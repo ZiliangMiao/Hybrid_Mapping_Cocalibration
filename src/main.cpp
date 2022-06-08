@@ -8,6 +8,7 @@
 // ros
 #include <ros/ros.h>
 #include <std_msgs/Header.h>
+#include <ros/package.h>
 // pcl
 #include <pcl/common/io.h>
 // heading
@@ -21,11 +22,8 @@ using namespace std;
 using namespace cv;
 
 string getDataPath(){
-    char *dir = NULL;
-    dir = (char *)get_current_dir_name();
-    string dir_string = dir;
-    // string dataPath = dir_string + "/data/lycheeHill/";
-    string dataPath = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/";
+    std::string currPkgDir = ros::package::getPath("data_process");
+    std::string dataPath = currPkgDir + "/data/runYangIn";
     return dataPath;
 }
 
@@ -78,13 +76,6 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
     vector< vector< vector<int> > > camtagsMap = 
         cam.sphereToPlane(camOrgPolarCloud, bandwidth);
-
-    char o_[64];
-    sprintf(o_, "%s%f%s", "/home/isee/Desktop/output/fusionViz_", bandwidth, ".png");
-    outfile << o_;
-    cv::imwrite(o_, imageShow);
-//    cv::imshow("show", imageShow);
-//    waitKey();
 }
 
 int main(int argc, char** argv){

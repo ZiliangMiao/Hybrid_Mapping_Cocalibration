@@ -4,10 +4,20 @@
 // ros 
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <ros/package.h>
 // pcl library
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
+
+using namespace std;
+
+string getDataPath(){
+    std::string currPkgDir = ros::package::getPath("data_process");
+    std::string dataPath = currPkgDir + "/data/runYangIn";
+    return dataPath;
+}
+const string dataPath = getDataPath();
 
 main (int argc, char **argv){
     ros::init (argc, argv, "rvizPub");
@@ -17,8 +27,7 @@ main (int argc, char **argv){
     // ros::Publisher fltPub = nh.advertise<sensor_msgs::PointCloud2> ("rvizFltTopic", 1);
     pcl::PointCloud<pcl::PointXYZI> orgCloud;
     // pcl::PointCloud<pcl::PointXYZI> fltCloud;
-    pcl::io::loadPCDFile ("/home/xwy/WS/fisheye_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangOut/outputs/ryOutLidDense.pcd", orgCloud);
-    // pcl::io::loadPCDFile ("/home/xwy/WS/fisheye_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/ryInLidDense.pcd", fltCloud);
+    pcl::io::loadPCDFile (dataPath + "/outputs/ryOutLidDense.pcd", orgCloud);
     sensor_msgs::PointCloud2 orgMsg;
     // sensor_msgs::PointCloud2 fltMsg;
     pcl::toROSMsg(orgCloud, orgMsg);

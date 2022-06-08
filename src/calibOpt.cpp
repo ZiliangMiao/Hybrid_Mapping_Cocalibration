@@ -5,6 +5,7 @@
 #include <math.h>
 //ros
 #include <visualization_msgs/MarkerArray.h>
+#include <ros/package.h>
 //opencv
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -30,6 +31,14 @@ ros::Publisher pub_curvature;
 
 const bool featureViz = true;
 const bool calibViz = false;
+
+string getDataPath(){
+    std::string currPkgDir = ros::package::getPath("data_process");
+    std::string dataPath = currPkgDir + "/data/runYangIn";
+    return dataPath;
+}
+
+const string dataPath = getDataPath();
 
 /********* Define Containers *********/
 int cloudSortInd[10000000];
@@ -246,7 +255,7 @@ void VisualizeCurvature(float *v_curv, int *v_label,
 
 void pclFilterTest() {
     pcl::PointCloud<PointType>::Ptr lidarCloudOrg(new pcl::PointCloud<PointType>);
-    pcl::io::loadPCDFile("/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/lidDense.pcd", *lidarCloudOrg);
+    pcl::io::loadPCDFile(dataPath + "/outputs/lidDense.pcd", *lidarCloudOrg);
     /********* PCL Filter - RNN *********/
     pcl::PointCloud<PointType>::Ptr lidStaFlt(new pcl::PointCloud<PointType>);
     pcl::RadiusOutlierRemoval<PointType> outlierFlt;
@@ -271,7 +280,7 @@ void pclFilterTest() {
 
 void lidarFeatureExtractor(lidarProcess lidarProcess) {
     pcl::PointCloud<PointType>::Ptr lidarCloudOrg(new pcl::PointCloud<PointType>);
-    pcl::io::loadPCDFile("/home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/lidDense150.pcd", *lidarCloudOrg);
+    pcl::io::loadPCDFile( dataPath + "/outputs/lidDense150.pcd", *lidarCloudOrg);
 
     /********* PCL Filter - RNN *********/
     pcl::PointCloud<PointType>::Ptr lidStaFlt(new pcl::PointCloud<PointType>);
