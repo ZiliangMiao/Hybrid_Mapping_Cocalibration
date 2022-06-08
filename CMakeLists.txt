@@ -55,6 +55,9 @@ add_library(MeanShift
 add_library(ceresAutoDiff
   src/ceresAutoDiff.cpp
 )
+add_library(ceresMultiScenes
+  src/ceresMultiScenes.cpp
+)
 add_library(calibOpt
   src/calibOpt.cpp
 )
@@ -71,8 +74,8 @@ add_dependencies(feature ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_T
 add_dependencies(MeanShift ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rvizPub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ceresAutoDiff ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(calibOpt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
 
 ## Link libraries
 target_link_libraries(MeanShift ${catkin_LIBRARIES})
@@ -95,6 +98,15 @@ target_link_libraries(mainNode
 )
 
 target_link_libraries(ceresAutoDiff
+  imageProcess
+  lidarProcess
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${CERES_LIBRARIES}
+)
+
+target_link_libraries(ceresMultiScenes
   imageProcess
   lidarProcess
   ${catkin_LIBRARIES}

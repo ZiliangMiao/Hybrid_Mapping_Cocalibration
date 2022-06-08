@@ -23,7 +23,7 @@ using namespace cv;
 
 string getDataPath(){
     std::string currPkgDir = ros::package::getPath("data_process");
-    std::string dataPath = currPkgDir + "/data/runYangIn";
+    std::string dataPath = currPkgDir + "/data/runYangIn/";
     return dataPath;
 }
 
