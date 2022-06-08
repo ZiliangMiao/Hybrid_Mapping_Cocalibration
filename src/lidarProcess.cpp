@@ -1,0 +1,960 @@
+// basic
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+#include <tuple>
+// ros
+#include <ros/ros.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <std_msgs/Header.h>
+// pcl
+#include <pcl/common/common.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/principal_curvatures.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/sample_consensus/ransac.h>
+#include <pcl/sample_consensus/sac_model_plane.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/common/transforms.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+// opencv
+#include <opencv2/opencv.hpp>
+#include <cv_bridge/cv_bridge.h>
+// include mlpack
+#include <mlpack/core.hpp>
+#include <mlpack/methods/kde/kde.hpp>
+#include <mlpack/core/tree/binary_space_tree.hpp>
+#include <mlpack/core/tree/octree.hpp>
+#include <mlpack/core/tree/cover_tree.hpp>
+#include <mlpack/core/tree/rectangle_tree.hpp>
+// heading
+#include "lidarProcess.h"
+
+using namespace std;
+using namespace cv;
+
+// using namespace mlpack;
+using namespace mlpack::kde;
+using namespace mlpack::metric;
+using namespace mlpack::tree;
+using namespace mlpack::kernel;
+
+using namespace arma;
+using namespace Eigen;
+
+#define GROUPSIZE 3000 // You can change the size of a PCD group
+#define MODE (S_IRWXU | S_IRWXG | S_IRWXO)
+
+// typedef pcl::PointXYZ PointT;
+// typedef pcl::PointCloud<PointT> PointCloudT;
+
+lidarProcess::lidarProcess(string dataPath, bool byIntensity)
+{
+    this->dataPath = dataPath;
+    this->byIntensity = byIntensity;
+
+    this->bagFile = dataPath + "lidar.bag";
+    this->pcdsFolder = dataPath + "pcds/";
+    this->outputFolder = dataPath + "outputs/";
+    if (byIntensity)
+    {
+        this->projectionFolder = this->outputFolder + "byIntensity/";
+    }
+    else
+    {
+        this->projectionFolder = this->outputFolder + "byDepth/";
+    }
+    checkFolder(this->projectionFolder);
+
+    this->lidarDenseFile = this->outputFolder + "lidDense.pcd";
+    this->lidEdgeFile = this->dataPath + "edges/lidEdge.png";
+    this->lidEdgePixFile = this->outputFolder + "lidEdgePix.txt";
+    this->lid3dOutFile = this->outputFolder + +"lid3dOut.txt";
+    this->lidTransFile = this->outputFolder + "lidTrans.txt";
+
+    this->edgeCheckFile = this->projectionFolder + "edgeCheck.bmp";
+    this->lidPolar = this->projectionFolder + "lidPolar.pcd";
+    this->lidCartesian = this->projectionFolder + "lidCartesian.pcd";
+    this->flatLidarFile = this->projectionFolder + "flatLidarImage.bmp";
+    this->flatLidarShiftFile = this->projectionFolder + "flatLidarImageShift.bmp";
+}
+
+void lidarProcess::readEdge()
+{
+    string edgePath = this->lid3dOutFile;
+    ifstream infile(edgePath);
+    string line;
+    vector<vector<double>> lidPts;
+    while (getline(infile, line))
+    {
+        stringstream ss(line);
+        string tmp;
+        vector<double> v;
+
+        while (getline(ss, tmp, '\t')) // split string with "\t"
+        {                           
+            v.push_back(stod(tmp)); // string->double
+        }
+
+        if (v.size() == 3)
+        {
+
+            lidPts.push_back(v);
+        }
+    }
+
+    // Remove dumplicated points
+    cout << "Imported LiDAR points: " << lidPts.size() << endl;
+    std::sort(lidPts.begin(), lidPts.end());
+    lidPts.erase(unique(lidPts.begin(), lidPts.end()), lidPts.end());
+
+    // Construct pcl pointcloud
+    pcl::PointCloud<pcl::PointXYZ>::Ptr lidEdgeOrg(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointXYZ point;
+    for (size_t i = 0; i < lidPts.size(); i++)
+    {
+        point.x = lidPts[i][0];
+        point.y = lidPts[i][1];
+        point.z = lidPts[i][2];
+        lidEdgeOrg->points.push_back(point);
+    }
+    cout << "Filtered LiDAR points: " << lidEdgeOrg->points.size() << endl;
+    this->lidEdgeOrg = lidEdgeOrg;
+}
+
+void lidarProcess::setExtrinsic(vector<double> _p)
+{
+    this->extrinsic.rx = _p[0];
+    this->extrinsic.ry = _p[1];
+    this->extrinsic.rz = _p[2];
+    this->extrinsic.tx = _p[3];
+    this->extrinsic.ty = _p[4];
+    this->extrinsic.tz = _p[5];
+}
+
+std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidarProcess::lidarToSphere()
+{
+    double X, Y, Z;
+    double radius;
+    double theta, phi;
+    double projProp;
+    double thetaMin = M_PI, thetaMax = -M_PI;
+
+    bool byIntensity = this->byIntensity;
+
+    // original cartesian point cloud
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lid3dOrg(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::io::loadPCDFile(this->lidarDenseFile, *lid3dOrg);
+
+    // check the original point cloud size
+    int cloudSizeOrg = lid3dOrg->points.size();
+    cout << "size of original cloud:" << cloudSizeOrg << endl;
+
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidIntFlt(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PassThrough<pcl::PointXYZI> intensityFlt;
+
+    if (!byIntensity)
+    {
+        pcl::PointXYZI pt;
+        for (int i = 0; i < lid3dOrg->points.size(); i++)
+        {
+            pt = lid3dOrg->points[i];
+            // store the projection property "depth" by using parameter "intensity"
+            double depth = sqrt(pow(pt.x, 2) + pow(pt.y, 2) + pow(pt.z, 2));
+            lid3dOrg->points[i].intensity = depth;
+        }
+
+        // pass through filter: point with invalid "depth" removal
+        intensityFlt.setFilterFieldName("intensity");
+        intensityFlt.setFilterLimits(1, 100);
+        intensityFlt.setInputCloud(lid3dOrg);
+        intensityFlt.filter(*lidIntFlt);
+    }
+
+    else
+    {
+        // pass through filter: point with invalid "intensity" removal
+        intensityFlt.setFilterFieldName("intensity");
+        intensityFlt.setFilterLimits(3, 255);
+        intensityFlt.setInputCloud(lid3dOrg);
+        intensityFlt.filter(*lidIntFlt);
+    }
+
+    // check the pass through filtered point cloud size
+    int cloudSizeIntFlt = lidIntFlt->points.size();
+    cout << "size of cloud after a pass through filter:" << cloudSizeIntFlt << endl;
+
+    // statistical filter: outlier removal
+    // pcl::PointCloud<pcl::PointXYZI>::Ptr lidStaFlt(new pcl::PointCloud<pcl::PointXYZI>);
+    // pcl::StatisticalOutlierRemoval<pcl::PointXYZI> outlierFlt;
+    // outlierFlt.setInputCloud(lidIntFlt);
+    // outlierFlt.setMeanK(20);
+    // outlierFlt.setStddevMulThresh(0.8);
+    // outlierFlt.setNegative(false);
+    // outlierFlt.filter(*lidStaFlt);
+
+    // filter: radius outlier removal
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidStaFlt(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::RadiusOutlierRemoval<pcl::PointXYZI> outlierFlt;
+    outlierFlt.setInputCloud(lidIntFlt);
+    outlierFlt.setRadiusSearch(0.05);
+    outlierFlt.setMinNeighborsInRadius(20);
+    outlierFlt.setNegative(false);
+    outlierFlt.filter(*lidStaFlt);
+
+    // new container
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointXYZI pt_polar;
+    pcl::PointXYZI pt_cartesian;
+
+    // cloud size check
+    int cloudSizeStaFlt = lidStaFlt->points.size();
+    cout << "statistically filtered cloud size:" << cloudSizeStaFlt << endl;
+
+    for (int i = 0; i < cloudSizeStaFlt; i++)
+    {
+        // assign the cartesian coordinate to pcl point cloud
+        X = lidStaFlt->points[i].x;
+        Y = lidStaFlt->points[i].y;
+        Z = lidStaFlt->points[i].z;
+        projProp = lidStaFlt->points[i].intensity;
+        if (!byIntensity)
+        {
+            radius = projProp;
+        }
+        else
+        {
+            radius = sqrt(pow(X, 2) + pow(Y, 2) + pow(Z, 2));
+        }
+
+        // assign the polar coordinate to pcl point cloud
+        phi = M_PI - atan2(Y, X);
+        theta = acos(Z / radius);
+        pt_polar.x = phi;
+        pt_polar.y = theta;
+        pt_polar.z = 0;
+        pt_polar.intensity = projProp;
+        lidPolar->points.push_back(pt_polar);
+
+        if (theta > thetaMax)
+        {
+            thetaMax = theta;
+        }
+        if (theta < thetaMin)
+        {
+            thetaMin = theta;
+        }
+    }
+
+    // output the important features of the point cloud
+    cout << "polar cloud size:" << lidPolar->points.size() << endl;
+    cout << "Min theta of lidar: " << thetaMin << endl;
+    cout << "Max theta of lidar: " << thetaMax << endl;
+
+    // save to pcd files and create tuple return
+    pcl::io::savePCDFileBinary(this->lidCartesian, *lidStaFlt);
+    pcl::io::savePCDFileBinary(this->lidPolar, *lidPolar);
+    std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> result;
+    result = std::make_tuple(lidPolar, lidStaFlt);
+
+    return result;
+}
+
+vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar)
+{
+    double flatRows = this->flatRows;
+    double flatCols = this->flatCols;
+
+    // define the data container
+    cv::Mat flatImage = cv::Mat::zeros(flatRows, flatCols, CV_32FC1); // define the flat image
+    vector<int> tagsList;                                             // define the tag list
+    vector<vector<vector<int>>> tagsMap(flatRows, vector<vector<int>>(flatCols, tagsList));
+
+    // construct kdtrees and load the point clouds
+    // caution: the point cloud need to be setted before the loop
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+    kdtree.setInputCloud(lidPolar);
+    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree2;
+    kdtree2.setInputCloud(lidPolar);
+
+    // define the invalid search count
+    int invalidSearch = 0; // search invalid count
+    int invalidIndex = 0;  // index invalid count
+    double radPerPix = this->radPerPix;
+    double searchRadius = radPerPix / 2;
+    for (int u = 0; u < flatRows; ++u)
+    {
+        float theta_lb = u * radPerPix;
+        float theta_ub = (u + 1) * radPerPix;
+        float theta_center = (theta_ub + theta_lb) / 2;
+
+        for (int v = 0; v < flatCols; ++v)
+        {
+            float phi_lb = v * radPerPix;       // upper bound of the current phi unit
+            float phi_ub = (v + 1) * radPerPix; // upper bound of the current phi unit
+            float phi_center = (phi_ub + phi_lb) / 2;
+
+            // assign the theta and phi center to the searchPoint
+            pcl::PointXYZI searchPoint;
+            searchPoint.x = phi_center;
+            searchPoint.y = theta_center;
+            searchPoint.z = 0;
+
+            // define the vector container for storing the info of searched points
+            std::vector<int> pointIdxRadiusSearch;
+            std::vector<float> pointRadiusSquaredDistance; // type of distance vector has to be float
+            int idx = 0;
+
+            // use kdtree to search (radius search) the spherical point cloud
+            int numRNN = kdtree.radiusSearch(searchPoint, searchRadius, pointIdxRadiusSearch, pointRadiusSquaredDistance); // number of the radius nearest neighbors
+            if (numRNN == 0)                                                                                               // no point found
+            {
+                // assign the theta and phi center to the searchPoint
+                std::vector<int> pointIdxRadiusSearch2;
+                std::vector<float> pointRadiusSquaredDistance2;
+                int numSecondSearch = 0;
+                double scale = 1;
+                while (numSecondSearch == 0)
+                {
+                    scale = scale + 0.05;
+                    numSecondSearch = kdtree2.radiusSearch(searchPoint, scale * searchRadius, pointIdxRadiusSearch2, pointRadiusSquaredDistance2);
+                    if (scale > 2)
+                    {
+                        flatImage.at<float>(u, v) = 160; // intensity
+                        invalidSearch = invalidSearch + 1;
+                        // add tags
+                        idx = 0;
+                        tagsMap[u][v].push_back(idx);
+                        break;
+                    }
+                }
+                if (numSecondSearch != 0) // there are more points found than one
+                {
+                    double intensity = 0; // intensity channel
+                    for (int i = 0; i < pointIdxRadiusSearch2.size(); ++i)
+                    {
+                        intensity = intensity + (*lidPolar)[pointIdxRadiusSearch2[i]].intensity;
+                        // add tags
+                        idx = pointIdxRadiusSearch2[i];
+                        tagsMap[u][v].push_back(idx);
+                    }
+                    flatImage.at<float>(u, v) = intensity / numSecondSearch; // intensity
+                }
+            }
+            if (numRNN != 0) // corresponding points are found in the radius neighborhood
+            {
+                double intensity = 0; // intensity channel
+                for (int i = 0; i < pointIdxRadiusSearch.size(); ++i)
+                {
+                    if (pointIdxRadiusSearch[i] > lidPolar->points.size() - 1)
+                    {
+                        // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
+                        flatImage.at<float>(u, v) = 160; // intensity
+                        invalidIndex = invalidIndex + 1;
+                        continue;
+                    }
+                    intensity = intensity + (*lidPolar)[pointIdxRadiusSearch[i]].intensity;
+                    // add tags
+                    idx = pointIdxRadiusSearch[i];
+                    tagsMap[u][v].push_back(idx);
+                }
+                flatImage.at<float>(u, v) = intensity / numRNN; // intensity
+            }
+        }
+    }
+    cout << "number of invalid searches:" << invalidSearch << endl;
+    cout << "number of invalid indices:" << invalidIndex << endl;
+
+    cv::imwrite(this->flatLidarFile, flatImage);
+    return tagsMap;
+}
+
+vector<vector<double>> lidarProcess::edgeTransform()
+{
+    const double pix2rad = 4000 / (M_PI * 2);
+    // declaration of point clouds and output vector
+    pcl::PointCloud<pcl::PointXYZ>::Ptr _p_l(new pcl::PointCloud<pcl::PointXYZ>());
+    vector<vector<double>> lidEdgePolar(2, vector<double>(lidEdgeOrg->points.size()));
+
+    // initialize the transformation matrix
+    Eigen::Affine3d transMat = Eigen::Affine3d::Identity();
+
+    // initialize the euler angle and transform it into rotation matrix
+    Eigen::Vector3d eulerAngle(this->extrinsic.rz, this->extrinsic.ry, this->extrinsic.rx);
+    Eigen::AngleAxisd xAngle(AngleAxisd(eulerAngle(2), Vector3d::UnitX()));
+    Eigen::AngleAxisd yAngle(AngleAxisd(eulerAngle(1), Vector3d::UnitY()));
+    Eigen::AngleAxisd zAngle(AngleAxisd(eulerAngle(0), Vector3d::UnitZ()));
+    Eigen::Matrix3d rot;
+    rot = zAngle * yAngle * xAngle;
+    transMat.rotate(rot);
+
+    // initialize the translation vector
+    transMat.translation() << this->extrinsic.tx, this->extrinsic.ty, this->extrinsic.tz;
+
+    // point cloud rigid transformation
+    pcl::transformPointCloud(*this->lidEdgeOrg, *_p_l, transMat);
+
+    for (int i = 0; i < lidEdgeOrg->points.size(); i++)
+    {
+        // assign the polar coordinate (theta, phi) to pcl point cloud
+        lidEdgePolar[0][i] = pix2rad * acos(_p_l->points[i].z / sqrt(pow(_p_l->points[i].x, 2) + pow(_p_l->points[i].y, 2) + pow(_p_l->points[i].z, 2)));
+        lidEdgePolar[1][i] = pix2rad * (M_PI - atan2(_p_l->points[i].y, _p_l->points[i].x));
+    }
+
+    return lidEdgePolar;
+}
+
+// extrinsic and inverse intrinsic transform for visualization of lidar points in flat image
+vector<vector<double>> lidarProcess::edgeVizTransform(vector<double> _p)
+{
+    const double u0 = _p[6];
+    const double v0 = _p[7];
+    const double a1 = _p[8];
+    const double a3 = _p[9];
+    const double a5 = _p[10];
+
+    double phi, theta;
+    double inv_r, inv_u, inv_v;
+    double eval_u, eval_v, result, tmp;
+
+    // extrinsic transform
+    Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
+    Eigen::Matrix<double, 3, 3> R;
+    Eigen::AngleAxisd xAngle(AngleAxisd(eulerAngle(0), Vector3d::UnitX()));
+    Eigen::AngleAxisd yAngle(AngleAxisd(eulerAngle(1), Vector3d::UnitY()));
+    Eigen::AngleAxisd zAngle(AngleAxisd(eulerAngle(2), Vector3d::UnitZ()));
+    R = zAngle * yAngle * xAngle;
+
+    Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
+    Eigen::Matrix<double, 3, 1> p_;
+    Eigen::Matrix<double, 3, 1> p_trans;
+
+    vector<vector<double>> lidProjection(2, vector<double>(lidEdgeOrg->points.size()));
+
+    for (int i = 0; i < lidEdgeOrg->points.size(); i++)
+    {
+        p_ << this->lidEdgeOrg->points[i].x, this->lidEdgeOrg->points[i].y, this->lidEdgeOrg->points[i].z;
+        p_trans = R * p_ + t;
+        phi = atan2(p_trans(1), p_trans(0)) + M_PI;
+        theta = acos(p_trans(2) / sqrt(pow(p_trans(0), 2) + pow(p_trans(1), 2) + pow(p_trans(2), 2)));
+        inv_r = a1 * theta + a3 * pow(theta, 3) + a5 * pow(theta, 5);
+        inv_u = inv_r * cos(phi) + u0;
+        inv_v = inv_r * sin(phi) + v0;
+        lidProjection[0][i] = inv_u;
+        lidProjection[1][i] = inv_v;
+    }
+
+    return lidProjection;
+}
+
+vector<vector<int>> lidarProcess::edgeToPixel()
+{
+    cv::Mat edgeImage = cv::imread(this->lidEdgeFile, cv::IMREAD_UNCHANGED);
+    try
+    {
+        if (edgeImage.rows != this->flatRows || edgeImage.cols != this->flatCols)
+        {
+            throw "Error: size of edge image (LiDAR) is incorrect!";
+        }
+    }
+    catch (const char *msg)
+    {
+        cerr << msg << endl;
+        abort();
+    }
+
+    vector<vector<int>> edgePixels;
+    for (int u = 0; u < edgeImage.rows; ++u)
+    {
+        for (int v = 0; v < edgeImage.cols; ++v)
+        {
+            if (edgeImage.at<uchar>(u, v) > 127)
+            {
+                vector<int> pixel{u, v};
+                edgePixels.push_back(pixel);
+            }
+        }
+    }
+
+    // write the coordinates into txt file
+    ofstream outfile;
+    outfile.open(this->lidEdgePixFile, ios::out);
+    if (!outfile.is_open())
+    {
+        cout << "Open file failure" << endl;
+    }
+    for (int i = 0; i < edgePixels.size(); ++i)
+    {
+        outfile << edgePixels[i][0] << "\t" << edgePixels[i][1] << endl;
+    }
+    outfile.close();
+
+    return edgePixels;
+}
+
+void lidarProcess::edgePixCheck(vector<vector<int>> edgePixels)
+{
+    int flatCols = this->flatCols;
+    int flatRows = this->flatRows;
+    cv::Mat edgeCheck = cv::Mat::zeros(flatRows, flatCols, CV_8UC1);
+    for (int i = 0; i < edgePixels.size(); ++i)
+    {
+        int u = edgePixels[i][0];
+        int v = edgePixels[i][1];
+        edgeCheck.at<uchar>(u, v) = 255;
+    }
+    cv::imwrite(this->edgeCheckFile, edgeCheck);
+}
+
+void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vector<int>>> tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian)
+{
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr lidEdgeOrg(new pcl::PointCloud<pcl::PointXYZ>());
+    int invalidLookUp = 0;
+
+    for (int i = 0; i < edgePixels.size(); ++i)
+    {
+        int u = edgePixels[i][0];
+        int v = edgePixels[i][1];
+        float X;
+        float Y;
+        float Z;
+        int size = tagsMap[u][v].size();
+
+        if (size == 0)
+        {
+            invalidLookUp = invalidLookUp + 1;
+            X = 0;
+            Y = 0;
+            Z = 0;
+            pcl::PointXYZ lidPt{X, Y, Z};
+            lidEdgeOrg->points.push_back(lidPt);
+        }
+        else
+        {
+            X = 0;
+            Y = 0;
+            Z = 0;
+            for (int j = 0; j < size; ++j)
+            {
+                int idx = tagsMap[u][v][j];
+                pcl::PointXYZI pt = (*lidCartesian)[idx];
+                X = X + pt.x;
+                Y = Y + pt.y;
+                Z = Z + pt.z;
+            }
+            // assign mean values to the output
+            X = X / size;
+            Y = Y / size;
+            Z = Z / size;
+            // vector<double> coordinates {X, Y, Z};
+            // lidPixOrg.push_back(coordinates);
+            pcl::PointXYZ lidPt{X, Y, Z};
+            lidEdgeOrg->points.push_back(lidPt);
+        }
+    }
+
+    cout << "number of invalid lookups(lidar): " << invalidLookUp << endl;
+    this->lidEdgeOrg = lidEdgeOrg;
+
+    // write the coordinates into txt file
+    ofstream outfile;
+    outfile.open(this->lid3dOutFile, ios::out);
+    if (!outfile.is_open())
+    {
+        cout << "Open file failure" << endl;
+    }
+    // for(int i = 0; i < lidPixOrg.size(); ++i) {
+    //     outfile << lidPixOrg[i][0] << "\t" << lidPixOrg[i][1] << "\t"  << lidPixOrg[i][2] << "\n" << endl;
+    // }
+    for (int i = 0; i < lidEdgeOrg->points.size(); ++i)
+    {
+        outfile << lidEdgeOrg->points[i].x
+                << "\t" << lidEdgeOrg->points[i].y
+                << "\t" << lidEdgeOrg->points[i].z << endl;
+    }
+    outfile.close();
+}
+
+// std::vector<double> lidarProcess::kdeFit(vector<vector<double>> edgePixels, int row_samples, int col_samples)
+// {
+
+//     int ref_size = edgePixels[0].size();
+//     int query_size = row_samples * col_samples;
+//     double pixPerDegree = 4000 / (M_PI * 2);
+
+//     arma::mat reference(2, ref_size); // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
+//     for (int i = 0; i < ref_size; ++i)
+//     {
+//         reference(0, i) = edgePixels[0][i] * pixPerDegree;
+//         reference(1, i) = edgePixels[1][i] * pixPerDegree;
+//     }
+
+//     arma::vec r = arma::linspace(0, this->flatRows - 1, row_samples);
+//     arma::vec c = arma::linspace(0, this->flatCols - 1, col_samples);
+
+//     // vector <double> query_r(query_size);
+//     // vector <double> query_c(query_size);
+
+//     // for (int i = 0; i < row_samples; ++i){
+//     //     for (int j = 0; j < col_samples; ++j){
+//     //         query_r[i * col_samples + j] = r.at(i);
+//     //         query_c[i * col_samples + j] = c.at(j);
+//     //     }
+//     // }
+
+//     // arma::mat query(2, query_size);
+//     // for (int i = 0; i < query_size; ++i){
+//     //     query(0, i) = query_r[i];
+//     //     query(1, i) = query_c[i];
+//     // }
+
+//     arma::mat query(2, query_size);
+//     for (int i = 0; i < row_samples; ++i)
+//     {
+//         for (int j = 0; j < col_samples; ++j)
+//         {
+//             query(0, i * col_samples + j) = r.at(i);
+//             query(1, i * col_samples + j) = c.at(j);
+//         }
+//     }
+
+//     arma::vec kdeEstimations;
+//     const double kernelBandwidth = 12;
+//     const double relError = 0.05;
+
+//     mlpack::kernel::GaussianKernel kernel(kernelBandwidth);
+//     mlpack::metric::EuclideanDistance metric;
+//     // kernel::EpanechnikovKernel kernel(kernelBandwidth);
+
+//     KDE<GaussianKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(relError, 0.00, kernel);
+//     kde.Train(reference);
+//     kde.Evaluate(query, kdeEstimations);
+
+//     // write the coordinates into txt file
+//     ofstream outfile;
+//     outfile.open(this->lidTransFile, ios::out);
+//     if (!outfile.is_open())
+//     {
+//         cout << "Open file failure" << endl;
+//     }
+
+//     for (int i = 0; i < query_size; ++i)
+//     {
+//         outfile << kdeEstimations.at(i) << endl;
+//         // outfile << kdeEstimations.at(i) << "\t" <<
+//         // query.at(0, i) << "\t" <<
+//         // query.at(1, i) << endl;
+//     }
+
+//     outfile.close();
+//     std::vector<double> res = arma::conv_to<std::vector<double>>::from(kdeEstimations);
+
+//     // cout << "r_samples: " << row_samples << endl;
+//     // cout << "c_samples: " << col_samples << endl;
+
+//     // cout << "rows of reference: " << reference.n_rows << endl;
+//     // cout << "cols of referemce: " << reference.n_cols << endl;
+//     // cout << "rows of query: " << query.n_rows << endl;
+//     // cout << "cols of query: " << query.n_cols << endl;
+
+//     // cout << "sum of kde estimations: " << sum(kdeEstimations) << endl;
+//     // cout << "size of kde estimations: " << kdeEstimations.size() << endl;
+//     return res;
+// }
+
+void lidarProcess::checkFolder(string fileFolder)
+{
+    if (opendir(fileFolder.c_str()) == NULL)
+    { // The first parameter of 'opendir' is char *
+        cout << fileFolder << " not exsits!" << endl;
+        int ret = mkdir(fileFolder.c_str(), MODE); // 'mkdir' used for creating new directory
+    }
+}
+
+int lidarProcess::readFileList(const std::string &folderPath, std::vector<std::string> &vFileList)
+{
+    DIR *dp;
+    struct dirent *dirp;
+    if ((dp = opendir(folderPath.c_str())) == NULL)
+    {
+        return 0;
+    }
+
+    int num = 0;
+    while ((dirp = readdir(dp)) != NULL)
+    {
+        std::string name = std::string(dirp->d_name);
+        if (name != "." && name != "..")
+        {
+            vFileList.push_back(name);
+            num++;
+        }
+    }
+    closedir(dp);
+    cout << "success!" << endl;
+
+    return num;
+}
+
+void lidarProcess::bagToPcd(string bagFile)
+{
+    rosbag::Bag bag;
+    bag.open(bagFile, rosbag::bagmode::Read);
+    vector<string> topics;
+    topics.push_back(string(this->topicName));
+    rosbag::View view(bag, rosbag::TopicQuery(topics));
+    rosbag::View::iterator it = view.begin();
+    pcl::PCLPointCloud2 pcl_pc2;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr intensityCloud(new pcl::PointCloud<pcl::PointXYZI>);
+    checkFolder(this->pcdsFolder);
+    for (int i = 0; it != view.end(); it++, i++)
+    {
+        auto m = *it;
+        sensor_msgs::PointCloud2::ConstPtr input = m.instantiate<sensor_msgs::PointCloud2>();
+        pcl_conversions::toPCL(*input, pcl_pc2);
+        pcl::fromPCLPointCloud2(pcl_pc2, *intensityCloud);
+        string id_str = to_string(i);
+        pcl::io::savePCDFileBinary(this->pcdsFolder + id_str + ".pcd", *intensityCloud);
+    }
+}
+
+bool lidarProcess::createDenseFile()
+{
+    pcl::PCDReader reader; // used for read PCD files
+    vector<string> nameList;
+    // checkFolder(fileFolder);
+    readFileList(this->pcdsFolder, nameList);
+    sort(nameList.begin(), nameList.end()); // sort file names by order
+    int groupCount = nameList.size() / GROUPSIZE;
+
+    // PCL PointCloud pointer. Remember that the pointer need to be given a new space
+    pcl::PointCloud<pcl::PointXYZI>::Ptr input(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZI>::Ptr output(new pcl::PointCloud<pcl::PointXYZI>);
+    int outputId = 0;
+    int nameLength = GROUPSIZE * groupCount;
+    auto nameIter = nameList.begin();
+    for (int i = 0; i < groupCount; i++)
+    {
+        for (int j = 0; j < GROUPSIZE; j++)
+        {
+            string fileName = this->pcdsFolder + *nameIter;
+            cout << fileName << endl;
+            if (reader.read(fileName, *input) < 0)
+            { // read PCD files, and save PointCloud in the pointer
+                PCL_ERROR("File is not exist!");
+                system("pause");
+                return false;
+            }
+            int pointCount = input->points.size();
+            for (int k = 0; k < pointCount; k++)
+            {
+                output->points.push_back(input->points[k]);
+            }
+            nameIter++;
+        }
+        pcl::io::savePCDFileBinary(lidarDenseFile, *output); // Save PCD files with destination file name and PointCloud pointer
+    }
+    return true;
+}
+
+void lidarProcess::calculateMaxIncidence()
+{
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidarDenseCloud(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::io::loadPCDFile(this->lidarDenseFile, *lidarDenseCloud);
+    float theta;
+    float radius;
+    float x, y, z;
+    int lidarCount = lidarDenseCloud->points.size();
+    vector<float> thetas;
+    for (int i = 0; i < lidarCount; i++)
+    {
+        x = lidarDenseCloud->points[i].x;
+        y = lidarDenseCloud->points[i].y;
+        z = lidarDenseCloud->points[i].z;
+        radius = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+        theta = asin(z / radius);
+        thetas.push_back(theta);
+    }
+    sort(thetas.begin(), thetas.end());
+    int j = 0;
+    for (auto it = thetas.begin(); it != thetas.end(); it++)
+    {
+        if (*it > 0)
+        {
+            j++;
+            cout << *it << endl;
+        }
+        if (j == 1000)
+        {
+            break;
+        }
+    }
+}
+
+// void lidarProcess::lidFlatImageShift(){
+//     float pixPerDegree = this -> pixelPerDegree;
+//     float camThetaMin = this -> camThetaMin;
+//     float camThetaMax = this -> camThetaMax;
+//     float lidThetaMin = this -> lidThetaMin;
+//     float lidThetaMax = this -> lidThetaMax;
+//     this -> imFlatRows = int((camThetaMax - camThetaMin) * pixPerDegree); // defined as the height(pixel) of the flat image // caution: the int division need a type coercion to float, otherwise the result would be zero
+//     this -> imFlatCols = int(2 * M_PI * pixPerDegree); // defined as the width(pixel) of the flat image
+//     int imFlatRows = this -> imFlatRows;
+//     int imFlatCols = this -> imFlatCols;
+//
+//     cv::Mat lidImage = cv::imread(this -> flatLidarFile, cv::IMREAD_UNCHANGED);
+//     try{
+//         if (lidImage.rows != this->lidFlatRows || lidImage.cols != this->lidFlatCols){
+//             throw "Error: size of flat image (LiDAR) is incorrect!";
+//         }
+//     }catch (const char* msg){
+//         cerr << msg << endl;
+//         abort();
+//     }
+//
+//     cv::Mat lidImageShift = cv::Mat::zeros(imFlatRows, imFlatCols, CV_8UC1);
+//     int lidMin = lidThetaMin * pixPerDegree;
+//     for(int i = 0; i < imFlatRows; i++){
+//         for(int j = 0; j < imFlatCols; j++){
+//             if(i >= lidMin){
+//                 lidImageShift.at<uchar>(i, j) = lidImage.at<uchar>(i - lidMin, j);
+//             }
+//             else {
+//                 lidImageShift.at<uchar>(i, j) = 160;
+//             }
+//         }
+//     }
+//     cv::imwrite(this -> flatLidarShiftFile, lidImageShift);
+// }
+
+// void lidarProcess::sphereToPlaneKNN(std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, float, float> result){
+//     //Input: spherical point cloud with RGB info (radius = 1073)
+//     pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar;
+//     float thetaMin;
+//     float thetaMax;
+//     std::tie(lidPolar, thetaMin, thetaMax) = result;
+
+//     float pixPerDegree = this -> imageRadius / (M_PI / 2);
+//     int flatHeight = int((thetaMax - thetaMin) * pixPerDegree); // defined as the height(pixel) of the flat image
+//     // caution: the int division need a type coercion to float, otherwise the result would be zero
+//     int flatWidth = int(2 * M_PI * pixPerDegree); // defined as the width(pixel) of the flat image
+//     cv::Mat flatImage = cv::Mat::zeros(flatHeight, flatWidth, CV_32FC1); // define the flat image
+
+//     // construct kdtrees and load the point clouds
+//     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+//     kdtree.setInputCloud(lidPolar);
+//     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree2;
+//     kdtree2.setInputCloud(lidPolar);
+
+//     // KNN search nnumber
+//     int K = 1;
+
+//     // X, Y are the pixel coordinates in the flat image
+//     // use KDTree to search the spherical point cloud
+//     for(int X = 0; X < flatWidth ; ++X){
+//         float degreePerPix = (M_PI / 2) / this -> imageRadius;
+//         // upper bound and lower bound of the current theta unit
+//         float phi_lb = X * degreePerPix;
+//         float phi_ub = (X+1) * degreePerPix;
+//         float phi_center = (phi_ub + phi_lb) / 2;
+
+//         for(int Y = 0; Y < flatHeight ; ++Y){
+//             // upper bound and lower bound of the current phi unit
+//             float theta_lb = thetaMin + Y * degreePerPix;
+//             float theta_ub = thetaMin + (Y+1) * degreePerPix;
+//             float theta_center = (theta_ub + theta_lb) / 2;
+
+//             // assign the theta and phi center to the searchPoint
+//             pcl::PointXYZI searchPoint;
+//             searchPoint.x = phi_center;
+//             searchPoint.y = theta_center;
+//             searchPoint.z = 0;
+
+//             // define the vector container for storing the info of searched points
+//             std::vector<int> pointIdxSearch(K);
+//             std::vector<float> pointSquaredDistance(K);
+
+//             // k nearest neighbors search
+//             kdtree.nearestKSearch(searchPoint, K, pointIdxSearch, pointSquaredDistance); // number of the radius nearest neighbors
+//             flatImage.at<float>(Y, X) = (*lidPolar)[pointIdxSearch[0]].intensity; // intensity
+//         }
+//     }
+//     cv::imwrite("flatLidarImageKNN.bmp", flatImage);
+// }
+
+// void lidarProcess::pp_callback(const pcl::visualization::PointPickingEvent& event, void *args)
+// {
+//     struct callback_args * data = (struct callback_args *)args;//点云数据 & 可视化窗口
+//     if (event.getPointIndex() == -1)
+//         return;
+//     PointT current_point;
+//     event.getPoint(current_point.x, current_point.y, current_point.z);
+//     data->clicked_points_3d->points.push_back(current_point);
+//     //Draw clicked points in red:
+//     pcl::visualization::PointCloudColorHandlerCustom<PointT> red(data->clicked_points_3d, 255, 0, 0);
+//     data->viewerPtr->removePointCloud("clicked_points");
+//     data->viewerPtr->addPointCloud(data->clicked_points_3d, red, "clicked_points");
+//     data->viewerPtr->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 10, "clicked_points");
+//     std::cout << current_point.x << " " << current_point.y << " " << current_point.z << std::endl;
+
+// }
+
+// bool lidarProcess::pointMark(){
+//     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+//     pcl::visualization::PCLVisualizer::Ptr viewer(new pcl::visualization::PCLVisualizer("viewer"));
+
+//     if (pcl::io::loadPCDFile(this -> lidarDenseFile, *cloud))
+//     {
+//         std::cerr << "ERROR: Cannot open file " << this -> lidarDenseFile << "! Aborting..." << std::endl;
+//         return false;
+//     }
+
+//     std::cout << cloud->points.size() << std::endl;
+
+//     cloud_mutex.lock();    // for not overwriting the point cloud
+
+//     // Display pointcloud:
+//     viewer->addPointCloud(cloud, "bunny_source");
+//     viewer->setCameraPosition(0, 0, -2, 0, -1, 0, 0);
+
+//     // Add point picking callback to viewer:
+//     struct callback_args cb_args;
+//     PointCloudT::Ptr clicked_points_3d(new PointCloudT);
+//     cb_args.clicked_points_3d = clicked_points_3d;
+//     cb_args.viewerPtr = pcl::visualization::PCLVisualizer::Ptr(viewer);
+
+//     viewer->registerPointPickingCallback(pp_callback, (void*)&cb_args);
+
+//     std::cout << "Shift+click on three floor points, then press 'Q'..." << std::endl;
+
+//     // Spin until 'Q' is pressed:
+//     viewer->spin();
+//     std::cout << "done." << std::endl;
+
+//     cloud_mutex.unlock();
+
+//     while (!viewer->wasStopped())
+//     {
+//         viewer->spinOnce(100);
+//         boost::this_thread::sleep(boost::posix_time::microseconds(100000));
+//     }
+
+//     return true;
+// }
