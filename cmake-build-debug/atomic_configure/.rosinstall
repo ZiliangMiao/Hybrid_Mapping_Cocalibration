@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/cmake-build-debug/devel/setup.sh

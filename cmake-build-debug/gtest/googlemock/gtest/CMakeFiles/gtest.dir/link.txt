@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -std=c++14  -g   -shared -Wl,-soname,libgtest.so -o libgtest.so CMakeFiles/gtest.dir/src/gtest-all.cc.o   -L/home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/cmake-build-debug/gtest/googlemock/gtest/src  -Wl,-rpath,/home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/cmake-build-debug/gtest/googlemock/gtest/src -lpthread 

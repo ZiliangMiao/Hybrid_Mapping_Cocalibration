@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: data_process
+Description: Description of data_process
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp rosmsg rospy
