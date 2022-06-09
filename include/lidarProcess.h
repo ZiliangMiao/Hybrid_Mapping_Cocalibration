@@ -36,18 +36,16 @@ class lidarProcess{
         lidarProcess(string dataPath, bool byIntensity);
         
         void readEdge();
-        void setExtrinsic(vector<double> parameters);
         void bagToPcd(string bagFile);
         bool createDenseFile();
         void calculateMaxIncidence();
 
-        void checkFolder(string outputDir);
         int readFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
 
         std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidarToSphere();
         vector< vector< vector<int> > > sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar);
         vector< vector<double> > edgeTransform();
-        vector< vector<double> > edgeVizTransform(vector<double> params);
+        vector<vector<double>> edgeVizTransform(vector<double> _p, Eigen::Matrix2d distortion);
         vector< vector <int> > edgeToPixel();
         void pixLookUp(vector< vector <int> > edgePixels, vector< vector< vector<int> > > tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         void edgePixCheck(vector< vector<int> > edgePixels);
@@ -55,14 +53,15 @@ class lidarProcess{
         void setImageAngle(float camThetaMin, float camThetaMax);
         // void lidFlatImageShift();
 
-        struct extrinsic;
     public:
         bool byIntensity = true;
         int flatRows = int((double)110/90 * 1000) + 1;
         int flatCols = 4000;
         double radPerPix = (M_PI/2) / 1000;
+        string topicName = "/livox/lidar";
+        pcl::PointCloud<pcl::PointXYZ>::Ptr EdgeOrgCloud;
 
-        struct extrinsic {
+        struct Extrinsic {
             double rx = 0;
             double ry = 0;
             double rz = 0;
@@ -71,23 +70,69 @@ class lidarProcess{
             double tz = 0;
         } extrinsic;
 
-        pcl::PointCloud<pcl::PointXYZ>::Ptr lidEdgeOrg;
+        void setExtrinsic(vector<double> _p) {
+            this->extrinsic.rx = _p[0];
+            this->extrinsic.ry = _p[1];
+            this->extrinsic.rz = _p[2];
+            this->extrinsic.tx = _p[3];
+            this->extrinsic.ty = _p[4];
+            this->extrinsic.tz = _p[5];
+        }
 
-        string topicName = "/livox/lidar";
-        string dataPath;
-        string pcdsFolder;
-        string outputFolder;
-        string projectionFolder;
-        string bagFile;
-        string lidarDenseFile; // time integral of point clouds
-        string lidPolar; // original point cloud in polar coordinates, without filtering
-        string lidCartesian; // filtered point cloud in polar coordinates
-        string flatLidarFile;
-        string flatLidarShiftFile;
-        string lidEdgeFile;
-        string lidEdgePixFile;
-        string edgeCheckFile;
-        string lid3dOutFile;
-        string lidTransFile;
+        /********* 所有Path定义中的/留前不留后 *********/
+        /********* Data Path of Multi-Scenes *********/
+        int scIdx = 0;
+        void setSceneIdx(int scIdx) {
+            this -> scIdx = scIdx;
+        }
+
+        static const int numScenes = 4;
+        struct ScenesPath
+        {
+            ScenesPath(string pkgPath) {
+                this -> sc1 = pkgPath + "/data/runYangIn";
+                this -> sc2 = pkgPath + "/data/huiyuan2";
+                this -> sc3 = pkgPath + "/data/11";
+                this -> sc4 = pkgPath + "/data/12";
+            }
+            string sc1;
+            string sc2;
+            string sc3;
+            string sc4;
+        };
+
+        /********* File Path of the Specific Scene *********/
+        struct SceneFilePath
+        {
+            SceneFilePath(string ScenePath) {
+                this -> OutputPath = ScenePath + "/outputs";
+                this -> PcdsPath = ScenePath + "/pcds";
+                this -> EdgeImgPath = ScenePath + "/edges/lidEdge.png";
+                this -> ResultPath = ScenePath + "/results";
+                this -> ProjPath = this -> OutputPath + "/byIntensity";
+                this -> LidDensePcdPath = this -> OutputPath + "/lidDense150.pcd";
+                this -> FlatImgPath = this -> ProjPath + "/flatLidarImage.bmp";
+                this -> PolarPcdPath = this -> ProjPath + "/lidPolar.pcd";
+                this -> CartPcdPath = this -> ProjPath + "/lidCartesian.pcd";
+                this -> EdgeCheckImgPath = this -> ProjPath + "/edgeCheck.bmp";
+                this -> EdgeTxtPath = this -> OutputPath + "/lidEdgePix.txt";
+                this -> EdgeOrgTxtPath = this -> OutputPath + +"/lid3dOut.txt";
+                this -> EdgeTransTxtPath = this -> OutputPath + "/lidTrans.txt";
+            }
+            string OutputPath;
+            string PcdsPath;
+            string EdgeImgPath;
+            string ResultPath;
+            string ProjPath;
+            string LidDensePcdPath;
+            string FlatImgPath;
+            string PolarPcdPath;
+            string CartPcdPath;
+            string EdgeCheckImgPath;
+            string EdgeTxtPath;
+            string EdgeOrgTxtPath;
+            string EdgeTransTxtPath;
+        };
+        vector<struct SceneFilePath> scenesFilePath;
 };
 #endif

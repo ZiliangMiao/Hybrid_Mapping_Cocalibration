@@ -21,11 +21,12 @@
 using namespace std;
 using namespace cv;
 
-string getDataPath(){
-    std::string currPkgDir = ros::package::getPath("data_process");
-    std::string dataPath = currPkgDir + "/data/runYangIn/";
-    return dataPath;
+/********* Directory Path of ROS Package *********/
+string getPkgPath() {
+    std::string pkgPath = ros::package::getPath("data_process");
+    return pkgPath;
 }
+string pkgPath = getPkgPath();
 
 bool checkFolder(string FolderPath){
     if(opendir(FolderPath.c_str()) == NULL){             // The first parameter of 'opendir' is char *
@@ -81,8 +82,8 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
 int main(int argc, char** argv){
     ros::init(argc, argv, "mainNode");
     ros::NodeHandle nh;
-    string dataPath = getDataPath();
-    if(!checkFolder(dataPath)){
+    string pkgPath = getPkgPath();
+    if(!checkFolder(pkgPath)){
         return -1;
     }
 
@@ -92,20 +93,9 @@ int main(int argc, char** argv){
         1.00014, -0.000177, 0.000129, 1023, 1201};
 
     cout << "----------------- Camera Processing ---------------------" << endl;
-    imageProcess imageProcess(dataPath, 20);
+    imageProcess imageProcess(pkgPath);
 
-    // // set intrinsic params
     imageProcess.setIntrinsic(params_calib);
-
-    // imageProcess.intrinsic.a0 = 606.16;
-    // imageProcess.intrinsic.a2 = -0.000558783;
-    // imageProcess.intrinsic.a3 = -2.70908E-09;
-    // imageProcess.intrinsic.a4 = -1.17573E-10;
-    // imageProcess.intrinsic.c = 1.00014;
-    // imageProcess.intrinsic.d = -0.000177;
-    // imageProcess.intrinsic.e = 0.000129;
-    // imageProcess.intrinsic.u0 = 1023;
-    // imageProcess.intrinsic.v0 = 1201;
 
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
@@ -117,18 +107,9 @@ int main(int argc, char** argv){
 
     cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
-
     bool byIntensity = true;
-    lidarProcess lidarProcess(dataPath, byIntensity);
+    lidarProcess lidarProcess(pkgPath, byIntensity);
     lidarProcess.setExtrinsic(params_calib);
-
-    // // set extrinsic params
-    // lidarProcess.extrinsic.rx = 0.001;
-    // lidarProcess.extrinsic.ry = 0.0197457;
-    // lidarProcess.extrinsic.rz = 0.13;
-    // lidarProcess.extrinsic.tx = 0.00891695;
-    // lidarProcess.extrinsic.ty = 0.00937508;
-    // lidarProcess.extrinsic.tz = 0.14;
 
     lidarProcess.createDenseFile();
 
@@ -142,40 +123,54 @@ int main(int argc, char** argv){
 
     cout << endl;
     cout << "----------------- Ceres Optimization ---------------------" << endl;
+    /** a0, a1, a2, a3, a4; size of params = 13 **/
+    // vector<char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+    // vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
+    // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
+
+    /** a0, a1, a3, a5; size of params = 12 **/
+    vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
+    vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
+    vector<double> dev = {5e-2, 5e-2, 5e-3, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 1e+1, 2e+1, 6e+0, 2e+0};
+
+    /** a1, a3, a5; size of params = 11 **/
+    // vector<char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
     // vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
-    vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
+    // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
+
     vector<double> params = params_init;
     // vector<double> params_init = {-0.03, 0.03, 0.1158, 0.0, 0.0, 0.21, 1023.0, 1201.0, 629.93645006, -8.48070567, 3.82415532};
-    vector<double> dev = {5e-2, 5e-2, M_PI/200, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+1, 4e+0, 1e+0};
+
     vector<double> lb(dev.size()), ub(dev.size());
-    vector<double> bw = {32, 24,16,12,8,6,4};
-    for (unsigned int i = 0; i < params_init.size(); i++)
-    {
-        lb[i] = params_init[i] - dev[i];
-        ub[i] = params_init[i] + dev[i];
-    }
+    vector<double> bw = {32,24,16};
+    Eigen::Matrix2d distortion;
+    distortion << 1.000143, -0.000177, 0.000129, 1.000000;
+
     lidarProcess.readEdge();
     imageProcess.readEdge();
+    string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
     for (int i = 0; i < bw.size(); i++)
     {
         double bandwidth = bw[i];
         if (i == 0){
-            vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params_init);
-            fusionViz(imageProcess, lidarProcess.lidTransFile, lidProjection, 88);
-            for (int j = 3; j < dev.size(); j++)
+            /** generate initial projection image **/
+            vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params_init, distortion);
+            fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, 88);
+            /** enable rx, ry, rz for the first round **/
+            for (int j = 0; j < dev.size(); j++)
             {
-                lb[j] = params_init[j] - 1e-3;
-                ub[j] = params_init[j] + 1e-3;
+                if (j < 3){
+                    lb[j] = params_init[j] - dev[j];
+                    ub[j] = params_init[j] + dev[j];
+                }
+                else{
+                    lb[j] = params_init[j] - 1e-3;
+                    ub[j] = params_init[j] + 1e-3;
+                }
             }
-            
         }
         else{
-            // lb[0] = params_init[0] - 1e-2;
-            // ub[0] = params_init[0] + 1e-2;
-            // lb[1] = params_init[1] - 1e-2;
-            // ub[1] = params_init[1] + 1e-2;
-            // lb[2] = params[2] - 1e-3;
-            // ub[2] = params[2] + 1e-3;
+            /** enable all the params for other rounds **/
             for (int j = 3; j < dev.size(); j++)
             {
                 lb[j] = params_init[j] - dev[j];
@@ -183,9 +178,9 @@ int main(int argc, char** argv){
             }
         }
         cout << "Round " << i << endl;
-        params = ceresAutoDiff(imageProcess, lidarProcess, bandwidth, params, lb, ub);
-        vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params);
-        fusionViz(imageProcess, lidarProcess.lidTransFile, lidProjection, bandwidth);
+        params = ceresAutoDiff(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
+        vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params, distortion);
+        fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, bandwidth);
     }
     return 0;
 }

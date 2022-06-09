@@ -60,28 +60,24 @@ using namespace mlpack::kernel;
 
 using namespace arma;
 
-imageProcess::imageProcess(string dataPath, int thresh)
-{
-    // data path
-    this->dataPath = dataPath;
-    this->outputFolder = this->dataPath + "outputs/";
-    this->imageFile = dataPath + "images/grab_0.bmp";
-    this->imageEdgeFile = dataPath + "edges/camEdge.png";
-    this->flatImageFile = this->outputFolder + "flatImage.bmp";
-    this->imageGrayFile = this->outputFolder + "imageGray.bmp";
-    this->imageMirrorFile = this->outputFolder + "imageMirror.bmp";
-    this->camEdgePixFile = this->outputFolder + "camEdgePix.txt";
-    this->camPixOutFile = this->outputFolder + "camPixOut.txt";
-    this->camKdeFile = this->outputFolder + "camKDE.txt";
-    this->camTransFile = this->outputFolder + "camTrans.txt";
+imageProcess::imageProcess(string pkgPath) {
+    struct ScenesPath scenesPath(pkgPath);
+    struct SceneFilePath SC1(scenesPath.sc1);
+    struct SceneFilePath SC2(scenesPath.sc2);
+    struct SceneFilePath SC3(scenesPath.sc3);
+    struct SceneFilePath SC4(scenesPath.sc4);
+    this -> scenesFilePath.push_back(SC1);
+    this -> scenesFilePath.push_back(SC2);
+    this -> scenesFilePath.push_back(SC3);
+    this -> scenesFilePath.push_back(SC4);
 }
 
 void imageProcess::readEdge()
 {
-    string edgePath = this->camPixOutFile;
-    ifstream infile(edgePath);
+    string edgeOrgTxtPath = this -> scenesFilePath[this -> scIdx].EdgeOrgTxtPath;
+    ifstream infile(edgeOrgTxtPath);
     string line;
-    vector<vector<double>> camEdgeOrg;
+    vector<vector<double>> edgeOrgTxtVec;
     while (getline(infile, line))
     {
         stringstream ss(line);
@@ -93,66 +89,31 @@ void imageProcess::readEdge()
         }
         if (v.size() == 2)
         {
-            camEdgeOrg.push_back(v);
+            edgeOrgTxtVec.push_back(v);
         }
     }
-    cout << "Imported image points: " << camEdgeOrg.size() << endl;
-    // Remove dumplicated points
-    std::sort(camEdgeOrg.begin(), camEdgeOrg.end());
-    camEdgeOrg.erase(unique(camEdgeOrg.begin(), camEdgeOrg.end()), camEdgeOrg.end());
-
-    cout << "Filtered image points: " << camEdgeOrg.size() << endl;
-    this->camEdgeOrg = camEdgeOrg;
-}
-
-void imageProcess::setIntrinsic(vector<double> parameters)
-{
-    // polynomial params
-    this->intrinsic.a0 = parameters[6];
-    this->intrinsic.a2 = parameters[7];
-    this->intrinsic.a3 = parameters[8];
-    this->intrinsic.a4 = parameters[9];
-    // expansion and distortion
-    this->intrinsic.c = parameters[10];
-    this->intrinsic.d = parameters[11];
-    this->intrinsic.e = parameters[12];
-    // center
-    this->intrinsic.u0 = parameters[13];
-    this->intrinsic.v0 = parameters[14];
+    cout << "Imported Fisheye Edge Points: " << edgeOrgTxtVec.size() << endl;
+    /********* Remove Dumplicated Points *********/
+    std::sort(edgeOrgTxtVec.begin(), edgeOrgTxtVec.end());
+    edgeOrgTxtVec.erase(unique(edgeOrgTxtVec.begin(), edgeOrgTxtVec.end()), edgeOrgTxtVec.end());
+    cout << "Dumplicated Fisheye Edge Points: " << edgeOrgTxtVec.size() << endl;
+    this -> edgeOrgTxtVec = edgeOrgTxtVec;
 }
 
 cv::Mat imageProcess::readOrgImage(){
-    cv::Mat image = cv::imread(this->imageFile, cv::IMREAD_UNCHANGED);
-    try
-    {
-        if ((image.rows == 0 && image.cols == 0) || (image.rows > 16384 || image.cols > 16384)){
-             char o_[256];
-            sprintf(o_, "%s%s%s",
-            "Error: size of original fisheye image is 0, check the path and filename.\n",
-            "Current path:", this->imageFile.c_str());
-            throw o_;
-        }
-        else if (image.rows != this->orgRows || image.cols != this->orgCols)
-        {
-            throw "Error: size of original fisheye image is incorrect!";
-        }
-    }
-    catch (const char *msg)
-    {
-        cerr << msg << endl;
-        abort();
-    }
+    string HdrImgPath = this -> scenesFilePath[this -> scIdx].HdrImgPath;
+    cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
+    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect!");
+    ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "Size of original fisheye image is 0, check the path and filename!");
     return image;
 }
 
 std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> imageProcess::fisheyeImageToSphere()
 {
     // read the origin fisheye image and check the image size
-
     cv::Mat image = readOrgImage();
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
     result = fisheyeImageToSphere(image);
-
     return result;
 }
 
@@ -192,18 +153,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
-    try
-    {
-        if (image.rows != this->orgRows || image.cols != this->orgCols)
-        {
-            throw "Error: size of original fisheye image is incorrect!";
-        }
-    }
-    catch (const char *msg)
-    {
-        cerr << msg << endl;
-        abort();
-    }
+    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect!");
 
     for (int u = 0; u < this->orgRows; u++)
     {
@@ -220,18 +170,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
                 phi = atan2(Y, X) + M_PI; // note that atan2 is defined as Y/X
                 theta = acos(Z / sqrt(pow(X, 2) + pow(Y, 2) + pow(Z, 2)));
 
-                try
-                {
-                    if (theta == 0)
-                    {
-                        throw "Error: theta equals to zero, failed!";
-                    }
-                }
-                catch (const char *msg)
-                {
-                    cerr << msg << endl;
-                    abort();
-                }
+                ROS_ASSERT_MSG((theta != 0), "Theta equals to zero!");
 
                 // point cloud with origin polar coordinates
                 ptPolar.x = phi;
@@ -287,8 +226,8 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
 
 vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth)
 {
-    double flatRows = this->flatRows;
-    double flatCols = this->flatCols;
+    double flatRows = this -> flatRows;
+    double flatCols = this -> flatCols;
     cv::Mat flatImage = cv::Mat::zeros(flatRows, flatCols, CV_8UC3); // define the flat image
 
     // define the tag list
@@ -305,7 +244,7 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
 
     int invalidSearch = 0; // search invalid count
     int invalidIndex = 0;  // index invalid count
-    double radPerPix = this->radPerPix;
+    double radPerPix = this -> radPerPix;
     double searchRadius = radPerPix / 2;
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flatRows; ++u)
@@ -403,12 +342,15 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
 
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
+
+    string fusionImgPath = this -> scenesFilePath[this -> scIdx].FusionImgPath;
+
     if (bandwidth < 0){
-        cv::imwrite(this->flatImageFile, flatImage);
+        cv::imwrite(fusionImgPath, flatImage);
     }
     else{
         char o_[256];
-        string 	str = this->flatImageFile.substr(0, str.length() - 4);
+        string 	str = fusionImgPath.substr(0, str.length() - 4);
         sprintf(o_, "%s%s%f%s", str.c_str(), "_", bandwidth, ".bmp");
         cv::imwrite(o_, flatImage);
     }
@@ -418,26 +360,11 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
 
 vector<vector<int>> imageProcess::edgeToPixel()
 {
-    cv::Mat edgeImage = cv::imread(this->imageEdgeFile, cv::IMREAD_UNCHANGED);
-    try
-    {
-        if ((edgeImage.rows == 0 && edgeImage.cols == 0) || (edgeImage.rows > 16384 || edgeImage.cols > 16384)){
-             char o_[256];
-            sprintf(o_, "%s%s%s",
-            "Error: size of flat image (fisheye cam) is 0, check the path and filename.\n",
-            "Current path:", this->imageFile.c_str());
-            throw o_;
-        }
-        if (edgeImage.rows != this->flatRows || edgeImage.cols != this->flatCols)
-        {
-            throw "Error: size of flat image (fisheye cam) is incorrect!";
-        }
-    }
-    catch (const char *msg)
-    {
-        cerr << msg << endl;
-        abort();
-    }
+    string edgeImgPath = this -> scenesFilePath[this -> scIdx].EdgeImgPath;
+    cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
+
+    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect!");
+    ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "Size of original fisheye image is 0, check the path and filename!");
 
     vector<vector<int>> edgePixels;
     for (int u = 0; u < edgeImage.rows; ++u)
@@ -452,9 +379,10 @@ vector<vector<int>> imageProcess::edgeToPixel()
         }
     }
 
-    // write the coordinates into txt file
+    /********* write the coordinates into txt file *********/
+    string edgeTxtPath = this -> scenesFilePath[this -> scIdx].EdgeTxtPath;
     ofstream outfile;
-    outfile.open(this->camEdgePixFile, ios::out);
+    outfile.open(edgeTxtPath, ios::out);
     if (!outfile.is_open())
     {
         cout << "Open file failure" << endl;
@@ -504,12 +432,14 @@ void imageProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vecto
             pixUV.push_back(pixel);
         }
     }
-    this->camEdgeOrg = pixUV;
+
+    this -> edgeOrgTxtVec = pixUV;
     cout << "number of invalid lookups(image): " << invalidLookUp << endl;
 
-    // write the coordinates into txt file
+    string edgeOrgTxtPath = this -> scenesFilePath[this -> scIdx].EdgeOrgTxtPath;
+    /********* write the coordinates into txt file *********/
     ofstream outfile;
-    outfile.open(this->camPixOutFile, ios::out);
+    outfile.open(edgeOrgTxtPath, ios::out);
     if (!outfile.is_open())
     {
         cout << "Open file failure" << endl;
@@ -523,9 +453,9 @@ void imageProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vecto
 
 vector<vector<double>> imageProcess::edgeTransform()
 {
-    vector<vector<double>> camEdgeOrg = this->camEdgeOrg;
-    vector<double> camEdgeRows(camEdgeOrg.size());
-    vector<double> camEdgeCols(camEdgeOrg.size());
+    vector<vector<double>> edgeOrgTxtVec = this -> edgeOrgTxtVec;
+    vector<double> camEdgeRows(edgeOrgTxtVec.size());
+    vector<double> camEdgeCols(edgeOrgTxtVec.size());
 
     double radius;
     double phi;
@@ -547,10 +477,10 @@ vector<vector<double>> imageProcess::edgeTransform()
     u0 = this->intrinsic.u0;
     v0 = this->intrinsic.v0;
 
-    for (int i = 0; i < camEdgeOrg.size(); i++)
+    for (int i = 0; i < edgeOrgTxtVec.size(); i++)
     {
-        double u = camEdgeOrg[i][0];
-        double v = camEdgeOrg[i][1];
+        double u = edgeOrgTxtVec[i][0];
+        double v = edgeOrgTxtVec[i][1];
         X = c * u + d * v - u0;
         Y = e * u + 1 * v - v0;
         radius = sqrt(pow(X, 2) + pow(Y, 2));
@@ -570,8 +500,7 @@ vector<vector<double>> imageProcess::edgeTransform()
     return camEdgePolar;
 }
 
-// static and stable method
-// convert cv::Mat to arma::mat
+// convert cv::Mat to arma::mat (static and stable method)
 static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out)
 {
     // convert unsigned int cv::Mat to arma::Mat<double>
@@ -582,10 +511,9 @@ static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out)
             arma_mat_out(r, c) = cv_mat_in.data[r * cv_mat_in.cols + c] / 255.0;
         }
     }
-};
+}
 
-// static and stable method
-// convert arma::mat to Eigen::Matrix 
+// convert arma::mat to Eigen::Matrix (static and stable method)
 static Eigen::MatrixXd arma_cast_eigen(arma::mat arma_A)
 {
 
@@ -608,12 +536,12 @@ std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool p
     arma::mat query;
 
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
-    const int ref_size = this->camEdgeOrg.size();
+    const int ref_size = this -> edgeOrgTxtVec.size();
     arma::mat reference(2, ref_size);
     for (int i = 0; i < ref_size; ++i)
     {
-        reference(0, i) = (double)this->camEdgeOrg[i][0];
-        reference(1, i) = (double)this->camEdgeOrg[i][1];
+        reference(0, i) = (double)this -> edgeOrgTxtVec[i][0];
+        reference(1, i) = (double)this -> edgeOrgTxtVec[i][1];
     }
 
     if (!polar)
@@ -661,8 +589,10 @@ std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool p
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kdeEstimations);
 
+
+    string kdeTxtPath = this -> scenesFilePath[this -> scIdx].KdeTxtPath;
     ofstream outfile;
-    outfile.open(this->camKdeFile, ios::out);
+    outfile.open(kdeTxtPath, ios::out);
     if (!outfile.is_open())
     {
         cout << "Open file failure" << endl;

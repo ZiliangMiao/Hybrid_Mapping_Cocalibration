@@ -18,17 +18,44 @@
 
 using namespace std;
 
-// ofstream outfile;
+static const int num_q = 3;
+static const int num_p = 9;
 
-// convert ceres::Jet and double to double in optimization process
-double get_double( double x )
-{ return static_cast<double>(x); }
+/**
+ * @brief Get double from type T (double and ceres::Jet) variables in the ceres optimization process
+ *
+ * @param x input variable with type T (double and ceres::Jet)
+ * @return **
+ */
+double get_double(double x)
+{
+    return static_cast<double>(x);
+}
 
-template<typename SCALAR, int N>
-double get_double( const ceres::Jet<SCALAR, N>& x )
-{ return static_cast<double>(x.a); }
+template <typename SCALAR, int N>
+double get_double(const ceres::Jet<SCALAR, N> &x)
+{
+    return static_cast<double>(x.a);
+}
 
-void initQuaternion(double rx, double ry, double rz, vector<double> &init){
+void customOutput(vector<const char *> name, double *params, vector<double> params_init)
+{
+    std::cout << "Initial ";
+    for (unsigned int i = 0; i < name.size(); i++)
+    {
+        std::cout << name[i] << ": " << params_init[i] << " ";
+    }
+    std::cout << "\n";
+    std::cout << "Final   ";
+    for (unsigned int i = 0; i < name.size(); i++)
+    {
+        std::cout << name[i] << ": " << params[i] << " ";
+    }
+    std::cout << "\n";
+}
+
+void initQuaternion(double rx, double ry, double rz, vector<double> &init)
+{
     Eigen::Vector3d eulerAngle(rx, ry, rz);
     Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
     Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
@@ -42,152 +69,174 @@ void initQuaternion(double rx, double ry, double rz, vector<double> &init){
     init[3] = q.w();
 }
 
-
 struct Calibration
 {
     template <typename T>
-    bool operator()(const T* const _q, const T* const _p, T* cost) const
+    bool operator()(const T *const _q, const T *const _p, T *cost) const
     {
         // intrinsic parameters
-        const T rx = _q[0];
-        const T ry = _q[1];
-        const T rz = _q[2];
-        // const T rw = _q[0];
-        // const T rx = _q[1];
-        // const T ry = _q[2];
-        // const T rz = _q[3];
-        const T tx = _p[0];
-        const T ty = _p[1];
-        const T tz = _p[2];
-        const T u0 = _p[3];
-        const T v0 = _p[4];
-        // const T a0 = _p[5];
-        // const T a1 = _p[6];
-        // const T a2 = _p[7];
-        // const T a3 = _p[8];
-        // const T a4 = _p[9];
-        const T a1 = _p[5];
-        const T a3 = _p[6];
-        const T a5 = _p[7];
-
-        // rigid transformation
-        // Convert to Eigen convention (w, x, y, z)
-        // Eigen::Quaternion<T> q{_q[3], _q[0], _q[1], _q[2]};
+        Eigen::Matrix<T, 3, 1> eulerAngle(_q[0], _q[1], _q[2]);
         Eigen::Matrix<T, 3, 1> t{_p[0], _p[1], _p[2]};
-        Eigen::Matrix<T, 3, 1> p_;
+        Eigen::Matrix<T, 2, 1> uv_0{_p[3], _p[4]};
+        Eigen::Matrix<T, 6, 1> a_;
+        switch (num_p)
+        {
+            case 10:
+                a_ << _p[5], _p[6], _p[7], _p[8], _p[9], T(0);
+                break;
+            case 9:
+                a_ << _p[5], _p[6], T(0), _p[7], T(0), _p[8];
+                break;
+            default:
+                a_ << T(0), _p[5], T(0), _p[6], T(0), _p[7];
+                break;
+        }
+
+        Eigen::Matrix<T, 3, 1> p_ = point_.cast<T>();
         Eigen::Matrix<T, 3, 1> p_trans;
 
         T phi, theta, r;
-        T inv_r, inv_u, inv_v;
-        T eval_u, eval_v, result, tmp;
+        T inv_r;
+        T res, val;
 
-        p_ << T(point_(0)), T(point_(1)), T(point_(2));
-
-        // extrinsic transform
-
-        Eigen::Matrix<T, 3, 1> eulerAngle(rx, ry, rz);
+        /** extrinsic transform for original 3d lidar edge points **/
         Eigen::Matrix<T, 3, 3> R;
 
         Eigen::AngleAxis<T> xAngle(Eigen::AngleAxis<T>(eulerAngle(0), Eigen::Matrix<T, 3, 1>::UnitX()));
         Eigen::AngleAxis<T> yAngle(Eigen::AngleAxis<T>(eulerAngle(1), Eigen::Matrix<T, 3, 1>::UnitY()));
         Eigen::AngleAxis<T> zAngle(Eigen::AngleAxis<T>(eulerAngle(2), Eigen::Matrix<T, 3, 1>::UnitZ()));
         R = zAngle * yAngle * xAngle;
+
+        /** Construct rotation matrix using quaternion in Eigen convention (w, x, y, z) **/
+        // Eigen::Quaternion<T> q{_q[3], _q[0], _q[1], _q[2]};
         // R = q.toRotationMatrix()
 
         p_trans = R * p_ + t;
 
-        // intrinsic inverse transform
+        /** extrinsic transform for transformed 3d lidar edge points **/
+        Eigen::Matrix<T, 2, 1> S;
+        Eigen::Matrix<T, 2, 1> p_uv;
 
+        /** r - theta representaion: r = f(theta) in polynomial form **/
+        theta = acos(p_trans(2) / sqrt((p_trans(0) * p_trans(0)) + (p_trans(1) * p_trans(1)) + (p_trans(2) * p_trans(2))));
+        inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        // inv_r = a0 + a1 * theta + a3 * pow(theta, 3) + a5 * pow(theta, 5);
         // phi = atan2(p_trans(1), p_trans(0));
-        theta = acos(p_trans(2) / sqrt((p_trans(0)*p_trans(0)) + (p_trans(1)*p_trans(1)) + (p_trans(2)*p_trans(2))));
-
-        //  r-theta representaion:
-        //  1) r = f(theta) using polynomials of 'theta'
-        //  2) theta = f(r) using polynomials of 'r' and compute inverse spline mapping
-        // inv_r = a0 + a1 * theta + a2 * pow(theta, 2) + a3 * pow(theta, 3) + a4 * pow(theta, 4);
-        inv_r = a1 * theta + a3 * pow(theta, 3) + a5 * pow(theta, 5);
         // inv_u = (inv_r * cos(phi) + u0);
         // inv_v = (inv_r * sin(phi) + v0);
+
+        /** compute undistorted uv coordinate of lidar projection point and evaluate the value **/
         r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
-        inv_u = (inv_r / r * p_trans(0) + u0);
-        inv_v = (inv_r / r * p_trans(1) + v0);
+        S = {-inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
+        p_uv = inv_distortion_.cast<T>() * S + uv_0;
+        kde_interpolator_.Evaluate(p_uv(0), p_uv(1), &val);
 
-        kde_interpolator_.Evaluate(inv_u, inv_v, &tmp);
+        /**
+         * residual:
+         * 1. diff. of kde image evaluation and lidar point projection(related to constant "scale_" and unified radius));
+         * 2. polynomial correction: r_max = F(theta_max);
+         *  **/
+        res = T(scale_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(theta_ref) - a_(2) * T(pow(theta_ref, 2)) - a_(3) * T(pow(theta_ref, 3)) - a_(4) * T(pow(theta_ref, 4) - a_(5) * T(pow(theta_ref, 5))));
 
-        // bicubic interpolation evaluation for "polar" version kde
-        // kde_interpolator_.Evaluate(phi, inv_r, &tmp);
-
-        // result = T(0.005) * (T(1.0) - inv_r * T(0.5/img_size_[1])) - tmp;
-
-        // char o_[32];
-        // sprintf(o_, "%f%s%f%s", get_double(inv_u), ",", get_double(inv_v), "\n");
-        // outfile << o_;
-
-        cost[0] = T(scale_) * (T(1.0) - inv_r * T(0.5/img_size_[1])) - tmp;
-        cost[1] = T(1e-8) * (T(1071) - a1 * T(ref_theta_) - a3 * T(pow(ref_theta_, 3)) - a5* T(pow(ref_theta_, 5))) ;
+        cost[0] = res;
+        cost[1] = res;
         return true;
     }
 
+    /** DO NOT remove the "&" of the interpolator! **/
     Calibration(const Eigen::Vector3d point,
                 const Eigen::Vector2d img_size,
                 const double scale,
-                const ceres::BiCubicInterpolator<ceres::Grid2D<double>>& interpolator)
-            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), scale_(scale){}
+                const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
+                const Eigen::Matrix2d inv_distortion)
+            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), scale_(scale), inv_distortion_(inv_distortion) {}
 
-    static ceres::CostFunction* Create(const Eigen::Vector3d& point,
-                                       const Eigen::Vector2d& img_size,
-                                       const double& scale,
-                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>>& interpolator) {
-        return new ceres::AutoDiffCostFunction<Calibration, 2, 3, 8>(
-                new Calibration(point, img_size, scale, interpolator));
+    /**
+     * @brief
+     * create autodiff costfunction for optimization.
+     * @param point xyz coordinate of a 3d lidar edge point;
+     * @param img_size size of the original fisheye image;
+     * @param scale default value of lidar points;
+     * @param interpolator bicubic interpolator for original fisheye image;
+     * @param inv_distortion inverse distortion matrix [c, d; e, 1] for fisheye camera;
+     * @return ** ceres::CostFunction*
+     */
+    static ceres::CostFunction *Create(const Eigen::Vector3d &point,
+                                       const Eigen::Vector2d &img_size,
+                                       const double &scale,
+                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
+                                       Eigen::Matrix2d &inv_distortion)
+    {
+        return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
+                new Calibration(point, img_size, scale, interpolator, inv_distortion));
     }
 
     const Eigen::Vector3d point_;
     const Eigen::Vector2d img_size_;
     const double scale_;
-    const ceres::BiCubicInterpolator<ceres::Grid2D<double>>& kde_interpolator_;
-    const double ref_theta_ = 95*M_PI/180;
-
+    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
+    const Eigen::Matrix2d inv_distortion_;
+    const double theta_ref = 95 * M_PI / 180;
 };
 
-
-class OutputCallback : public ceres::IterationCallback {
+/**
+ * @brief
+ * custom callback to print something after every iteration (inner iteration is not included)
+ */
+class OutputCallback : public ceres::IterationCallback
+{
 public:
-    OutputCallback(string filename, double* params)
-            : filename_(filename), params_(params) {}
+    OutputCallback(double *params)
+            : params_(params) {}
 
     ceres::CallbackReturnType operator()(
-            const ceres::IterationSummary& summary) override {
-        // outfile.close();
-        // outfile.open(filename_);
+            const ceres::IterationSummary &summary) override
+    {
         return ceres::SOLVER_CONTINUE;
     }
 
 private:
-    const string filename_;
-    const double* params_;
+    const double *params_;
 };
 
-// invoke ceres-solver for optimization
-std::vector<double> ceresAutoDiff(imageProcess cam, lidarProcess lid, double bandwidth, vector<double> params_init, vector<double> lb, vector<double> ub)
+/**
+ * @brief
+ * Ceres-solver Optimization
+ * @param cam camProcess
+ * @param lid lidarProcess
+ * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
+ * @param distortion distortion matrix {c, d; e, 1}
+ * @param params_init initial parameters
+ * @param name name of parameters
+ * @param lb lower bounds of the parameters
+ * @param ub upper bounds of the parameters
+ * @return ** std::vector<double>
+ */
+std::vector<double> ceresAutoDiff(imageProcess cam,
+                                  lidarProcess lid,
+                                  double bandwidth,
+                                  Eigen::Matrix2d distortion,
+                                  vector<double> params_init,
+                                  vector<const char *> name,
+                                  vector<double> lb,
+                                  vector<double> ub)
 {
     std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
     const double scale = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
     const int num_params = params_init.size();
-    // Quaternion in {x, y, z, w}
-    // double param_init[] = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.14, 0.22548, 596.99269, 42.07474, -54.03895, 20.89775, 1023.0, 1201.0};
-    // double dev[] = {1, 1, 1e-3, 1, 1e-3, 1e-3, 5e-4, 5e-0, 5e-0, 5e+1, 5e+0, 5e+0, 5e+0, 5e+0};
+
     // initQuaternion(0.0, -0.01, M_PI, param_init);
 
     double params[num_params];
-    memcpy(params, &params_init[0], params_init.size()*sizeof(double));
+    memcpy(params, &params_init[0], params_init.size() * sizeof(double));
+    Eigen::Matrix2d inv_distortion = distortion.inverse();
     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
     // Data is a row-major array of kGridRows x kGridCols values of function
     // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
     // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
     double *kde_data = new double[p_c.size()];
-    memcpy(kde_data, &p_c[0], p_c.size()*sizeof(double));
+    memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 
     // unable to set coordinate to 2D grid for corresponding interpolator;
     // use post-processing to scale the grid instead.
@@ -200,31 +249,33 @@ std::vector<double> ceresAutoDiff(imageProcess cam, lidarProcess lid, double ban
 
     // problem.AddParameterBlock(params, 4, q_parameterization);
     // problem.AddParameterBlock(params + 4, num_params - 4);
-    problem.AddParameterBlock(params, 3);
-    problem.AddParameterBlock(params + 3, num_params - 3);
+    problem.AddParameterBlock(params, num_q);
+    problem.AddParameterBlock(params + num_q, num_params - num_q);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-    for (int i = 0; i < lid.lidEdgeOrg->points.size(); ++i) {
+    for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
+    {
         // Eigen::Vector3d p_l_tmp = p_l.row(i);
-        Eigen::Vector3d p_l_tmp = {lid.lidEdgeOrg->points[i].x, lid.lidEdgeOrg->points[i].y, lid.lidEdgeOrg->points[i].z};
-        problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator),
-                                 nullptr,
+        Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+        problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator, inv_distortion),
+                                 loss_function,
                                  params,
-                                 params + 3);
+                                 params + num_q);
     }
 
     for (int i = 0; i < num_params; ++i)
     {
-        if (i < 3){
+        if (i < num_q)
+        {
             problem.SetParameterLowerBound(params, i, lb[i]);
             problem.SetParameterUpperBound(params, i, ub[i]);
         }
-        else{
-            problem.SetParameterLowerBound(params + 3, i - 3, lb[i]);
-            problem.SetParameterUpperBound(params + 3, i - 3, ub[i]);
+        else
+        {
+            problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
+            problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
         }
-
     }
 
     ceres::Solver::Options options;
@@ -233,42 +284,17 @@ std::vector<double> ceresAutoDiff(imageProcess cam, lidarProcess lid, double ban
     options.minimizer_progress_to_stdout = true;
     options.num_threads = 12;
     options.function_tolerance = 1e-7;
-    // options.use_nonmonotonic_steps = true;
+    options.use_nonmonotonic_steps = true;
 
-    OutputCallback callback(lid.lidTransFile, params);
-    options.callbacks.push_back(&callback);
+    // OutputCallback callback(params);
+    // options.callbacks.push_back(&callback);
 
     ceres::Solver::Summary summary;
 
     ceres::Solve(options, &problem, &summary);
 
     std::cout << summary.FullReport() << "\n";
-    // std::cout << "Initial rw: " << param_init[0] << " rx: " << param_init[1] << " ry: " << param_init[2] << " rz: " << param_init[3]
-    //         << " tx: " << param_init[4] << " ty: " << param_init[5] << " tz: " << param_init[6]
-    //         << " a0: " << param_init[7] << " a1: " << param_init[8] << " a2: " << param_init[9] << " a3: " << param_init[10] << " a4: " << param_init[11]
-    //         // << " c: " << param_init[11] << " d: " << param_init[12] << " e: " << param_init[13]
-    //         << " u0: " << param_init[12] << " v0: " << param_init[13]
-    //         << "\n";
-    // std::cout << "Final   rw: " << params[0] << " rx: " << params[1] << " ry: " << params[2] << " rz: " << params[3]
-    //         << " tx: " << params[4] << " ty: " << params[5] << " tz: " << params[6]
-    //         << " a0: " << params[7] << " a1: " << params[8] << " a2: " << params[9] << " a3: " << params[10] << " a4: " << params[11]
-    //         // << " c: " << params[11] << " d: " << params[12] << " e: " << params[13]
-    //         << " u0: " << params[12] << " v0: " << params[13]
-    //         << "\n";
-    std::cout << "Initial rx: " << params_init[0] << " ry: " << params_init[1] << " rz: " << params_init[2]
-              << " tx: " << params_init[3] << " ty: " << params_init[4] << " tz: " << params_init[5]
-              << " u0: " << params_init[6] << " v0: " << params_init[7]
-              // << " a0: " << param_init[8] << " a1: " << param_init[9] << " a2: " << param_init[10] << " a3: " << params[11] << " a4: " << params[12]
-              << " a1: " << params_init[8] << " a3: " << params_init[9] << " a5: " << params_init[10]
-              // << " c: " << param_init[11] << " d: " << param_init[12] << " e: " << param_init[13]
-              << "\n";
-    std::cout << "Final   rx: " << params[0] << " ry: " << params[1] << " rz: " << params[2]
-              << " tx: " << params[3] << " ty: " << params[4] << " tz: " << params[5]
-              << " u0: " << params[6] << " v0: " << params[7]
-              // << " a0: " << params[8] << " a1: " << params[9] << " a2: " << params[10] << " a3: " << params[11] << " a4: " << params[12]
-              << " a1: " << params[8] << " a3: " << params[9] << " a5: " << params[10]
-              // << " c: " << params[11] << " d: " << params[12] << " e: " << params[13]
-              << "\n";
-    std::vector<double> round_res(params, params+sizeof(params)/sizeof(double));
-    return round_res;
+    customOutput(name, params, params_init);
+    std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
+    return params_res;
 }
