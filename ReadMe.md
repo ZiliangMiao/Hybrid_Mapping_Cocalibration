@@ -46,11 +46,13 @@ note: package name is data_process
 
  <table>
 	<tr>
-	    <th>Item</th>
-	    <th>Pics</th>  
-	    <th>Shopping Link</th> 
+	    <th>Hardware Platform</th>
+	    <th>Item Names</th>
+	    <th>Pictures</th>  
+	    <th>Shopping Links</th> 
 	</tr >
 	<tr >
+            <td rowspan="4"><img src="readme_pics/robot.jpg" /></td>
 	    <td>Livox Mid-360 </td>
 	    <td align="center" valign="middle"><img src=  "readme_pics/robot.jpg" width=25% /></td>
             <td align="center" valign="middle">  <a href ="https://www.livoxtech.com/horizon"> Lidar </a> </td>
