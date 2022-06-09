@@ -5,15 +5,16 @@ LFF project is an automatic calibration method for Livox mid-360 LiDAR and Fishe
 ## 1. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
 Ubuntu 18.04.
-ROS Melodic. [ROS Installation](http://wiki.ros.org/ROS/Installation)
+
+ROS Melodic. Please follow [ROS Installation](http://wiki.ros.org/ROS/Installation)
 ### 1.2. **Ceres-Solver**
-Follow [Ceres-Solver Installation](http://ceres-solver.org/installation.html).
+Please follow [Ceres-Solver Installation](http://ceres-solver.org/installation.html).
 ### 1.3. **PCL**
-Follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
+Please follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html).
 ### 1.3. **OpenCV**
-Follow [OpenCV Installation](https://opencv.org/).
+Please follow [OpenCV Installation](https://opencv.org/).
 ### 1.4. **mlpack**
-Follow [mlpack Installation](https://mlpack.org/).
+Please follow [mlpack Installation](https://mlpack.org/).
 
 ## 2. Build 
 Clone the repository and catkin_make:
