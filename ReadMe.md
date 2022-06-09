@@ -77,7 +77,7 @@ note: package name is data_process
 	</tr>
 	<tr>
 	    <td>Morefine S500+</td>
-	    <td align="center" valign="middle"><img src="readme_pics/robot.png" width=22% /></td>
+	    <td align="center" valign="middle"><img src="readme_pics/morefine.png" width=22% /></td>
             <td align="center" valign="middle">  <a href ="https://www.dji.com/cn/manifold-2"> Onboard-Computer </a> </td>
 	</tr>
 	<tr>
