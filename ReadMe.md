@@ -68,7 +68,7 @@ note: package name is data_process
             <td rowspan="4"><img src="readme_pics/robot.jpg" /></td>
 	    <td>Livox Mid-360 </td>
 	    <td align="center" valign="middle"><img src=  "readme_pics/mid360.png" width=25% /></td>
-            <td align="center" valign="middle">  <a href ="https://www.livoxtech.com/horizon"> Lidar </a> </td>
+            <td align="center" valign="middle">  <a href ="https://www.livoxtech.com"> Lidar </a> </td>
 	</tr>
 	<tr>
 	    <td> MV-Fisheye Camera</td>
@@ -78,7 +78,7 @@ note: package name is data_process
 	<tr>
 	    <td>Morefine S500+</td>
 	    <td align="center" valign="middle"><img src="readme_pics/morefine.png" width=22% /></td>
-            <td align="center" valign="middle">  <a href ="https://www.dji.com/cn/manifold-2"> Onboard-Computer </a> </td>
+            <td align="center" valign="middle">  <a href =https://morefines.com/products/mini-pc-s500-enclosure> Onboard-Computer </a> </td>
 	</tr>
 	<tr>
 	    <td> Scout-mini </td>
