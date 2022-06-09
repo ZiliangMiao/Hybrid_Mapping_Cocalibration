@@ -90,4 +90,4 @@ note: package name is data_process
 
 ## 5. Acknowledgements
 Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration). [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab).
-Thanks for the guidance of [ISEE-Lab](https://isee.technology/) and Prof.HONG Xiaoping.
+Thanks for the guidance of Prof.HONG Xiaoping and [ISEE-Lab](https://isee.technology/).
