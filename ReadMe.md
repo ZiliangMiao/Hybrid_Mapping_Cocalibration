@@ -40,8 +40,8 @@ note: package name is data_process
 ### 4.1. Hardwares
 
 <div align="center">
-    <img src="readme_pics/robot.png" width=45% >
-    <img src="readme_pics/robot.png" width=45% >
+    <img src="readme_pics/robot.jpg" width=45% >
+    <img src="readme_pics/robot.jpg" width=45% >
 </div>
 
 
