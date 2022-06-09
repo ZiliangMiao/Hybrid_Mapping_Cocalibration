@@ -16,18 +16,35 @@ Follow [OpenCV Installation](https://opencv.org/).
 Follow [mlpack Installation](https://mlpack.org/).
 
 ## 2. Build 
-ROS Package name: data_process
+Clone the repository and catkin_make:
+
+```
+    cd ~/catkin_ws/src/
+    git clone https://github.com/SDIM-Fisheye/Livox_Fisheye_Fusion.git
+    cd ../
+    catkin_make
+    source ~/catkin_ws/devel/setup.bash
+```
+note: package name is data_process
 
 
 ## 3. Run
+### Only for Livox Mid-360
 
+```
+    roslaunch loam_livox livox.launch
+    roslaunch livox_ros_driver livox_lidar.launch
+```
 
+## 4. Results
+### 4.1. Hardwares
 
-## 4. Example
-
+<div align="center">
+    <img src="readme_pics/robot.png" width=45% >
+    <img src="readme_pics/robot.png" width=45% >
+</div>
 
 
 ## 5. Acknowledgements
 Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration). [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab).
-
 Thanks for the guidance of [ISEE-Lab](https://isee.technology/) and Prof.HONG Xiaoping.
