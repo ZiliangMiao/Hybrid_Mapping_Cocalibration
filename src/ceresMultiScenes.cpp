@@ -221,9 +221,113 @@ std::vector<double> ceresAutoDiff(imageProcess cam,
                                   vector<double> lb,
                                   vector<double> ub)
 {
-    /********* Fisheye KDE *********/
     std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
-    /********* 2d vector *********/
+    const double scale = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
+    const int num_params = params_init.size();
+
+    // initQuaternion(0.0, -0.01, M_PI, param_init);
+
+    double params[num_params];
+    memcpy(params, &params_init[0], params_init.size() * sizeof(double));
+    Eigen::Matrix2d inv_distortion = distortion.inverse();
+    // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
+
+    // Data is a row-major array of kGridRows x kGridCols values of function
+    // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
+    // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
+    double *kde_data = new double[p_c.size()];
+    memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
+
+    // unable to set coordinate to 2D grid for corresponding interpolator;
+    // use post-processing to scale the grid instead.
+    const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
+    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
+
+    // Ceres Problem
+    // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
+    ceres::Problem problem;
+
+    // problem.AddParameterBlock(params, 4, q_parameterization);
+    // problem.AddParameterBlock(params + 4, num_params - 4);
+    problem.AddParameterBlock(params, num_q);
+    problem.AddParameterBlock(params + num_q, num_params - num_q);
+    ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
+
+    Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
+    for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
+    {
+        // Eigen::Vector3d p_l_tmp = p_l.row(i);
+        Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+        problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator, inv_distortion),
+                                 loss_function,
+                                 params,
+                                 params + num_q);
+    }
+
+    for (int i = 0; i < num_params; ++i)
+    {
+        if (i < num_q)
+        {
+            problem.SetParameterLowerBound(params, i, lb[i]);
+            problem.SetParameterUpperBound(params, i, ub[i]);
+        }
+        else
+        {
+            problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
+            problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
+        }
+    }
+
+    ceres::Solver::Options options;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+    options.minimizer_progress_to_stdout = true;
+    options.num_threads = 12;
+    options.function_tolerance = 1e-7;
+    options.use_nonmonotonic_steps = true;
+
+    // OutputCallback callback(params);
+    // options.callbacks.push_back(&callback);
+
+    ceres::Solver::Summary summary;
+
+    ceres::Solve(options, &problem, &summary);
+
+    std::cout << summary.FullReport() << "\n";
+    customOutput(name, params, params_init);
+    std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
+    return params_res;
+}
+
+/**
+ * @brief
+ * Ceres-solver Optimization
+ * @param cam camProcess
+ * @param lid lidarProcess
+ * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
+ * @param distortion distortion matrix {c, d; e, 1}
+ * @param params_init initial parameters
+ * @param name name of parameters
+ * @param lb lower bounds of the parameters
+ * @param ub upper bounds of the parameters
+ * @return ** std::vector<double>
+ */
+std::vector<double> ceresMultiScenes(imageProcess cam,
+                                  lidarProcess lid,
+                                  double bandwidth,
+                                  Eigen::Matrix2d distortion,
+                                  vector<double> params_init,
+                                  vector<const char *> name,
+                                  vector<double> lb,
+                                  vector<double> ub)
+{
+    /********* Fisheye KDE *********/
+    int numScenes = cam.numScenes;
+    std::vector< std::vector<double> > p_c;
+    for (int idx = 0; idx < numScenes; idx++) {
+        cam.setSceneIdx(idx);
+        p_c[idx] = cam.kdeBlur(bandwidth, 1.0, false);
+    }
 
     const double scale = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
     const int num_params = params_init.size();
@@ -261,7 +365,12 @@ std::vector<double> ceresAutoDiff(imageProcess cam,
     {
         // Eigen::Vector3d p_l_tmp = p_l.row(i);
         /********* <Eigen::Vector3d> *********/
-        Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+        std::vector < Eigen::Vector3d > p_l_tmp;
+        for (int idx = 0; idx < numScenes; idx++) {
+            lid.setSceneIdx(idx);
+            lid.readEdge();
+            p_l_tmp[idx] = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+        }
 
         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator, inv_distortion),
                                  loss_function,

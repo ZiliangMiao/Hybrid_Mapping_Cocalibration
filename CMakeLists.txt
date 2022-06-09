@@ -44,22 +44,18 @@ add_library(lidarProcess
   include/lidarProcess.h
   src/lidarProcess.cpp
 )
-add_library(feature
-  include/feature.h
-  src/feature.cpp
-)
 add_library(MeanShift
   include/MeanShift.h
   src/MeanShift.cpp
-)
-add_library(ceresAutoDiff
-  src/ceresAutoDiff.cpp
 )
 add_library(ceresMultiScenes
   src/ceresMultiScenes.cpp
 )
 add_library(calibOpt
   src/calibOpt.cpp
+)
+add_library(visualization
+  src/visualization.cpp
 )
 
 ## Add executable cpp files
@@ -70,40 +66,28 @@ add_executable(rvizPub src/rvizPub.cpp)
 add_dependencies(mainNode ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(imageProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(lidarProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(feature ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(MeanShift ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rvizPub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(ceresAutoDiff ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(calibOpt ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(visualization ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Link libraries
 target_link_libraries(MeanShift ${catkin_LIBRARIES})
 target_link_libraries(lidarProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(imageProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
-target_link_libraries(feature ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
-# target_link_libraries(mainNode ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
 target_link_libraries(rvizPub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
 target_link_libraries(mainNode
   imageProcess
   lidarProcess
-  ceresAutoDiff
+  ceresMultiScenes
   calibOpt
-  feature
+  visualization
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${MLPACK_LIBRARIES}
-)
-
-target_link_libraries(ceresAutoDiff
-  imageProcess
-  lidarProcess
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  ${PCL_LIBRARIES}
-  ${CERES_LIBRARIES}
 )
 
 target_link_libraries(ceresMultiScenes

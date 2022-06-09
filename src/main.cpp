@@ -14,7 +14,7 @@
 // heading
 #include "imageProcess.h"
 #include "lidarProcess.h"
-#include "ceresAutoDiff.cpp"
+#include "ceresMultiScenes.cpp"
 #include "visualization.cpp"
 
 using namespace std;
@@ -36,8 +36,6 @@ bool checkFolder(string FolderPath){
     }
     return 1;
 }
-
-
 
 int main(int argc, char** argv){
     ros::init(argc, argv, "mainNode");
@@ -105,8 +103,6 @@ int main(int argc, char** argv){
     Eigen::Matrix2d distortion;
     distortion << 1.000143, -0.000177, 0.000129, 1.000000;
 
-    lidarProcess.readEdge();
-    imageProcess.readEdge();
     string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
     for (int i = 0; i < bw.size(); i++)
     {
@@ -137,8 +133,16 @@ int main(int argc, char** argv){
             }
         }
         cout << "Round " << i << endl;
-        params = ceresAutoDiff(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
+        params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
+
+        cout << endl;
+        cout << "----------------- Ceres Optimization ---------------------" << endl;
+        int scVizIdx = 0; /** visualize the first scene **/
+        lidarProcess.setSceneIdx(scVizIdx);
+        imageProcess.setSceneIdx(scVizIdx);
         vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params, distortion);
+        lidarProcess.readEdge();
+        imageProcess.readEdge();
         fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, bandwidth);
     }
     return 0;
