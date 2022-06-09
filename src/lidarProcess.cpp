@@ -633,7 +633,7 @@ bool lidarProcess::createDenseFile(){
     auto nameIter = nameList.begin();
     for(int i = 0; i < groupCount; i++){
         for(int j = 0; j < groupSize; j++){
-            string fileName = pcdsPath + *nameIter;
+            string fileName = pcdsPath + "/" + *nameIter;
             cout << fileName << endl;
             if(reader.read(fileName, *input) < 0){      // read PCD files, and save PointCloud in the pointer
                 PCL_ERROR("File is not exist!");
