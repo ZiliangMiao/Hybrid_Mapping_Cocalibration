@@ -221,7 +221,10 @@ std::vector<double> ceresAutoDiff(imageProcess cam,
                                   vector<double> lb,
                                   vector<double> ub)
 {
+    /********* Fisheye KDE *********/
     std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
+    /********* 2d vector *********/
+
     const double scale = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
     const int num_params = params_init.size();
 
@@ -257,7 +260,9 @@ std::vector<double> ceresAutoDiff(imageProcess cam,
     for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
     {
         // Eigen::Vector3d p_l_tmp = p_l.row(i);
+        /********* <Eigen::Vector3d> *********/
         Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+
         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator, inv_distortion),
                                  loss_function,
                                  params,

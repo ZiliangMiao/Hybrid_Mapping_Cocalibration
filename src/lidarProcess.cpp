@@ -58,8 +58,6 @@ using namespace mlpack::kernel;
 using namespace arma;
 using namespace Eigen;
 
-#define GROUPSIZE 3000 // You can change the size of a PCD group
-
 lidarProcess::lidarProcess(string pkgPath, bool byIntensity)
 {
     this -> byIntensity = byIntensity;
@@ -617,42 +615,39 @@ void lidarProcess::bagToPcd(string bagFile)
     }
 }
 
-bool lidarProcess::createDenseFile()
-{
-    pcl::PCDReader reader; // used for read PCD files
-    vector<string> nameList;
+bool lidarProcess::createDenseFile(){
+    pcl::PCDReader reader; /** used for read PCD files **/
+    vector <string> nameList;
     string pcdsPath = this -> scenesFilePath[this -> scIdx].PcdsPath;
     readFileList(pcdsPath, nameList);
-    sort(nameList.begin(), nameList.end()); // sort file names by order
-    int groupCount = nameList.size() / GROUPSIZE;
+    sort(nameList.begin(),nameList.end()); /** sort file names by order **/
+
+    int groupSize = 50; /** number of pcds to be merged **/
+    int groupCount = nameList.size() / groupSize;
 
     // PCL PointCloud pointer. Remember that the pointer need to be given a new space
     pcl::PointCloud<pcl::PointXYZI>::Ptr input(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZI>::Ptr output(new pcl::PointCloud<pcl::PointXYZI>);
     int outputId = 0;
-    int nameLength = GROUPSIZE * groupCount;
+    int nameLength = groupSize * groupCount;
     auto nameIter = nameList.begin();
-    for (int i = 0; i < groupCount; i++)
-    {
-        for (int j = 0; j < GROUPSIZE; j++)
-        {
+    for(int i = 0; i < groupCount; i++){
+        for(int j = 0; j < groupSize; j++){
             string fileName = pcdsPath + *nameIter;
             cout << fileName << endl;
-            if (reader.read(fileName, *input) < 0)
-            { // read PCD files, and save PointCloud in the pointer
+            if(reader.read(fileName, *input) < 0){      // read PCD files, and save PointCloud in the pointer
                 PCL_ERROR("File is not exist!");
                 system("pause");
                 return false;
             }
-            int pointCount = input->points.size();
-            for (int k = 0; k < pointCount; k++)
-            {
-                output->points.push_back(input->points[k]);
+            int pointCount = input -> points.size();
+            for(int k = 0; k < pointCount; k++){
+                output -> points.push_back(input -> points[k]);
             }
             nameIter++;
         }
-        string lidDensePcdPath = this -> scenesFilePath[this -> scIdx].LidDensePcdPath;
-        pcl::io::savePCDFileBinary(lidDensePcdPath, *output); // Save PCD files with destination file name and PointCloud pointer
+        string outputPath = this -> scenesFilePath[this -> scIdx].OutputPath;
+        pcl::io::savePCDFileBinary(outputPath + "/lidDense" + to_string(groupSize) + ".pcd", *output);
     }
     return true;
 }
