@@ -92,6 +92,7 @@ void imageProcess::readEdge()
             edgeOrgTxtVec.push_back(v);
         }
     }
+    ROS_ASSERT_MSG(edgeOrgTxtVec.size() != 0, "Fisheye Read Edge Fault! Scene Index: %d", this -> numScenes);
     cout << "Imported Fisheye Edge Points: " << edgeOrgTxtVec.size() << endl;
     /********* Remove Dumplicated Points *********/
     std::sort(edgeOrgTxtVec.begin(), edgeOrgTxtVec.end());
@@ -103,8 +104,8 @@ void imageProcess::readEdge()
 cv::Mat imageProcess::readOrgImage(){
     string HdrImgPath = this -> scenesFilePath[this -> scIdx].HdrImgPath;
     cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
-    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect!");
-    ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "Size of original fisheye image is 0, check the path and filename!");
+    ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "Size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> numScenes);
+    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect! Scene Index: %d", this -> numScenes);
     return image;
 }
 
@@ -153,7 +154,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
-    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect!");
+    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "Size of original fisheye image is incorrect! Scene Index: %d", this -> numScenes);
 
     for (int u = 0; u < this->orgRows; u++)
     {
@@ -170,7 +171,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
                 phi = atan2(Y, X) + M_PI; // note that atan2 is defined as Y/X
                 theta = acos(Z / sqrt(pow(X, 2) + pow(Y, 2) + pow(Z, 2)));
 
-                ROS_ASSERT_MSG((theta != 0), "Theta equals to zero!");
+                ROS_ASSERT_MSG((theta != 0), "Theta equals to zero! Scene Index: %d", this -> numScenes);
 
                 // point cloud with origin polar coordinates
                 ptPolar.x = phi;
@@ -344,15 +345,18 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
     cout << "number of invalid indices:" << invalidIndex << endl;
 
     string fusionImgPath = this -> scenesFilePath[this -> scIdx].FusionImgPath;
+    string resultPath = this -> scenesFilePath[this -> scIdx].ResultPath;
 
+    /********* Image Generation *********/
     if (bandwidth < 0){
         cv::imwrite(fusionImgPath, flatImage);
     }
     else{
         char o_[256];
-        string 	str = fusionImgPath.substr(0, str.length() - 4);
-        sprintf(o_, "%s%s%f%s", str.c_str(), "_", bandwidth, ".bmp");
-        cv::imwrite(o_, flatImage);
+//        string str = fusionImgPath.substr(0, str.length() - 4);
+//        sprintf(o_, "%s%s%f%s", str.c_str(), "_", bandwidth, ".bmp");
+        string fusionImgPath = resultPath + "sc_" + to_string(this -> scIdx) + "_fusion_bw_" + to_string(int(bandwidth));
+        cv::imwrite(fusionImgPath, flatImage);
     }
     
     return tagsMap;
@@ -363,8 +367,8 @@ vector<vector<int>> imageProcess::edgeToPixel()
     string edgeImgPath = this -> scenesFilePath[this -> scIdx].EdgeImgPath;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
-    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect!");
-    ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "Size of original fisheye image is 0, check the path and filename!");
+    ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "Size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> numScenes);
+    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect! Scene Index: %d", this -> numScenes);
 
     vector<vector<int>> edgePixels;
     for (int u = 0; u < edgeImage.rows; ++u)

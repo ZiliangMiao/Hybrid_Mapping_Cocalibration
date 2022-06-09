@@ -55,6 +55,7 @@ class lidarProcess{
 
     public:
         bool byIntensity = true;
+        static const int numPcds = 500;
         int flatRows = int((double)110/90 * 1000) + 1;
         int flatCols = 4000;
         double radPerPix = (M_PI/2) / 1000;
@@ -110,7 +111,7 @@ class lidarProcess{
                 this -> EdgeImgPath = ScenePath + "/edges/lidEdge.png";
                 this -> ResultPath = ScenePath + "/results";
                 this -> ProjPath = this -> OutputPath + "/byIntensity";
-                this -> LidDensePcdPath = this -> OutputPath + "/lidDense150.pcd";
+                this -> LidDensePcdPath = this -> OutputPath + "/lidDense" + to_string(numPcds) + ".pcd";
                 this -> FlatImgPath = this -> ProjPath + "/flatLidarImage.bmp";
                 this -> PolarPcdPath = this -> ProjPath + "/lidPolar.pcd";
                 this -> CartPcdPath = this -> ProjPath + "/lidCartesian.pcd";

@@ -15,6 +15,7 @@
 // heading
 #include "imageProcess.h"
 #include "lidarProcess.h"
+#include "visualization.cpp"
 
 using namespace std;
 
@@ -229,13 +230,12 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     const Eigen::Matrix2d inv_distortion = distortion.inverse();
     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
-    const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators;
+    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators;
     std::vector<double> scales;
 
-    for (unsigned int idx = 0; idx < numScenes; idx++)
+    for (int idx = 0; idx < numScenes; idx++)
     {
         cam.setSceneIdx(idx);
-        const ceres::BiCubicInterpolator<ceres::Grid2D<double>>* interpolator = &img_interpolators[idx];
         /********* Fisheye KDE *********/
         vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
         // Data is a row-major array of kGridRows x kGridCols values of function
@@ -247,8 +247,8 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         // use post-processing to scale the grid instead.
         ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
         ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
-        interpolator = new ceres::BiCubicInterpolator<ceres::Grid2D<double>>(kde_grid);
-        scales[idx] = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
+        img_interpolators.push_back(kde_interpolator);
+        scales.push_back(*max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth));
     }
 
     // Ceres Problem
@@ -262,11 +262,11 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-    for (unsigned int idx = 0; idx < numScenes; idx++)
+    for (int idx = 0; idx < numScenes; idx++)
     {
         lid.setSceneIdx(idx);
         lid.readEdge();
-        for (unsigned int j = 0; j < lid.EdgeOrgCloud -> points.size(); ++j)
+        for (int j = 0; j < lid.EdgeOrgCloud -> points.size(); ++j)
         {
             Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[j].x, lid.EdgeOrgCloud -> points[j].y, lid.EdgeOrgCloud -> points[j].z};
             problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scales[idx], img_interpolators[idx], inv_distortion),
@@ -327,7 +327,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 std::vector<double> ceresAutoDiff(imageProcess cam,
                                   lidarProcess lid,
                                   double bandwidth,
-                                  Eigen::Matrix2d distortion,
+                                  const Eigen::Matrix2d distortion,
                                   vector<double> params_init,
                                   vector<const char *> name,
                                   vector<double> lb,
@@ -408,5 +408,10 @@ std::vector<double> ceresAutoDiff(imageProcess cam,
     std::cout << summary.FullReport() << "\n";
     customOutput(name, params, params_init);
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
+
+    vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
+    string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
+    fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
+
     return params_res;
 }

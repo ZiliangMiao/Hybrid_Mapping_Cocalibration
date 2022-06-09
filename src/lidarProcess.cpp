@@ -95,6 +95,8 @@ void lidarProcess::readEdge()
         }
     }
 
+    ROS_ASSERT_MSG(lidPts.size() != 0, "LiDAR Read Edge Incorrect! Scene Index: %d", this -> numScenes);
+
     // Remove dumplicated points
     cout << "Imported LiDAR points: " << lidPts.size() << endl;
     std::sort(lidPts.begin(), lidPts.end());
@@ -393,8 +395,8 @@ vector<vector<int>> lidarProcess::edgeToPixel()
     string edgeImgPath = this -> scenesFilePath[this -> scIdx].EdgeImgPath;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
-    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect!");
-    ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "Size of original fisheye image is 0, check the path and filename!");
+    ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "Size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> numScenes);
+    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect! Scene Index: %d", this -> numScenes);
 
     vector<vector<int>> edgePixels;
     for (int u = 0; u < edgeImage.rows; ++u)
@@ -588,7 +590,7 @@ int lidarProcess::readFileList(const std::string &folderPath, std::vector<std::s
         }
     }
     closedir(dp);
-    cout << "success!" << endl;
+    cout << "read file list success" << endl;
 
     return num;
 }
@@ -622,7 +624,7 @@ bool lidarProcess::createDenseFile(){
     readFileList(pcdsPath, nameList);
     sort(nameList.begin(),nameList.end()); /** sort file names by order **/
 
-    int groupSize = 50; /** number of pcds to be merged **/
+    int groupSize = this -> numPcds; /** number of pcds to be merged **/
     int groupCount = nameList.size() / groupSize;
 
     // PCL PointCloud pointer. Remember that the pointer need to be given a new space
@@ -648,6 +650,7 @@ bool lidarProcess::createDenseFile(){
         }
         string outputPath = this -> scenesFilePath[this -> scIdx].OutputPath;
         pcl::io::savePCDFileBinary(outputPath + "/lidDense" + to_string(groupSize) + ".pcd", *output);
+        cout << "create dense file success" << endl;
     }
     return true;
 }
