@@ -42,12 +42,25 @@ note: package name is data_process
 
 
 ## 3. Run
-### Only for Livox Mid-360
+### For Livox Mid-360
 
 ```
     roslaunch loam_livox livox.launch
     roslaunch livox_ros_driver livox_lidar.launch
 ```
+### Transform .lvx file to rosbag
+Get into the workspace of livox driver.
+```
+    catkin_make 
+    source ./devel/setup.bash
+    roslaunch livox_ros_driver lvx_to_rosbag.launch <lvx_file_path>
+```
+<lvx_file_path> is the absolute path of .lvx file.
+### Transform rosbag file to .pcd files
+```
+    rosrun pcl_ros bag_to_pcd <rosbag_file_path> <topic> <pcds_directory_path>
+```
+<rosbag_file_path> is the path of rosbag file, <topic> is /livox/lidar for livox lidar, <pcds_directory_path> is the output directory path of .pcd files.
 
 ## 4. Results
 ### 4.1. Hardwares
@@ -61,7 +74,7 @@ note: package name is data_process
 	<tr>
 	    <th>Hardware Platform</th>
 	    <th>Item Names</th>
-	    <th>Pictures</th>  
+	    <th>Pictures</th>
 	    <th>Shopping Links</th> 
 	</tr >
 	<tr >

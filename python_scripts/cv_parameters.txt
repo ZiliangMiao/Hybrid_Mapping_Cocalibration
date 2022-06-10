@@ -1,0 +1,19 @@
+conferenceF2-P1: 
+GaussianBlur: 2, 2, (5, 5)
+fastNlMeansDenoising: 45, 21, 7
+Canny_cam: 30, 50
+Canny_lid: 60, 80
+Contour_cam: 200
+Contour_lid: 100
+HOG_cam: /
+HOG_lid: /
+
+conferenceF1: 
+GaussianBlur: 2, 2, (5, 5)
+fastNlMeansDenoising: 45, 21, 7
+Canny_cam: 30, 50
+Canny_lid: 60, 80
+Contour_cam: 200
+Contour_lid: 100
+HOG_cam: /
+HOG_lid: /

@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 from skimage.feature import _hog, _hoghistogram
 
-data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF2-P1"
+data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF1"
 dir_cam = data_path + "/outputs/flatImage.bmp"
 dir_lidar = data_path + "/outputs/byIntensity/flatLidarImage.bmp"
 
@@ -254,13 +254,13 @@ if __name__ == "__main__":
 
     image_cam = cv2.cvtColor(image_cam, cv2.COLOR_BGR2GRAY)
     image_lidar = cv2.cvtColor(image_lidar, cv2.COLOR_BGR2GRAY)
-    image_cam = cv2.GaussianBlur(image_cam, sigmaX=1, sigmaY=1, ksize=(5, 5))
-    image_lidar = cv2.fastNlMeansDenoising(image_lidar, h=40, searchWindowSize=21, templateWindowSize=7)
+    image_cam = cv2.GaussianBlur(image_cam, sigmaX=2, sigmaY=2, ksize=(5, 5))
+    image_lidar = cv2.fastNlMeansDenoising(image_lidar, h=60, searchWindowSize=21, templateWindowSize=7)
     cv2.imwrite(data_path + "/edges/cannyOutputs/cam_1_filtered.png", image_cam)
     cv2.imwrite(data_path + "/edges/cannyOutputs/lid_1_filtered.png", image_lidar)
 
-    edge_cam = cv2.Canny(image=image_cam, threshold1=5, threshold2=50)
-    edge_lidar = cv2.Canny(image=image_lidar, threshold1=5, threshold2=50)
+    edge_cam = cv2.Canny(image=image_cam, threshold1=30, threshold2=50)
+    edge_lidar = cv2.Canny(image=image_lidar, threshold1=30, threshold2=50)
 
     # remove the black region
     pix_rows_bound = 435
@@ -281,8 +281,8 @@ if __name__ == "__main__":
     cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     cnt_lidar, hierarchy_lidar = cv2.findContours(edge_lidar, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-    cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=100)
+    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=250)
+    cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=300)
 
     image_cam = np.zeros(image_cam.shape, np.uint8)
     image_lidar = np.zeros(image_lidar.shape, np.uint8)
@@ -295,9 +295,9 @@ if __name__ == "__main__":
 
     ################################################################################################
     # LiDAR # define the hyper-params of LiDAR
-    orien_lid = 5  # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
-    block_size_lid = 20  # 方块的大小，越大会统计更大范围内的方向分量
-    var_proportion_lid = 0.20
+    orien_lid = 3 # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
+    block_size_lid = 5  # 方块的大小，越大会统计更大范围内的方向分量
+    var_proportion_lid = 0.10
     num_bins_lid = 300
     ################################################################################################
     # first filter (big blocks)
