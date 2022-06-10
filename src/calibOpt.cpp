@@ -357,6 +357,7 @@ void lidarFeatureExtractor(lidarProcess lidarProcess) {
     disFlt.setNegative(true);
     disFlt.setInputCloud(lidarCloudOrg);
     disFlt.filter(*lidarCloudOrg);
+
 //    pcl::PassThrough<PointType> disFlt2;
 //    disFlt.setFilterFieldName("z");
 //    disFlt.setFilterLimits(-55e-2, -15e-2);

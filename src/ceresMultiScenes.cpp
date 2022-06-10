@@ -134,50 +134,54 @@ struct Calibration
 
         /**
          * residual:
-         * 1. diff. of kde image evaluation and lidar point projection(related to constant "scale_" and unified radius));
+         * 1. diff. of kde image evaluation and lidar point projection(related to constant "ref_val_" and unified radius));
          * 2. polynomial correction: r_max = F(theta_max);
          *  **/
-        res = T(scale_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(theta_ref) - a_(2) * T(pow(theta_ref, 2)) - a_(3) * T(pow(theta_ref, 3)) - a_(4) * T(pow(theta_ref, 4) - a_(5) * T(pow(theta_ref, 5))));
+        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
 
-        cost[0] = res;
-        cost[1] = res;
+        cost[0] = T(scale_) * res;
+        cost[1] = T(scale_) * res;
         return true;
     }
 
     /** DO NOT remove the "&" of the interpolator! **/
     Calibration(const Eigen::Vector3d point,
                 const Eigen::Vector2d img_size,
+                const double ref_val,
                 const double scale,
                 const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
                 const Eigen::Matrix2d inv_distortion)
-            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), scale_(scale), inv_distortion_(inv_distortion) {}
+            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), ref_val_(ref_val), scale_(std::move(scale)), inv_distortion_(inv_distortion) {}
 
     /**
      * @brief
-     * create autodiff costfunction for optimization.
-     * @param point xyz coordinate of a 3d lidar edge point;
-     * @param img_size size of the original fisheye image;
-     * @param scale default value of lidar points;
-     * @param interpolator bicubic interpolator for original fisheye image;
-     * @param inv_distortion inverse distortion matrix [c, d; e, 1] for fisheye camera;
+     * create multiscenes costfunction for optimization.
+     * @param point-xyz coordinate of a 3d lidar edge point;
+     * @param img_size-size of the original fisheye image;
+     * @param ref_val-default reference value of lidar points;
+     * @param scale-normalization coefficient determined by the relative size of scenes;
+     * @param interpolator-bicubic interpolator for original fisheye image;
+     * @param inv_distortion-inverse distortion matrix [c, d; e, 1] for fisheye camera;
      * @return ** ceres::CostFunction*
      */
     static ceres::CostFunction *Create(const Eigen::Vector3d &point,
                                        const Eigen::Vector2d &img_size,
+                                       const double &ref_val,
                                        const double &scale,
                                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
                                        const Eigen::Matrix2d &inv_distortion)
     {
         return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
-                new Calibration(point, img_size, scale, interpolator, inv_distortion));
+                new Calibration(point, img_size, ref_val, scale, interpolator, inv_distortion));
     }
 
     const Eigen::Vector3d point_;
     const Eigen::Vector2d img_size_;
+    const double ref_val_;
     const double scale_;
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
     const Eigen::Matrix2d inv_distortion_;
-    const double theta_ref = 99.5 * M_PI / 180;
+    const double ref_theta = 99.5 * M_PI / 180;
 };
 
 /**
@@ -230,26 +234,35 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     const Eigen::Matrix2d inv_distortion = distortion.inverse();
     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
-    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators;
-    std::vector<double> scales;
+    std::vector<ceres::Grid2D<double>> grids;
+    std::vector<double> ref_vals;
+    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
 
     for (int idx = 0; idx < numScenes; idx++)
     {
         cam.setSceneIdx(idx);
+        cam.readEdge();
         /********* Fisheye KDE *********/
         vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
         // Data is a row-major array of kGridRows x kGridCols values of function
         // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
         // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
-        double *kde_data = new double[p_c.size()];
-        memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
+        // double *kde_data = new double[p_c.size()];
+        // memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
+        double *kde_data = p_c.data();
         // unable to set coordinate to 2D grid for corresponding interpolator;
         // use post-processing to scale the grid instead.
-        ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
-        ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
-        img_interpolators.push_back(kde_interpolator);
-        scales.push_back(*max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth));
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
+        grids.push_back(kde_grid);
+        ref_vals.push_back(*max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth));
     }
+    const std::vector<ceres::Grid2D<double>> img_grids(grids);
+    for (int idx = 0; idx < numScenes; idx++)
+    {
+        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
+        interpolators.push_back(kde_interpolator);
+    }
+    const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators(interpolators);
 
     // Ceres Problem
     // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
@@ -266,10 +279,12 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     {
         lid.setSceneIdx(idx);
         lid.readEdge();
-        for (int j = 0; j < lid.EdgeOrgCloud -> points.size(); ++j)
+        /** note: '30000' is a typical value for normalization. **/
+        const double relative_size = (double)lid.EdgeOrgCloud->points.size() / 30000;
+        for (int j = 0; j < lid.EdgeOrgCloud->points.size(); ++j)
         {
-            Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[j].x, lid.EdgeOrgCloud -> points[j].y, lid.EdgeOrgCloud -> points[j].z};
-            problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scales[idx], img_interpolators[idx], inv_distortion),
+            Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
+            problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_vals[idx], relative_size, img_interpolators[idx], inv_distortion),
                                      loss_function,
                                      params,
                                      params + num_q);
@@ -308,110 +323,122 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     std::cout << summary.FullReport() << "\n";
     customOutput(name, params, params_init);
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
+
+    for (int idx = 0; idx < numScenes; idx++)
+    {
+        lid.setSceneIdx(idx);
+        cam.setSceneIdx(idx);
+        cam.readEdge();
+        lid.readEdge();
+        vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
+        string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
+        fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
+    }
+
     return params_res;
 }
 
-/**
- * @brief
- * Ceres-solver Optimization
- * @param cam camProcess
- * @param lid lidarProcess
- * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
- * @param distortion distortion matrix {c, d; e, 1}
- * @param params_init initial parameters
- * @param name name of parameters
- * @param lb lower bounds of the parameters
- * @param ub upper bounds of the parameters
- * @return ** std::vector<double>
- */
-std::vector<double> ceresAutoDiff(imageProcess cam,
-                                  lidarProcess lid,
-                                  double bandwidth,
-                                  const Eigen::Matrix2d distortion,
-                                  vector<double> params_init,
-                                  vector<const char *> name,
-                                  vector<double> lb,
-                                  vector<double> ub)
-{
-    std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
-    const double scale = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
-    const int num_params = params_init.size();
+// /**
+//  * @brief
+//  * Ceres-solver Optimization
+//  * @param cam camProcess
+//  * @param lid lidarProcess
+//  * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
+//  * @param distortion distortion matrix {c, d; e, 1}
+//  * @param params_init initial parameters
+//  * @param name name of parameters
+//  * @param lb lower bounds of the parameters
+//  * @param ub upper bounds of the parameters
+//  * @return ** std::vector<double>
+//  */
+// std::vector<double> ceresAutoDiff(imageProcess cam,
+//                                   lidarProcess lid,
+//                                   double bandwidth,
+//                                   const Eigen::Matrix2d distortion,
+//                                   vector<double> params_init,
+//                                   vector<const char *> name,
+//                                   vector<double> lb,
+//                                   vector<double> ub)
+// {
+//     std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
+//     const double ref_val = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
+//     const int num_params = params_init.size();
 
-    // initQuaternion(0.0, -0.01, M_PI, param_init);
+//     // initQuaternion(0.0, -0.01, M_PI, param_init);
 
-    double params[num_params];
-    memcpy(params, &params_init[0], params_init.size() * sizeof(double));
-    Eigen::Matrix2d inv_distortion = distortion.inverse();
-    // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
+//     double params[num_params];
+//     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
+//     Eigen::Matrix2d inv_distortion = distortion.inverse();
+//     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
-    // Data is a row-major array of kGridRows x kGridCols values of function
-    // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
-    // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
-    double *kde_data = new double[p_c.size()];
-    memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
+//     // Data is a row-major array of kGridRows x kGridCols values of function
+//     // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
+//     // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
+//     double *kde_data = new double[p_c.size()];
+//     memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 
-    // unable to set coordinate to 2D grid for corresponding interpolator;
-    // use post-processing to scale the grid instead.
-    const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
-    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
+//     // unable to set coordinate to 2D grid for corresponding interpolator;
+//     // use post-processing to scale the grid instead.
+//     const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
+//     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
 
-    // Ceres Problem
-    // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
-    ceres::Problem problem;
+//     // Ceres Problem
+//     // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
+//     ceres::Problem problem;
 
-    // problem.AddParameterBlock(params, 4, q_parameterization);
-    // problem.AddParameterBlock(params + 4, num_params - 4);
-    problem.AddParameterBlock(params, num_q);
-    problem.AddParameterBlock(params + num_q, num_params - num_q);
-    ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
+//     // problem.AddParameterBlock(params, 4, q_parameterization);
+//     // problem.AddParameterBlock(params + 4, num_params - 4);
+//     problem.AddParameterBlock(params, num_q);
+//     problem.AddParameterBlock(params + num_q, num_params - num_q);
+//     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-    Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-    for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
-    {
-        // Eigen::Vector3d p_l_tmp = p_l.row(i);
-        Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
-        problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, scale, kde_interpolator, inv_distortion),
-                                 loss_function,
-                                 params,
-                                 params + num_q);
-    }
+//     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
+//     for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
+//     {
+//         // Eigen::Vector3d p_l_tmp = p_l.row(i);
+//         Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+//         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_val, kde_interpolator, inv_distortion),
+//                                  loss_function,
+//                                  params,
+//                                  params + num_q);
+//     }
 
-    for (int i = 0; i < num_params; ++i)
-    {
-        if (i < num_q)
-        {
-            problem.SetParameterLowerBound(params, i, lb[i]);
-            problem.SetParameterUpperBound(params, i, ub[i]);
-        }
-        else
-        {
-            problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
-            problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
-        }
-    }
+//     for (int i = 0; i < num_params; ++i)
+//     {
+//         if (i < num_q)
+//         {
+//             problem.SetParameterLowerBound(params, i, lb[i]);
+//             problem.SetParameterUpperBound(params, i, ub[i]);
+//         }
+//         else
+//         {
+//             problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
+//             problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
+//         }
+//     }
 
-    ceres::Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-    options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options.minimizer_progress_to_stdout = true;
-    options.num_threads = 12;
-    options.function_tolerance = 1e-7;
-    options.use_nonmonotonic_steps = true;
+//     ceres::Solver::Options options;
+//     options.linear_solver_type = ceres::DENSE_SCHUR;
+//     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+//     options.minimizer_progress_to_stdout = true;
+//     options.num_threads = 12;
+//     options.function_tolerance = 1e-7;
+//     options.use_nonmonotonic_steps = true;
 
-    // OutputCallback callback(params);
-    // options.callbacks.push_back(&callback);
+//     // OutputCallback callback(params);
+//     // options.callbacks.push_back(&callback);
 
-    ceres::Solver::Summary summary;
+//     ceres::Solver::Summary summary;
 
-    ceres::Solve(options, &problem, &summary);
+//     ceres::Solve(options, &problem, &summary);
 
-    std::cout << summary.FullReport() << "\n";
-    customOutput(name, params, params_init);
-    std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
+//     std::cout << summary.FullReport() << "\n";
+//     customOutput(name, params, params_init);
+//     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
-    vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
-    string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
-    fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
+//     vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
+//     string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
+//     fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
 
-    return params_res;
-}
+//     return params_res;
+// }

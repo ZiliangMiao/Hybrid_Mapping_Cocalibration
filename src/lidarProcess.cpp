@@ -66,10 +66,12 @@ lidarProcess::lidarProcess(string pkgPath, bool byIntensity)
     struct SceneFilePath SC2(scenesPath.sc2);
     struct SceneFilePath SC3(scenesPath.sc3);
     struct SceneFilePath SC4(scenesPath.sc4);
+    struct SceneFilePath SC5(scenesPath.sc5);
     this -> scenesFilePath.push_back(SC1);
     this -> scenesFilePath.push_back(SC2);
     this -> scenesFilePath.push_back(SC3);
     this -> scenesFilePath.push_back(SC4);
+    this -> scenesFilePath.push_back(SC5);
 }
 
 void lidarProcess::readEdge()
@@ -134,38 +136,22 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
     int cloudSizeOrg = lid3dOrg->points.size();
     cout << "size of original cloud:" << cloudSizeOrg << endl;
 
-    pcl::PointCloud<pcl::PointXYZI>::Ptr lidIntFlt(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PassThrough<pcl::PointXYZI> intensityFlt;
-
-    if (!byIntensity)
-    {
-        pcl::PointXYZI pt;
-        for (int i = 0; i < lid3dOrg->points.size(); i++)
-        {
-            pt = lid3dOrg->points[i];
-            // store the projection property "depth" by using parameter "intensity"
-            double depth = sqrt(pow(pt.x, 2) + pow(pt.y, 2) + pow(pt.z, 2));
-            lid3dOrg->points[i].intensity = depth;
-        }
-
-        // pass through filter: point with invalid "depth" removal
-        intensityFlt.setFilterFieldName("intensity");
-        intensityFlt.setFilterLimits(1, 100);
-        intensityFlt.setInputCloud(lid3dOrg);
-        intensityFlt.filter(*lidIntFlt);
-    }
-
-    else
-    {
-        // pass through filter: point with invalid "intensity" removal
-        intensityFlt.setFilterFieldName("intensity");
-        intensityFlt.setFilterLimits(3, 255);
-        intensityFlt.setInputCloud(lid3dOrg);
-        intensityFlt.filter(*lidIntFlt);
-    }
+    /********* PCL Filter - Pass Through *********/
+    pcl::PassThrough<pcl::PointXYZI> disFlt;
+    disFlt.setFilterFieldName("x");
+    disFlt.setFilterLimits(-1e-3, 1e-3);
+    disFlt.setNegative(true);
+    disFlt.setInputCloud(lid3dOrg);
+    disFlt.filter(*lid3dOrg);
+    pcl::PassThrough<pcl::PointXYZI> disFlt1;
+    disFlt.setFilterFieldName("y");
+    disFlt.setFilterLimits(-1e-3, 1e-3);
+    disFlt.setNegative(true);
+    disFlt.setInputCloud(lid3dOrg);
+    disFlt.filter(*lid3dOrg);
 
     // check the pass through filtered point cloud size
-    int cloudSizeIntFlt = lidIntFlt->points.size();
+    int cloudSizeIntFlt = lid3dOrg->points.size();
     cout << "size of cloud after a pass through filter:" << cloudSizeIntFlt << endl;
 
     // statistical filter: outlier removal
@@ -180,9 +166,9 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
     // filter: radius outlier removal
     pcl::PointCloud<pcl::PointXYZI>::Ptr lidStaFlt(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::RadiusOutlierRemoval<pcl::PointXYZI> outlierFlt;
-    outlierFlt.setInputCloud(lidIntFlt);
-    outlierFlt.setRadiusSearch(0.05);
-    outlierFlt.setMinNeighborsInRadius(20);
+    outlierFlt.setInputCloud(lid3dOrg);
+    outlierFlt.setRadiusSearch(0.1);
+    outlierFlt.setMinNeighborsInRadius(5);
     outlierFlt.setNegative(false);
     outlierFlt.filter(*lidStaFlt);
 
@@ -351,7 +337,9 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
     string flatImgPath = this -> scenesFilePath[this -> scIdx].FlatImgPath;
+    cout << "LiDAR flat image path: " << flatImgPath << endl;
     cv::imwrite(flatImgPath, flatImage);
+    cout << "LiDAR flat image generated successfully! Scene Index: " << this -> scIdx << endl;
     return tagsMap;
 }
 

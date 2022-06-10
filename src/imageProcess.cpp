@@ -66,10 +66,12 @@ imageProcess::imageProcess(string pkgPath) {
     struct SceneFilePath SC2(scenesPath.sc2);
     struct SceneFilePath SC3(scenesPath.sc3);
     struct SceneFilePath SC4(scenesPath.sc4);
+    struct SceneFilePath SC5(scenesPath.sc5);
     this -> scenesFilePath.push_back(SC1);
     this -> scenesFilePath.push_back(SC2);
     this -> scenesFilePath.push_back(SC3);
     this -> scenesFilePath.push_back(SC4);
+    this -> scenesFilePath.push_back(SC5);
 }
 
 void imageProcess::readEdge()
@@ -344,19 +346,20 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
 
+    string flatImgPath = this -> scenesFilePath[this -> scIdx].FlatImgPath;
     string fusionImgPath = this -> scenesFilePath[this -> scIdx].FusionImgPath;
     string resultPath = this -> scenesFilePath[this -> scIdx].ResultPath;
 
     /********* Image Generation *********/
     if (bandwidth < 0){
-        cv::imwrite(fusionImgPath, flatImage);
+        cv::imwrite(flatImgPath, flatImage); /** flat image generation **/
     }
     else{
         char o_[256];
 //        string str = fusionImgPath.substr(0, str.length() - 4);
 //        sprintf(o_, "%s%s%f%s", str.c_str(), "_", bandwidth, ".bmp");
-        string fusionImgPath = resultPath + "sc_" + to_string(this -> scIdx) + "_fusion_bw_" + to_string(int(bandwidth));
-        cv::imwrite(fusionImgPath, flatImage);
+        string fusionImgPath = resultPath + "/sc_" + to_string(this -> scIdx) + "_fusion_bw_" + to_string(int(bandwidth));
+        cv::imwrite(fusionImgPath, flatImage); /** fusion image generation **/
     }
     
     return tagsMap;

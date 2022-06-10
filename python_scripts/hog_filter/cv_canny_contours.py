@@ -74,7 +74,7 @@ def black_region_removal(img, pix_rows_bound):
 #     dst = cv2.illuminationChange(rep, mask, alpha=1, beta=1)
 #     return dst
 
-data_path = "/home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/"
+data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/huiyuan2/"
 dir_cam = data_path + "outputs/flatImage.bmp"
 dir_lidar = data_path + "outputs/byIntensity/flatLidarImage.bmp"
 image_cam = cv2.imread(dir_cam)
@@ -87,8 +87,8 @@ image_lidar = cv2.fastNlMeansDenoising(image_lidar, h=40, searchWindowSize=21, t
 cv2.imwrite(data_path + "edges/cannyOutputs/cam_1_filtered.png", image_cam)
 cv2.imwrite(data_path + "edges/cannyOutputs/lid_1_filtered.png", image_lidar)
 
-edge_cam = cv2.Canny(image=image_cam, threshold1=20, threshold2=100)
-edge_lidar = cv2.Canny(image=image_lidar, threshold1=20, threshold2=100)
+edge_cam = cv2.Canny(image=image_cam, threshold1=5, threshold2=50)
+edge_lidar = cv2.Canny(image=image_lidar, threshold1=5, threshold2=50)
 
 # remove the black region
 pix_rows_bound = 435
@@ -106,11 +106,11 @@ cv2.imwrite(data_path + "edges/cannyOutputs/cam_2_canny_original.png", edge_cam)
 # cv2.imwrite(data_path + "edges/cannyOutputs/lidar_3_canny_patch.png", edge_lidar)
 # cv2.imwrite(data_path + "edges/cannyOutputs/cam_3_canny_patch.png", edge_cam)
 
-_, cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-_, cnt_lidar, hierarchy_lidar = cv2.findContours(edge_lidar, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+cnt_lidar, hierarchy_lidar = cv2.findContours(edge_lidar, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-cnt_cam = contour_filter(contour=cnt_cam, len_threshold=150)
-cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=90)
+cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=100)
 
 image_cam = np.zeros(image_cam.shape, np.uint8)
 image_lidar = np.zeros(image_lidar.shape, np.uint8)

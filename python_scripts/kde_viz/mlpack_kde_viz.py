@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/python_scripts/kde_viz/"
-data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/"
+
+# data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/"
+data_path = "/home/godm/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/"
 
 ########################################################################################################################
 # load files #

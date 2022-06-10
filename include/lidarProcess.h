@@ -56,6 +56,7 @@ class lidarProcess{
     public:
         bool byIntensity = true;
         static const int numPcds = 500;
+
         int flatRows = int((double)110/90 * 1000) + 1;
         int flatCols = 4000;
         double radPerPix = (M_PI/2) / 1000;
@@ -87,19 +88,21 @@ class lidarProcess{
             this -> scIdx = scIdx;
         }
 
-        static const int numScenes = 4;
+        static const int numScenes = 5;
         struct ScenesPath
         {
             ScenesPath(string pkgPath) {
                 this -> sc1 = pkgPath + "/data/runYangIn";
                 this -> sc2 = pkgPath + "/data/huiyuan2";
-                this -> sc3 = pkgPath + "/data/11";
-                this -> sc4 = pkgPath + "/data/12";
+                this -> sc3 = pkgPath + "/data/12";
+                this -> sc4 = pkgPath + "/data/conferenceF1";
+                this -> sc5 = pkgPath + "/data/conferenceF2-P1";
             }
             string sc1;
             string sc2;
             string sc3;
             string sc4;
+            string sc5;
         };
 
         /********* File Path of the Specific Scene *********/
