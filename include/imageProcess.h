@@ -108,8 +108,8 @@ class imageProcess{
                 this -> sc1 = pkgPath + "/data/runYangIn";
                 this -> sc2 = pkgPath + "/data/huiyuan2";
                 this -> sc3 = pkgPath + "/data/12";
-                this -> sc4 = pkgPath + "/data/conferenceF1";
-                this -> sc5 = pkgPath + "/data/conferenceF2-P1";
+                this -> sc4 = pkgPath + "/data/conferenceF2-P1";
+                this -> sc5 = pkgPath + "/data/conferenceF2-P2";
             }
             string sc1;
             string sc2;

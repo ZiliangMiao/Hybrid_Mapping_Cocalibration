@@ -20,10 +20,10 @@ using namespace std;
 using namespace cv;
 
 const bool fisheyeFlatProcess = false;
-const bool fisheyeEdgeProcess = true;
+const bool fisheyeEdgeProcess = false;
 const bool lidarFlatProcess = false;
-const bool lidarEdgeProcess = true;
-const bool ceresOpt = false;
+const bool lidarEdgeProcess = false;
+const bool ceresOpt = true;
 const bool denseFile = false;
 
 /********* Directory Path of ROS Package *********/

@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 from skimage.feature import _hog, _hoghistogram
 
-data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF1"
+data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn"
 dir_cam = data_path + "/outputs/flatImage.bmp"
 dir_lidar = data_path + "/outputs/byIntensity/flatLidarImage.bmp"
 
@@ -249,27 +249,47 @@ def black_region_removal(img, pix_rows_bound):
 
 
 if __name__ == "__main__":
-    image_cam = cv2.imread(dir_cam)
-    image_lidar = cv2.imread(dir_lidar)
+    edge_cam = cv2.imread(dir_cam)
+    edge_lid = cv2.imread(dir_lidar)
 
-    image_cam = cv2.cvtColor(image_cam, cv2.COLOR_BGR2GRAY)
-    image_lidar = cv2.cvtColor(image_lidar, cv2.COLOR_BGR2GRAY)
-    image_cam = cv2.GaussianBlur(image_cam, sigmaX=2, sigmaY=2, ksize=(5, 5))
-    image_lidar = cv2.fastNlMeansDenoising(image_lidar, h=60, searchWindowSize=21, templateWindowSize=7)
-    cv2.imwrite(data_path + "/edges/cannyOutputs/cam_1_filtered.png", image_cam)
-    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_1_filtered.png", image_lidar)
+    edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
+    edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
+    edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=2, sigmaY=2, ksize=(5, 5))
+    edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=40, searchWindowSize=21, templateWindowSize=7)
+    cv2.imwrite(data_path + "/edges/cannyOutputs/cam_1_filtered.png", edge_cam)
+    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_1_filtered.png", edge_lid)
 
-    edge_cam = cv2.Canny(image=image_cam, threshold1=30, threshold2=50)
-    edge_lidar = cv2.Canny(image=image_lidar, threshold1=30, threshold2=50)
+    edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
+    edge_lid = cv2.Canny(image=edge_lid, threshold1=60, threshold2=80)
 
     # remove the black region
     pix_rows_bound = 435
     edge_cam = black_region_removal(edge_cam, pix_rows_bound)
-    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_2_canny_original.png", edge_lidar)
+
+    # mask to remove the upper and lower bound noise
+    mask_cam = cv2.imread("./flatImage_mask.bmp", cv2.IMREAD_GRAYSCALE)
+    mask_lid = cv2.imread("./flatImageLidar_mask.bmp", cv2.IMREAD_GRAYSCALE)
+    edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
+    edge_lid = cv2.bitwise_and(edge_lid, mask_lid)
+    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_2_canny_original.png", edge_lid)
     cv2.imwrite(data_path + "/edges/cannyOutputs/cam_2_canny_original.png", edge_cam)
 
-    # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=7, iter=2)
-    # edge_lidar = patch_image(image=edge_lidar, mode=cv2.MORPH_CLOSE, size=3, iter=2)
+    # contour filter
+    cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+    cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
+    edge_cam = np.zeros(edge_cam.shape, np.uint8)
+    edge_lid = np.zeros(edge_lid.shape, np.uint8)
+    cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
+    cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+
+    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_3_contour.png", edge_lid)
+    cv2.imwrite(data_path + "/edges/cannyOutputs/cam_3_contour.png", edge_cam)
+
+    # patch
+    edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=9, iter=2)
+    edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=15, iter=2)
 
     # 这个是填充区域的
     # edge_cam = fill_hole(img=edge_cam, hole_color=0, bkg_color=255)
@@ -278,70 +298,68 @@ if __name__ == "__main__":
     # cv2.imwrite(data_path + "edges/cannyOutputs/lidar_3_canny_patch.png", edge_lidar)
     # cv2.imwrite(data_path + "edges/cannyOutputs/cam_3_canny_patch.png", edge_cam)
 
+    # contour filter
     cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_lidar, hierarchy_lidar = cv2.findContours(edge_lidar, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-
-    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=250)
-    cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=300)
-
-    image_cam = np.zeros(image_cam.shape, np.uint8)
-    image_lidar = np.zeros(image_lidar.shape, np.uint8)
-
-    cv2.drawContours(image_cam, cnt_cam, -1, 255, 1)
-    cv2.drawContours(image_lidar, cnt_lidar, -1, 255, 1)
-
-    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_3_contour.png", image_lidar)
-    cv2.imwrite(data_path + "/edges/cannyOutputs/cam_3_contour.png", image_cam)
-
-    ################################################################################################
-    # LiDAR # define the hyper-params of LiDAR
-    orien_lid = 3 # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
-    block_size_lid = 5  # 方块的大小，越大会统计更大范围内的方向分量
-    var_proportion_lid = 0.10
-    num_bins_lid = 300
-    ################################################################################################
-    # first filter (big blocks)
-    img_lid = cv2.imread(data_path + "/edges/cannyOutputs/lid_3_contour.png", cv2.IMREAD_GRAYSCALE)
-    img_filtered_lid, img_hog_lid = hog_filter(img_lid, orien_lid, block_size_lid, var_proportion_lid, num_bins_lid)
-    # img_filtered_lid_ex = extremum_filter(img_lid, orien_lid, block_size_lid)
-    # store the image files
-    # cv2.imwrite(data_path + "edges/hogOutputs/img_hog_lid.png", img_hog_lid)
-    cv2.imwrite(data_path + "/edges/hogOutputs/img_filtered_lid.png", img_filtered_lid)
-    # cv2.imwrite(data_path + "edges/lidEdge.png", img_filtered_lid_ex)
-    ################################################################################################
-    # counter filter
-    cnt_lidar, hierarchy_lidar = cv2.findContours(img_filtered_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=200)
-    image_lidar = np.zeros(img_lid.shape, np.uint8)
-    cv2.drawContours(image_lidar, cnt_lidar, -1, 255, 1)
-    cv2.imwrite(data_path + "/edges/lidEdge.png", image_lidar)
-    ################################################################################################
-    # fisheye # define the hyper-params of the first hog filter
-    orien_cam = 5  # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
-    block_size_cam = 50  # 方块的大小，越大会统计更大范围内的方向分量
-    var_proportion_cam = 0.20
-    num_bins_cam = 300
-    # define the params of second filter
-    # orien_cam_2 = 4
-    # block_size_cam_2 = 48
-    # var_proportion_cam_2 = 0.3
-
-    ################################################################################################
-    # variance filter (big blocks)
-    img_cam = cv2.imread(data_path + "/edges/cannyOutputs/cam_3_contour.png", cv2.IMREAD_GRAYSCALE)  # cv2.IMREAD_COLOR为彩图
-    img_cam_filtered, img_hog_cam = hog_filter(img_cam, orien_cam, block_size_cam, var_proportion_cam, num_bins_cam)
-    # extremum filter
-    # img_cam_filtered_ex = extremum_filter(img_cam, orien_cam, block_size_cam)
-    # principal_component_filter (small blocks)
-    principal_component_filter(img_cam, orien_cam, block_size_cam)
-    # store the image files
-    # cv2.imwrite(data_path + "edges/hogOutputs/img_hog_cam.png", img_hog_cam)
-    cv2.imwrite(data_path + "/edges/hogOutputs/img_filtered_cam.png", img_cam_filtered)
-    # cv2.imwrite(data_path + "edges/camEdge.png", img_cam_filtered_ex)
-    ################################################################################################
-    # counter filter
-    cnt_cam, hierarchy_cam = cv2.findContours(img_cam_filtered, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=400)
-    edge_cam = np.zeros(img_cam.shape, np.uint8)
+    cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+    cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
+    edge_cam = np.zeros(edge_cam.shape, np.uint8)
+    edge_lid = np.zeros(edge_lid.shape, np.uint8)
     cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-    cv2.imwrite(data_path + "/edges/camEdge.png", edge_cam)
+    cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+
+    cv2.imwrite(data_path + "/edges/cannyOutputs/lidEdge.png", edge_lid)
+    cv2.imwrite(data_path + "/edges/cannyOutputs/camEdge.png", edge_cam)
+
+    # ################################################################################################
+    # # LiDAR # define the hyper-params of LiDAR
+    # orien_lid = 3 # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
+    # block_size_lid = 5  # 方块的大小，越大会统计更大范围内的方向分量
+    # var_proportion_lid = 0.10
+    # num_bins_lid = 300
+    # ################################################################################################
+    # # first filter (big blocks)
+    # img_lid = cv2.imread(data_path + "/edges/cannyOutputs/lid_3_contour.png", cv2.IMREAD_GRAYSCALE)
+    # img_filtered_lid, img_hog_lid = hog_filter(img_lid, orien_lid, block_size_lid, var_proportion_lid, num_bins_lid)
+    # # img_filtered_lid_ex = extremum_filter(img_lid, orien_lid, block_size_lid)
+    # # store the image files
+    # # cv2.imwrite(data_path + "edges/hogOutputs/img_hog_lid.png", img_hog_lid)
+    # cv2.imwrite(data_path + "/edges/hogOutputs/img_filtered_lid.png", img_filtered_lid)
+    # # cv2.imwrite(data_path + "edges/lidEdge.png", img_filtered_lid_ex)
+    # ################################################################################################
+    # # counter filter
+    # cnt_lidar, hierarchy_lidar = cv2.findContours(img_filtered_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # cnt_lidar = contour_filter(contour=cnt_lidar, len_threshold=200)
+    # image_lidar = np.zeros(img_lid.shape, np.uint8)
+    # cv2.drawContours(image_lidar, cnt_lidar, -1, 255, 1)
+    # cv2.imwrite(data_path + "/edges/lidEdge.png", image_lidar)
+    # ################################################################################################
+    # # fisheye # define the hyper-params of the first hog filter
+    # orien_cam = 5  # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
+    # block_size_cam = 50  # 方块的大小，越大会统计更大范围内的方向分量
+    # var_proportion_cam = 0.20
+    # num_bins_cam = 300
+    # # define the params of second filter
+    # # orien_cam_2 = 4
+    # # block_size_cam_2 = 48
+    # # var_proportion_cam_2 = 0.3
+    #
+    # ################################################################################################
+    # # variance filter (big blocks)
+    # img_cam = cv2.imread(data_path + "/edges/cannyOutputs/cam_3_contour.png", cv2.IMREAD_GRAYSCALE)  # cv2.IMREAD_COLOR为彩图
+    # img_cam_filtered, img_hog_cam = hog_filter(img_cam, orien_cam, block_size_cam, var_proportion_cam, num_bins_cam)
+    # # extremum filter
+    # # img_cam_filtered_ex = extremum_filter(img_cam, orien_cam, block_size_cam)
+    # # principal_component_filter (small blocks)
+    # principal_component_filter(img_cam, orien_cam, block_size_cam)
+    # # store the image files
+    # # cv2.imwrite(data_path + "edges/hogOutputs/img_hog_cam.png", img_hog_cam)
+    # cv2.imwrite(data_path + "/edges/hogOutputs/img_filtered_cam.png", img_cam_filtered)
+    # # cv2.imwrite(data_path + "edges/camEdge.png", img_cam_filtered_ex)
+    # ################################################################################################
+    # # counter filter
+    # cnt_cam, hierarchy_cam = cv2.findContours(img_cam_filtered, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # cnt_cam = contour_filter(contour=cnt_cam, len_threshold=400)
+    # edge_cam = np.zeros(img_cam.shape, np.uint8)
+    # cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
+    # cv2.imwrite(data_path + "/edges/camEdge.png", edge_cam)

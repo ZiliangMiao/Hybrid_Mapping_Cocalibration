@@ -19,6 +19,7 @@
 
 using namespace std;
 
+/** num_p + num_q = number of parameters **/
 static const int num_q = 3;
 static const int num_p = 9;
 
@@ -247,12 +248,10 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         // Data is a row-major array of kGridRows x kGridCols values of function
         // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
         // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
-        // double *kde_data = new double[p_c.size()];
-        // memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
-        double *kde_data = p_c.data();
-        // unable to set coordinate to 2D grid for corresponding interpolator;
-        // use post-processing to scale the grid instead.
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
+        double *kde_data = new double[p_c.size()];
+        memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
+//        double *kde_data = p_c.data();
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows-1, 0, cam.kdeCols-1);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth));
     }
@@ -280,7 +279,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         lid.setSceneIdx(idx);
         lid.readEdge();
         /** note: '30000' is a typical value for normalization. **/
-        const double relative_size = (double)lid.EdgeOrgCloud->points.size() / 30000;
+        const double relative_size = std::sqrt((double)lid.EdgeOrgCloud->points.size() / 30000);
         for (int j = 0; j < lid.EdgeOrgCloud->points.size(); ++j)
         {
             Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
