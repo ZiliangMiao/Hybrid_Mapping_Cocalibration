@@ -36,9 +36,9 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
         // int v = (int)pixPerRad * phi;
         int u = std::clamp(lidarRGB.rows - 1 - theta, (double)0.0, (double)(lidarRGB.rows-1));
         int v = std::clamp(phi, (double)0.0, (double)(lidarRGB.cols-1));;
-        int b = 255;
+        int b = 0;
         int g = 0;
-        int r = 0;
+        int r = 255;
         lidarRGB.at<Vec3b>(u, v)[0] = b;
         lidarRGB.at<Vec3b>(u, v)[1] = g;
         lidarRGB.at<Vec3b>(u, v)[2] = r;

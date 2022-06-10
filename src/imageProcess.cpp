@@ -355,10 +355,7 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
         cv::imwrite(flatImgPath, flatImage); /** flat image generation **/
     }
     else{
-        char o_[256];
-//        string str = fusionImgPath.substr(0, str.length() - 4);
-//        sprintf(o_, "%s%s%f%s", str.c_str(), "_", bandwidth, ".bmp");
-        string fusionImgPath = resultPath + "/sc_" + to_string(this -> scIdx) + "_fusion_bw_" + to_string(int(bandwidth));
+        string fusionImgPath = resultPath + "/sc_" + to_string(this -> scIdx) + "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusionImgPath, flatImage); /** fusion image generation **/
     }
     
