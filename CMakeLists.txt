@@ -4,6 +4,7 @@ project(data_process)
 set(MAKE_CXX_STANDARD 11)
 set(CMAKE_BUILD_TYPE "Debug")
 
+
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
 
 find_package(mlpack REQUIRED)
