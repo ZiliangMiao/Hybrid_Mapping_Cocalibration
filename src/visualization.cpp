@@ -11,12 +11,15 @@
 #include <ros/package.h>
 // pcl
 #include <pcl/common/io.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 // heading
 #include "imageProcess.h"
 #include "lidarProcess.h"
 
 using namespace std;
 using namespace cv;
+using namespace Eigen;
 
 void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidProjection, double bandwidth){
     cv::Mat image = cam.readOrgImage();
@@ -57,4 +60,117 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
     vector< vector< vector<int> > > camtagsMap =
             cam.sphereToPlane(camOrgPolarCloud, bandwidth);
+}
+
+void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p, Eigen::Matrix2d distortion){
+    Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
+    Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
+    Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
+    Eigen::Matrix<double, 6, 1> a_;
+    Eigen::Matrix<double, 2, 2> inv_distortion_ = distortion.inverse();
+    switch (_p.size() - 3)
+    {
+        case 10:
+            a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
+            break;
+        case 9:
+            a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
+            break;
+        default:
+            a_ << double(0), _p[8], double(0), _p[9], double(0), _p[10];
+            break;
+    }
+
+    double phi, theta;
+    double inv_r, r;
+    double res, val;
+
+    // extrinsic transform
+    Eigen::Matrix<double, 3, 3> R;
+    Eigen::AngleAxisd xAngle(AngleAxisd(eulerAngle(0), Vector3d::UnitX()));
+    Eigen::AngleAxisd yAngle(AngleAxisd(eulerAngle(1), Vector3d::UnitY()));
+    Eigen::AngleAxisd zAngle(AngleAxisd(eulerAngle(2), Vector3d::UnitZ()));
+    R = zAngle * yAngle * xAngle;
+
+    Eigen::Matrix<double, 3, 1> p_;
+    Eigen::Matrix<double, 3, 1> p_trans;
+    Eigen::Matrix<double, 2, 1> S;
+    Eigen::Matrix<double, 2, 1> p_uv;
+
+    string lidDensePcdPath = lid.scenesFilePath[lid.scIdx].LidDensePcdPath;
+    string lidPro2DPath = lid.scenesFilePath[lid.scIdx].LidPro2DPath;
+    string lidPro3DPath = lid.scenesFilePath[lid.scIdx].LidPro3DPath;
+    string HdrImgPath = cam.scenesFilePath[cam.scIdx].HdrImgPath;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::io::loadPCDFile(lidDensePcdPath, *lidRaw);
+    cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
+    int pixelThresh = 10;
+    int rows = image.rows;
+    int cols = image.cols;
+    ofstream outfile2D;
+    ofstream outfile3D;
+    outfile2D.open(lidPro2DPath, ios::out);
+    outfile3D.open(lidPro3DPath, ios::out);
+    if (!outfile2D.is_open())
+    {
+        cout << "Open file failure" << endl;
+    }
+    if (!outfile3D.is_open())
+    {
+        cout << "Open file failure" << endl;
+    }
+
+    pcl::PointXYZRGB pt;
+    vector<double> ptLoc(3, 0);
+    vector<vector<vector<double>>> dict(rows, vector<vector<double>>(cols, ptLoc));
+    cout << "---------------Save 2D and 3D txt file------------" << endl;
+    for(int i = 0; i < lidRaw -> points.size(); i++){
+        p_ << lidRaw -> points[i].x, lidRaw -> points[i].y, lidRaw -> points[i].z;
+        p_trans = R * p_ + t;
+        theta = acos(p_trans(2) / sqrt(pow(p_trans(0), 2) + pow(p_trans(1), 2) + pow(p_trans(2), 2)));
+        inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
+        S = {inv_r * p_trans(0) / r, inv_r * p_trans(1) / r};
+        p_uv = inv_distortion_ * S + uv_0;
+
+        int u = int(p_uv(0));
+        int v = int(p_uv(1));
+        if(0 <= u && u < rows && 0 <=v && v < cols){
+
+            dict[u][v][0] = p_(0);
+            dict[u][v][1] = p_(1);
+            dict[u][v][2] = p_(2);
+            outfile2D << u << "\t" << v << endl;
+            outfile3D << p_(0) << "\t" << p_(1) << "\t" << p_(2) << endl;
+        }
+        if(i % 100000 == 0){
+            cout << i << " / " << lidRaw -> points.size() << " points written" << endl;
+        }
+    }
+    outfile2D.close();
+    outfile3D.close();
+    cout << "---------------Coloring------------" << endl;
+    for(int i = 0; i < rows; i++){
+        for(int j = 0; j < cols; j++){
+            if(image.at<cv::Vec3b>(i, j)[0] > pixelThresh || image.at<cv::Vec3b>(i, j)[1] > pixelThresh || image.at<cv::Vec3b>(i, j)[2] > pixelThresh){
+                if(dict[i][j][0] != 0 && dict[i][j][1] != 0 && dict[i][j][2] != 0){
+                    pt.x = dict[i][j][0];
+                    pt.y = dict[i][j][1];
+                    pt.z = dict[i][j][2];
+                    pt.b = image.at<cv::Vec3b>(i, j)[0];
+                    pt.g = image.at<cv::Vec3b>(i, j)[1];
+                    pt.r = image.at<cv::Vec3b>(i, j)[2];
+                    showCloud -> points.push_back(pt);
+                }
+            }
+        }
+    }
+    pcl::visualization::CloudViewer viewer("Viewer");
+    viewer.showCloud(showCloud);
+    
+    while(!viewer.wasStopped()){
+        
+    }
+    cv::waitKey();
 }

@@ -122,6 +122,8 @@ class lidarProcess{
                 this -> EdgeTxtPath = this -> OutputPath + "/lidEdgePix.txt";
                 this -> EdgeOrgTxtPath = this -> OutputPath + +"/lid3dOut.txt";
                 this -> EdgeTransTxtPath = this -> OutputPath + "/lidTrans.txt";
+                this -> LidPro2DPath = this -> OutputPath + "/lidPro2d.txt";
+                this -> LidPro3DPath = this -> OutputPath + "/lidPro3d.txt";
             }
             string OutputPath;
             string PcdsPath;
@@ -136,6 +138,8 @@ class lidarProcess{
             string EdgeTxtPath;
             string EdgeOrgTxtPath;
             string EdgeTransTxtPath;
+            string LidPro2DPath;
+            string LidPro3DPath;
         };
         vector<struct SceneFilePath> scenesFilePath;
 };

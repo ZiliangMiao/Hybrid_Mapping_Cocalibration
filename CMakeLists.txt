@@ -3,7 +3,7 @@ project(data_process)
 
 set(MAKE_CXX_STANDARD 11)
 set(CMAKE_BUILD_TYPE "Debug")
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
 
