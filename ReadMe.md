@@ -73,6 +73,7 @@ Transform rosbag file to .pcd files
 
 ### 3.3 Use MindVision SDK to Abtain Image Data
 Use [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138) to abtain image data.
+
 <img src="readme_pics/fisheyeImg.bmp" width=45% >
 
 ## 4. Run
