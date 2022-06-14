@@ -19,9 +19,11 @@
 
 using namespace std;
 
+ofstream outfile;
+
 /** num_p + num_q = number of parameters **/
-static const int num_q = 3;
-static const int num_p = 9;
+static const int num_q = 6;
+static const int num_p = 7;
 
 /**
  * @brief Get double from type T (double and ceres::Jet) variables in the ceres optimization process
@@ -78,19 +80,19 @@ struct Calibration
     {
         // intrinsic parameters
         Eigen::Matrix<T, 3, 1> eulerAngle(_q[0], _q[1], _q[2]);
-        Eigen::Matrix<T, 3, 1> t{_p[0], _p[1], _p[2]};
-        Eigen::Matrix<T, 2, 1> uv_0{_p[3], _p[4]};
+        Eigen::Matrix<T, 3, 1> t{_q[3], _q[4], _q[5]};
+        Eigen::Matrix<T, 2, 1> uv_0{_p[0], _p[1]};
         Eigen::Matrix<T, 6, 1> a_;
-        switch (num_p)
+        switch (num_p + num_q)
         {
-            case 10:
-                a_ << _p[5], _p[6], _p[7], _p[8], _p[9], T(0);
+            case 13:
+                a_ << _p[2], _p[3], _p[4], _p[5], _p[6], T(0);
                 break;
-            case 9:
-                a_ << _p[5], _p[6], T(0), _p[7], T(0), _p[8];
+            case 12:
+                a_ << _p[2], _p[3], T(0), _p[4], T(0), _p[5];
                 break;
             default:
-                a_ << T(0), _p[5], T(0), _p[6], T(0), _p[7];
+                a_ << T(0), _p[2], T(0), _p[3], T(0), _p[4];
                 break;
         }
 
@@ -119,7 +121,7 @@ struct Calibration
         Eigen::Matrix<T, 2, 1> S;
         Eigen::Matrix<T, 2, 1> p_uv;
 
-        /** r - theta representaion: r = f(theta) in polynomial form **/
+        /** r - theta representation: r = f(theta) in polynomial form **/
         theta = acos(p_trans(2) / sqrt((p_trans(0) * p_trans(0)) + (p_trans(1) * p_trans(1)) + (p_trans(2) * p_trans(2))));
         inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         // inv_r = a0 + a1 * theta + a3 * pow(theta, 3) + a5 * pow(theta, 5);
@@ -130,18 +132,19 @@ struct Calibration
         /** compute undistorted uv coordinate of lidar projection point and evaluate the value **/
         r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
         S = {-inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
-        p_uv = inv_distortion_.cast<T>() * S + uv_0;
-        kde_interpolator_.Evaluate(p_uv(0), p_uv(1), &val);
+        p_uv = S + uv_0;
+        kde_interpolator_.Evaluate(p_uv(0) * T(scale_), p_uv(1) * T(scale_), &val);
 
         /**
          * residual:
          * 1. diff. of kde image evaluation and lidar point projection(related to constant "ref_val_" and unified radius));
          * 2. polynomial correction: r_max = F(theta_max);
          *  **/
-        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
-
-        cost[0] = T(scale_) * res;
-        cost[1] = T(scale_) * res;
+//        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
+//        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val;
+        res = T(ref_val_) - val;
+        cost[0] = res;
+        cost[1] = res;
         return true;
     }
 
@@ -150,9 +153,8 @@ struct Calibration
                 const Eigen::Vector2d img_size,
                 const double ref_val,
                 const double scale,
-                const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
-                const Eigen::Matrix2d inv_distortion)
-            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), ref_val_(ref_val), scale_(std::move(scale)), inv_distortion_(inv_distortion) {}
+                const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
+            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), ref_val_(ref_val), scale_(std::move(scale)) {}
 
     /**
      * @brief
@@ -169,11 +171,10 @@ struct Calibration
                                        const Eigen::Vector2d &img_size,
                                        const double &ref_val,
                                        const double &scale,
-                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator,
-                                       const Eigen::Matrix2d &inv_distortion)
+                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
     {
         return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
-                new Calibration(point, img_size, ref_val, scale, interpolator, inv_distortion));
+                new Calibration(point, img_size, ref_val, scale, interpolator));
     }
 
     const Eigen::Vector3d point_;
@@ -181,7 +182,6 @@ struct Calibration
     const double ref_val_;
     const double scale_;
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
-    const Eigen::Matrix2d inv_distortion_;
     const double ref_theta = 99.5 * M_PI / 180;
 };
 
@@ -189,20 +189,24 @@ struct Calibration
  * @brief
  * custom callback to print something after every iteration (inner iteration is not included)
  */
-class OutputCallback : public ceres::IterationCallback
-{
+class OutputCallback : public ceres::IterationCallback {
 public:
     OutputCallback(double *params)
             : params_(params) {}
 
     ceres::CallbackReturnType operator()(
-            const ceres::IterationSummary &summary) override
-    {
+            const ceres::IterationSummary& summary) override {
+        for (int i = 0; i < num_p + num_q; i++)
+        {
+            const double params_out = params_[i];
+            outfile << params_out << "\t";
+        }
+        outfile << "\n";
         return ceres::SOLVER_CONTINUE;
     }
 
 private:
-    const double *params_;
+    const double* params_;
 };
 
 /**
@@ -221,18 +225,18 @@ private:
 std::vector<double> ceresMultiScenes(imageProcess cam,
                                      lidarProcess lid,
                                      double bandwidth,
-                                     Eigen::Matrix2d distortion,
                                      vector<double> params_init,
                                      vector<const char *> name,
                                      vector<double> lb,
-                                     vector<double> ub)
+                                     vector<double> ub,
+                                     int setConstant)
 {
     const int num_params = params_init.size();
     const int numScenes = cam.numScenes;
+    const double scale = 1.0;
 
     double params[num_params];
     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
-    const Eigen::Matrix2d inv_distortion = distortion.inverse();
     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
     std::vector<ceres::Grid2D<double>> grids;
@@ -244,16 +248,16 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         cam.setSceneIdx(idx);
         cam.readEdge();
         /********* Fisheye KDE *********/
-        vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
+        vector<double> p_c = cam.kdeBlur(bandwidth, scale, false);
         // Data is a row-major array of kGridRows x kGridCols values of function
         // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
         // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
         double *kde_data = new double[p_c.size()];
         memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 //        double *kde_data = p_c.data();
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows-1, 0, cam.kdeCols-1);
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows * scale, 0, cam.kdeCols * scale);
         grids.push_back(kde_grid);
-        ref_vals.push_back(*max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth));
+        ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
     for (int idx = 0; idx < numScenes; idx++)
@@ -278,26 +282,36 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     {
         lid.setSceneIdx(idx);
         lid.readEdge();
-        /** note: '30000' is a typical value for normalization. **/
-        const double relative_size = std::sqrt((double)lid.EdgeOrgCloud->points.size() / 30000);
         for (int j = 0; j < lid.EdgeOrgCloud->points.size(); ++j)
         {
             Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
-            problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_vals[idx], relative_size, img_interpolators[idx], inv_distortion),
+            problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_vals[idx], scale, img_interpolators[idx]),
                                      loss_function,
                                      params,
                                      params + num_q);
         }
     }
 
+    switch (setConstant)
+    {
+        case 1:
+            problem.SetParameterBlockConstant(params);
+            break;
+        case 2:
+            problem.SetParameterBlockConstant(params + num_q);
+            break;
+        default:
+            break;
+    }
+
     for (int i = 0; i < num_params; ++i)
     {
-        if (i < num_q)
+        if (i < num_q && setConstant != 1)
         {
             problem.SetParameterLowerBound(params, i, lb[i]);
             problem.SetParameterUpperBound(params, i, ub[i]);
         }
-        else
+        else if (i >= num_q && setConstant != 2)
         {
             problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
             problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
@@ -308,12 +322,15 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
-    options.num_threads = 12;
+    options.num_threads = 16;
     options.function_tolerance = 1e-7;
-    options.use_nonmonotonic_steps = true;
+    options.use_nonmonotonic_steps = false;
 
-    // OutputCallback callback(params);
-    // options.callbacks.push_back(&callback);
+     lid.setSceneIdx(1);
+     string paramsOutPath = lid.scenesFilePath[lid.scIdx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
+     outfile.open(paramsOutPath);
+     OutputCallback callback(params);
+     options.callbacks.push_back(&callback);
 
     ceres::Solver::Summary summary;
 
@@ -321,6 +338,8 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 
     std::cout << summary.FullReport() << "\n";
     customOutput(name, params, params_init);
+    outfile.close();
+
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
     for (int idx = 0; idx < numScenes; idx++)
@@ -329,7 +348,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         cam.setSceneIdx(idx);
         cam.readEdge();
         lid.readEdge();
-        vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
+        vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res);
         string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
         fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
     }

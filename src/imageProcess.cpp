@@ -558,7 +558,7 @@ std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool p
         {
             for (int j = 0; j < n_cols; ++j)
             {
-                query(0, i * n_cols + j) = rows.at(n_rows - i);
+                query(0, i * n_cols + j) = rows.at(n_rows - 1 - i);
                 query(1, i * n_cols + j) = cols.at(j);
             }
         }
@@ -585,9 +585,9 @@ std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool p
     }
 
     arma::vec kdeEstimations;
-    mlpack::kernel::GaussianKernel kernel(bandwidth);
+    mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
     mlpack::metric::EuclideanDistance metric;
-    mlpack::kde::KDE<GaussianKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(relError, 0.00, kernel);
+    mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(relError, 0.00, kernel);
     kde.Train(reference);
     kde.Evaluate(query, kdeEstimations);
 
@@ -612,8 +612,10 @@ std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool p
             // img(i, j) = kdeEstimations(index);
         }
     }
+    double kde_sum = arma::sum(kdeEstimations);
+    double kde_max = arma::max(kdeEstimations);
     outfile.close();
-    cout << "New kde image generated." << endl;
+    cout << "New kde image generated with sum = " << kde_sum << " and max = " << kde_max << endl;
     cout << "The run time is: " <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
     return img;
 }
