@@ -86,7 +86,7 @@ Get into the workspace of livox driver.
 	<tr>
 	    <td>Morefine S500+</td>
 	    <td align="center" valign="middle"><img src="readme_pics/morefine.png" width=60% /></td>
-            <td align="center" valign="middle">  <a href =https://morefines.com/products/mini-pc-s500-enclosure> Onboard-Computer </a> </td>
+            <td align="center" valign="middle">  <a href =https://morefines.com/products/mini-pc-s500-enclosure> Mini-Computer </a> </td>
 	</tr>
 	<tr>
 	    <td> Scout-mini </td>
