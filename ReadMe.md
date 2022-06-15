@@ -99,7 +99,8 @@ rosrun data_process mainNode
 <img src="readme_pics/lidarEdge.png" >
 
 ### 5.3 Calibration Visualization
-<img src="readme_pics/overlap.png" >
+<img src="readme_pics/Scene2.png" >
+<img src="readme_pics/ColoredScene2.png" >
 
 ## 6. Hardwares
 
