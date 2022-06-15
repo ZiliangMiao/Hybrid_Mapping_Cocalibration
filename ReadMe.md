@@ -65,11 +65,6 @@ Get into the workspace of livox driver.
 ## 4. Results
 ### 4.1. Hardwares
 
-<div align="center">
-    <img src="readme_pics/robot.png" width=45% >
-    <img src="readme_pics/robot.png" width=45% >
-</div>
-
  <table>
 	<tr>
 	    <th>Hardware Platform</th>
@@ -78,7 +73,7 @@ Get into the workspace of livox driver.
 	    <th>Shopping Links</th> 
 	</tr >
 	<tr >
-            <td rowspan="4"><img src="readme_pics/robot.jpg" /></td>
+            <td rowspan="4"><img src="readme_pics/robot.png" /></td>
 	    <td>Livox Mid-360 </td>
 	    <td align="center" valign="middle"><img src=  "readme_pics/mid360.png" width=25% /></td>
             <td align="center" valign="middle">  <a href ="https://www.livoxtech.com"> Lidar </a> </td>
