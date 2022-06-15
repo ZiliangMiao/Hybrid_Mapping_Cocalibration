@@ -29,7 +29,7 @@ Version: mlpack 3.4.2
 Please follow [mlpack Installation](https://mlpack.org/) to install.
 
 ### 1.6 Livox SDK and Livox ROS Driver (Optional)
-The SDK and driver is used for dealing with Livox lidar.
+The SDK and driver is used for dealing with Livox LiDAR.
 Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [Livox ROS Driver](https://github.com/Livox-SDK/livox_ros_driver).
 
 ### 1.7 MindVision SDK (Optional)
@@ -47,7 +47,7 @@ Clone the repository and catkin_make:
 ```
 
 ## 3. Data 
-### 3.1 Use Livox ROS Driver to Abtain Lidar Data
+### 3.1 Use Livox ROS Driver to Obtain LiDAR Data
 Get into the workspace of livox driver, record data by these command. 
 ```
 catkin_make 
@@ -55,9 +55,9 @@ source ./devel/setup.bash
 roslaunch livox_ros_driver livox_lidar.launch
 rosbag record -a
 ```
-### 3.2 Use Livox Viewer to Abtain Lidar Data
+### 3.2 Use Livox Viewer to Obtain LiDAR Data
 Download [Livox Viewer](https://www.livoxtech.com/downloads).
-Use Livox Viewer to abtain data with .lvx format.
+Use Livox Viewer to obtain data with .lvx format.
 
 Get into the workspace of livox driver, convert .lvx format to .bag format.
 ```
@@ -71,8 +71,8 @@ Transform rosbag file to .pcd files
 ```
 <rosbag_file_path> is the path of rosbag file, <topic> is /livox/lidar for livox lidar, <pcds_directory_path> is the output directory path of .pcd files.
 
-### 3.3 Use MindVision SDK to Abtain Image Data
-Use [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138) to abtain image data.
+### 3.3 Use MindVision SDK to Obtain Image Data
+Use [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138) to obtain image data.
 
 <img src="readme_pics/fisheyeImg.bmp" width=45% >
 
@@ -93,7 +93,7 @@ rosrun data_process mainNode
 <img src="readme_pics/flatImage.bmp" >
 <img src="readme_pics/imageEdge.png" >
 
-### 5.2 Lidar process
+### 5.2 LiDAR process
 <img src="readme_pics/flattedLid.png" >
 <img src="readme_pics/flatLidarImageRNN.bmp" >
 <img src="readme_pics/lidarEdge.png" >
@@ -115,7 +115,7 @@ rosrun data_process mainNode
             <td rowspan="4"><img src="readme_pics/robot.png" /></td>
 	    <td>Livox Mid-360 </td>
 	    <td align="center" valign="middle"><img src=  "readme_pics/mid360.JPG" width=60%/></td>
-            <td align="center" valign="middle">  <a href ="https://www.livoxtech.com"> Lidar </a> </td>
+            <td align="center" valign="middle">  <a href ="https://www.livoxtech.com"> LiDAR </a> </td>
 	</tr>
 	<tr>
 	    <td> MV-Fisheye Camera</td>
