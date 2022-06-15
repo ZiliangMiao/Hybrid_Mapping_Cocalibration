@@ -503,13 +503,12 @@ void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vecto
 }
 
 // extrinsic and inverse intrinsic transform for visualization of lidar points in flat image
-vector<vector<double>> lidarProcess::edgeVizTransform(vector<double> _p, Eigen::Matrix2d distortion)
+vector<vector<double>> lidarProcess::edgeVizTransform(vector<double> _p)
 {
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
     Eigen::Matrix<double, 6, 1> a_;
-    Eigen::Matrix<double, 2, 2> inv_distortion_ = distortion.inverse();
     switch (_p.size() - 3)
     {
         case 10:
@@ -550,7 +549,7 @@ vector<vector<double>> lidarProcess::edgeVizTransform(vector<double> _p, Eigen::
         inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
         S = {-inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
-        p_uv = inv_distortion_ * S + uv_0;
+        p_uv = S + uv_0;
         lidProjection[0][i] = p_uv(0);
         lidProjection[1][i] = p_uv(1);
     }

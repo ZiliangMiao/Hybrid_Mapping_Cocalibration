@@ -45,7 +45,7 @@ class lidarProcess{
         std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidarToSphere();
         vector< vector< vector<int> > > sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar);
         vector< vector<double> > edgeTransform();
-        vector<vector<double>> edgeVizTransform(vector<double> _p, Eigen::Matrix2d distortion);
+        vector<vector<double>> edgeVizTransform(vector<double> _p);
         vector< vector <int> > edgeToPixel();
         void pixLookUp(vector< vector <int> > edgePixels, vector< vector< vector<int> > > tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         void edgePixCheck(vector< vector<int> > edgePixels);
@@ -122,6 +122,7 @@ class lidarProcess{
                 this -> EdgeTxtPath = this -> OutputPath + "/lidEdgePix.txt";
                 this -> EdgeOrgTxtPath = this -> OutputPath + +"/lid3dOut.txt";
                 this -> EdgeTransTxtPath = this -> OutputPath + "/lidTrans.txt";
+                this -> ParamsRecordPath = this -> OutputPath + "/ParamsRecord.txt";
                 this -> LidPro2DPath = this -> OutputPath + "/lidPro2d.txt";
                 this -> LidPro3DPath = this -> OutputPath + "/lidPro3d.txt";
             }
@@ -138,6 +139,7 @@ class lidarProcess{
             string EdgeTxtPath;
             string EdgeOrgTxtPath;
             string EdgeTransTxtPath;
+            string ParamsRecordPath;
             string LidPro2DPath;
             string LidPro3DPath;
         };

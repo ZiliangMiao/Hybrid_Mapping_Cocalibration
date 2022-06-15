@@ -125,73 +125,102 @@ int main(int argc, char** argv){
 //         }
 //     }
    
-//     cout << endl;
-//     cout << "----------------- Ceres Optimization ---------------------" << endl;
-//     if (ceresOpt) {
-//         /** a0, a1, a2, a3, a4; size of params = 13 **/
-//         // vector<char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-//         // vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
-//         // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
+    cout << endl;
+    cout << "----------------- Ceres Optimization ---------------------" << endl;
+    if (ceresOpt) {
+//        /** a0, a1, a2, a3, a4; size of params = 13 **/
+//         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+//         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
+//         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
 
-//         /** a0, a1, a3, a5; size of params = 12 **/
-//         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
-//         vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
-//         vector<double> dev = {5e-2, 5e-2, 5e-3, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 6e+0, 2e+0};
+        /** a0, a1, a2, a3, a4; size of params = 13 **/
+         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
-//         /** a1, a3, a5; size of params = 11 **/
-//         // vector<char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
-//         // vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
-//         // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
+        /** a0, a1, a2, a3, a4; size of params = 13 **/
+        // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+        // vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
+        // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
 
-//         vector<double> params = params_init;
-//         // vector<double> params_init = {-0.03, 0.03, 0.1158, 0.0, 0.0, 0.21, 1023.0, 1201.0, 629.93645006, -8.48070567, 3.82415532};
+        /** a0, a1, a3, a5; size of params = 12 **/
+//        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
+//        vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
+//        vector<double> dev = {2e-2, 2e-2, 4e-2, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 4e+0, 2e+0};
 
-//         vector<double> lb(dev.size()), ub(dev.size());
-//         vector<double> bw = {32,24,16};
-        Eigen::Matrix2d distortion;
-        distortion << 1.000143, -0.000177, 0.000129, 1.000000;
+//        /** a0, a1, a3, a5; size of params = 12 **/
+//        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
+//        vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, -1, 1};
+//        vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 2e+1, 10e+0, 5e+0};
 
-//         string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
+        /** a1, a3, a5; size of params = 11 **/
+        // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
+        // vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
+        // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
 
-// //        /********* Initial Visualization *********/
-// //        for (int idx = 0; idx < imageProcess.numScenes; idx++)
-// //        {
-// //            imageProcess.setSceneIdx(idx);
-// //            lidarProcess.readEdge();
-// //            imageProcess.readEdge();
-// //            vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params_init, distortion);
-// //            fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
-// //        }
+        vector<double> params = params_init;
+        // vector<double> params_init = {-0.03, 0.03, 0.1158, 0.0, 0.0, 0.21, 1023.0, 1201.0, 629.93645006, -8.48070567, 3.82415532};
 
-//         for (int i = 0; i < bw.size(); i++)
-//         {
-//             double bandwidth = bw[i];
-//             cout << "Round " << i << endl;
-//             if (i == 0){
-//                 /** enable rx, ry, rz for the first round **/
-//                 for (int j = 0; j < dev.size(); j++)
-//                 {
-//                     if (j < 3){
-//                         lb[j] = params_init[j] - dev[j];
-//                         ub[j] = params_init[j] + dev[j];
-//                     }
-//                     else{
-//                         lb[j] = params_init[j] - 1e-3;
-//                         ub[j] = params_init[j] + 1e-3;
-//                     }
-//                 }
-//             }
-//             else{
-//                 /** enable all the params for other rounds **/
-//                 for (int j = 3; j < dev.size(); j++)
-//                 {
-//                     lb[j] = params_init[j] - dev[j];
-//                     ub[j] = params_init[j] + dev[j];
-//                 }
-//             }
-//             params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
-//         }
-//     }
-    fusionViz3D(imageProcess, lidarProcess, params, distortion);
+        vector<double> lb(dev.size()), ub(dev.size());
+        vector<double> bw = {32,24,16,8,4,2};
+        string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
+
+        for (int i = 0; i < dev.size(); ++i) {
+            ub[i] = params_init[i] + dev[i];
+            lb[i] = params_init[i] - dev[i];
+            if (i == dev.size() - 2){
+                ub[i] = params_init[i];
+                lb[i] = params_init[i] - dev[i];
+            }
+            if (i == dev.size() - 1 || i == dev.size() - 3){
+                ub[i] = params_init[i] + dev[i];
+                lb[i] = params_init[i];
+            }
+        }
+
+        /********* Initial Visualization *********/
+        for (int idx = 0; idx < imageProcess.numScenes; idx++)
+        {
+            imageProcess.setSceneIdx(idx);
+            lidarProcess.setSceneIdx(idx);
+            lidarProcess.readEdge();
+            imageProcess.readEdge();
+            vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params_init);
+            fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+        }
+
+        for (int i = 0; i < bw.size(); i++)
+        {
+            double bandwidth = bw[i];
+            cout << "Round " << i << endl;
+            /**
+             * setConstant = 0 -> enable all the params
+             * setConstant = 1 -> enable intrinsics only
+             * setConstant = 2 -> enable extrinsics only
+             * **/
+            if (i == 0){
+                int setConstant = 2;
+                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+//                setConstant = 1;
+//                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+            }
+            else{
+                int setConstant = 0;
+                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+            }
+//            params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
+        }
+        lidarProcess.setSceneIdx(1);
+        imageProcess.setSceneIdx(1);
+//    vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
+        fusionViz3D(imageProcess, lidarProcess, params);
+    }
+
+    lidarProcess.setSceneIdx(2);
+    imageProcess.setSceneIdx(2);
+    vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
+    fusionViz3D(imageProcess, lidarProcess, params);
+
+
     return 0;
 }

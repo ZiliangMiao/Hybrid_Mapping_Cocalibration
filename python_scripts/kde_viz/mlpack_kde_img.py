@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/python_scripts/kde_viz/"
-data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn/outputs/"
+data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF2-P1/outputs/"
 
 ########################################################################################################################
 # load files #
@@ -78,9 +78,9 @@ def joint_visualization(img_rows, img_cols, input_a, input_b):
               alpha = 0.5,)
     ax.set_xlim([0, img_cols-1])
     ax.set_ylim([0, img_rows-1])
-    plt.savefig("/home/halsey/Desktop/output/pytest.png")
-    # plt.show()
-    # plt.close()
+    # plt.savefig("/home/isee/Desktop/output/pytest.png")
+    plt.show()
+    plt.close()
 
 
 ########################################################################################################################

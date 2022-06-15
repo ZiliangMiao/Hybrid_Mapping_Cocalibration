@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 from skimage.feature import _hog, _hoghistogram
 
-data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/runYangIn"
+data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF2-P2"
 dir_cam = data_path + "/outputs/flatImage.bmp"
 dir_lidar = data_path + "/outputs/byIntensity/flatLidarImage.bmp"
 
@@ -260,7 +260,7 @@ if __name__ == "__main__":
     cv2.imwrite(data_path + "/edges/cannyOutputs/lid_1_filtered.png", edge_lid)
 
     edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
-    edge_lid = cv2.Canny(image=edge_lid, threshold1=60, threshold2=80)
+    edge_lid = cv2.Canny(image=edge_lid, threshold1=130, threshold2=150)
 
     # remove the black region
     pix_rows_bound = 435
@@ -277,19 +277,19 @@ if __name__ == "__main__":
     # contour filter
     cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=220)
     cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
     edge_cam = np.zeros(edge_cam.shape, np.uint8)
     edge_lid = np.zeros(edge_lid.shape, np.uint8)
     cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
     cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
 
-    cv2.imwrite(data_path + "/edges/cannyOutputs/lid_3_contour.png", edge_lid)
-    cv2.imwrite(data_path + "/edges/cannyOutputs/cam_3_contour.png", edge_cam)
+    # cv2.imwrite(data_path + "/edges/cannyOutputs/lid_3_contour.png", edge_lid)
+    # cv2.imwrite(data_path + "/edges/cannyOutputs/cam_3_contour.png", edge_cam)
 
     # patch
-    edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=9, iter=2)
-    edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=15, iter=2)
+    # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
+    # edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=8, iter=2)
 
     # 这个是填充区域的
     # edge_cam = fill_hole(img=edge_cam, hole_color=0, bkg_color=255)
@@ -298,15 +298,15 @@ if __name__ == "__main__":
     # cv2.imwrite(data_path + "edges/cannyOutputs/lidar_3_canny_patch.png", edge_lidar)
     # cv2.imwrite(data_path + "edges/cannyOutputs/cam_3_canny_patch.png", edge_cam)
 
-    # contour filter
-    cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-    cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
-    edge_cam = np.zeros(edge_cam.shape, np.uint8)
-    edge_lid = np.zeros(edge_lid.shape, np.uint8)
-    cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-    cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+    # # contour filter
+    # cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    # cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+    # cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
+    # edge_cam = np.zeros(edge_cam.shape, np.uint8)
+    # edge_lid = np.zeros(edge_lid.shape, np.uint8)
+    # cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
+    # cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
 
     cv2.imwrite(data_path + "/edges/cannyOutputs/lidEdge.png", edge_lid)
     cv2.imwrite(data_path + "/edges/cannyOutputs/camEdge.png", edge_cam)

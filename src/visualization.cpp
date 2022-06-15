@@ -62,18 +62,17 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
             cam.sphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p, Eigen::Matrix2d distortion){
+void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p){
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
     Eigen::Matrix<double, 6, 1> a_;
-    Eigen::Matrix<double, 2, 2> inv_distortion_ = distortion.inverse();
-    switch (_p.size() - 3)
+    switch (_p.size())
     {
-        case 10:
+        case 13:
             a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
             break;
-        case 9:
+        case 12:
             a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
             break;
         default:
@@ -87,9 +86,9 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p, Eigen::M
 
     // extrinsic transform
     Eigen::Matrix<double, 3, 3> R;
-    Eigen::AngleAxisd xAngle(AngleAxisd(eulerAngle(0), Vector3d::UnitX()));
-    Eigen::AngleAxisd yAngle(AngleAxisd(eulerAngle(1), Vector3d::UnitY()));
-    Eigen::AngleAxisd zAngle(AngleAxisd(eulerAngle(2), Vector3d::UnitZ()));
+    Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
+    Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
+    Eigen::AngleAxisd zAngle(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
     R = zAngle * yAngle * xAngle;
 
     Eigen::Matrix<double, 3, 1> p_;
@@ -131,8 +130,8 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p, Eigen::M
         theta = acos(p_trans(2) / sqrt(pow(p_trans(0), 2) + pow(p_trans(1), 2) + pow(p_trans(2), 2)));
         inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
-        S = {inv_r * p_trans(0) / r, inv_r * p_trans(1) / r};
-        p_uv = inv_distortion_ * S + uv_0;
+        S = {inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
+        p_uv = S + uv_0;
 
         int u = int(p_uv(0));
         int v = int(p_uv(1));
@@ -168,9 +167,9 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p, Eigen::M
     }
     pcl::visualization::CloudViewer viewer("Viewer");
     viewer.showCloud(showCloud);
-    
+
     while(!viewer.wasStopped()){
-        
+
     }
     cv::waitKey();
 }
