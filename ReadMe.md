@@ -1,4 +1,4 @@
-# Livox_Fisheye_Fusion (LFF)
+# Livox-Fisheye Joint Calibration and Fusion 
 LFF project is an automatic calibration method for Livox mid-360 LiDAR and Fisheye Camera. The package is developed by MIAO Ziliang, He Buwei, Xie Wenya, WANG Zhenhu (ISEE Lab, SDIM, SUSTech), directed by Prof.HONG Xiaoping (ISEE Lab, SDIM, SUSTech).
 
 
