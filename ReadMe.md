@@ -93,15 +93,15 @@ rosrun data_process mainNode
 <img src="readme_pics/flatImage.bmp" >
 <img src="readme_pics/imageEdge.png" >
 
-### 5.1 Lidar process
+### 5.2 Lidar process
 <img src="readme_pics/flattedLid.png" >
 <img src="readme_pics/flatLidarImageRNN.bmp" >
 <img src="readme_pics/lidarEdge.png" >
 
-### 5.1 Calibration Visualization
+### 5.3 Calibration Visualization
 <img src="readme_pics/overlap.png" >
 
-
+## 6. Hardwares
 
  <table>
 	<tr>
