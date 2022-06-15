@@ -75,22 +75,22 @@ Get into the workspace of livox driver.
 	<tr >
             <td rowspan="4"><img src="readme_pics/robot.png" /></td>
 	    <td>Livox Mid-360 </td>
-	    <td align="center" valign="middle"><img src=  "readme_pics/mid360.JPG" width=25% /></td>
+	    <td align="center" valign="middle"><img src=  "readme_pics/mid360.JPG" /></td>
             <td align="center" valign="middle">  <a href ="https://www.livoxtech.com"> Lidar </a> </td>
 	</tr>
 	<tr>
 	    <td> MV-Fisheye Camera</td>
-	    <td align="center" valign="middle"><img src="readme_pics/fisheye.JPG" width=19% /></td>
+	    <td align="center" valign="middle"><img src="readme_pics/fisheye.JPG" /></td>
 	    <td align="center" valign="middle">  <a href ="https://en.hikrobotics.com/vision/visioninfo.htm?type=42&oid=2451"> Camera </a> </td>
 	</tr>
 	<tr>
 	    <td>Morefine S500+</td>
-	    <td align="center" valign="middle"><img src="readme_pics/morefine.png" width=22% /></td>
+	    <td align="center" valign="middle"><img src="readme_pics/morefine.png"  /></td>
             <td align="center" valign="middle">  <a href =https://morefines.com/products/mini-pc-s500-enclosure> Onboard-Computer </a> </td>
 	</tr>
 	<tr>
 	    <td> Scout-mini </td>
-	    <td align="center" valign="middle"><img src="readme_pics/robot.png" width=28% /></td>
+	    <td align="center" valign="middle"><img src="readme_pics/robot.png" /></td>
 	    <td align="center" valign="middle">  <a href ="http://www.agilex.ai/index/product/id/3?lang=zh-cn"> Robot Chassis </a> </td>
 	</tr>
 </table>
