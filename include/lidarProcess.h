@@ -119,10 +119,13 @@ class lidarProcess{
                 this -> PolarPcdPath = this -> ProjPath + "/lidPolar.pcd";
                 this -> CartPcdPath = this -> ProjPath + "/lidCartesian.pcd";
                 this -> EdgeCheckImgPath = this -> ProjPath + "/edgeCheck.bmp";
+                this -> TagsMapTxtPath = this -> ProjPath + "/tagsMap.txt";
                 this -> EdgeTxtPath = this -> OutputPath + "/lidEdgePix.txt";
                 this -> EdgeOrgTxtPath = this -> OutputPath + +"/lid3dOut.txt";
                 this -> EdgeTransTxtPath = this -> OutputPath + "/lidTrans.txt";
                 this -> ParamsRecordPath = this -> OutputPath + "/ParamsRecord.txt";
+
+
                 this -> LidPro2DPath = this -> OutputPath + "/lidPro2d.txt";
                 this -> LidPro3DPath = this -> OutputPath + "/lidPro3d.txt";
             }
@@ -136,6 +139,7 @@ class lidarProcess{
             string PolarPcdPath;
             string CartPcdPath;
             string EdgeCheckImgPath;
+            string TagsMapTxtPath;
             string EdgeTxtPath;
             string EdgeOrgTxtPath;
             string EdgeTransTxtPath;

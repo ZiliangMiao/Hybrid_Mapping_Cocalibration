@@ -176,8 +176,8 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
                 ROS_ASSERT_MSG((theta != 0), "Theta equals to zero! Scene Index: %d", this -> numScenes);
 
                 // point cloud with origin polar coordinates
-                ptPolar.x = phi;
-                ptPolar.y = theta;
+                ptPolar.x = theta;
+                ptPolar.y = phi;
                 ptPolar.z = 0;
                 ptPolar.b = image.at<cv::Vec3b>(u, v)[0];
                 ptPolar.g = image.at<cv::Vec3b>(u, v)[1];
@@ -277,8 +277,8 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
             {
                 // assign the theta and phi center to the searchPoint
                 pcl::PointXYZRGB searchPoint;
-                searchPoint.x = phi_center;
-                searchPoint.y = theta_center;
+                searchPoint.x = theta_center;
+                searchPoint.y = phi_center;
                 searchPoint.z = 0;
                 std::vector<int> pointIdxRadiusSearch;
                 std::vector<float> pointRadiusSquaredDistance;

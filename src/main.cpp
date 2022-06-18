@@ -21,9 +21,10 @@ using namespace cv;
 
 const bool fisheyeFlatProcess = false;
 const bool fisheyeEdgeProcess = false;
-const bool lidarFlatProcess = false;
+const bool lidarFlatProcess = true;
 const bool lidarEdgeProcess = false;
-const bool ceresOpt = true;
+const bool ceresOpt = false;
+const bool viz3D = false;
 const bool denseFile = false;
 
 /********* Directory Path of ROS Package *********/
@@ -51,92 +52,88 @@ int main(int argc, char** argv){
         return -1;
     }
 
-    // vector<double> params_calib = {
-    //     0.001, 0.0197457, 0.13,  0.00891695, 0.00937508, 0.14,
-    //     606.16, -0.000558783, -2.70908E-09, -1.17573E-10,
-    //     1.00014, -0.000177, 0.000129, 1023, 1201
-    // };
-    vector<double> params = {
-        -0.0142489, 0.027169, 0.1225, -0.01, -0.01, 0.110625,
-        1028, 1197.71,
-        10, 607.74, -10.2107, 5.22416
+    /** fisheye intrinsics calibrated by chessboard **/
+    vector<double> params_calib = {
+        0.001, 0.0197457, 0.13,  0.00891695, 0.00937508, 0.14,
+        606.16, -0.000558783, -2.70908E-09, -1.17573E-10,
+        1.00014, -0.000177, 0.000129, 1023, 1201
     };
 
     cout << "----------------- Camera Processing ---------------------" << endl;
     imageProcess imageProcess(pkgPath);
-    // imageProcess.setIntrinsic(params_calib);
+    imageProcess.setIntrinsic(params_calib);
 
-    // if (fisheyeFlatProcess) {
-    //     for (int idx = 0; idx < imageProcess.numScenes; idx++) {
-    //         imageProcess.setSceneIdx(idx);
-    //         std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
-    //         pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
-    //         pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
-    //         std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    //         vector< vector< vector<int> > > camtagsMap = imageProcess.sphereToPlane(camOrgPolarCloud);
-    //     }
-    // }
-    // else if (fisheyeEdgeProcess) {
-    //     for (int idx = 0; idx < imageProcess.numScenes; idx++) {
-    //         imageProcess.setSceneIdx(idx);
-    //         std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
-    //         pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
-    //         pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
-    //         std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    //         vector< vector< vector<int> > > camtagsMap = imageProcess.sphereToPlane(camOrgPolarCloud);
-    //         vector< vector<int> > edgePixels = imageProcess.edgeToPixel();
-    //         imageProcess.pixLookUp(edgePixels, camtagsMap, camOrgPixelCloud);
-    //     }
-    // }
+    if (fisheyeFlatProcess) {
+        for (int idx = 0; idx < imageProcess.numScenes; idx++) {
+            imageProcess.setSceneIdx(idx);
+            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
+            std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
+            vector< vector< vector<int> > > camtagsMap = imageProcess.sphereToPlane(camOrgPolarCloud);
+        }
+    }
+    else if (fisheyeEdgeProcess) {
+        for (int idx = 0; idx < imageProcess.numScenes; idx++) {
+            imageProcess.setSceneIdx(idx);
+            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
+            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
+            std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
+            vector< vector< vector<int> > > camtagsMap = imageProcess.sphereToPlane(camOrgPolarCloud);
+            vector< vector<int> > edgePixels = imageProcess.edgeToPixel();
+            imageProcess.pixLookUp(edgePixels, camtagsMap, camOrgPixelCloud);
+        }
+    }
 
-    // cout << endl;
+    cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     bool byIntensity = true;
     lidarProcess lidarProcess(pkgPath, byIntensity);
-//     lidarProcess.setExtrinsic(params_calib);
-//     ROS_ASSERT_MSG(lidarProcess.numScenes == imageProcess.numScenes, "numScenes in imageProcess and lidarProcess is not equal!");
-//     /********* Create Dense Pcd for All Scenes *********/
-//     if (denseFile) {
-//         for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
-//             lidarProcess.setSceneIdx(idx);
-//             lidarProcess.createDenseFile();
-//         }
-//     }
-//     if (lidarFlatProcess) {
-//         for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
-//             lidarProcess.setSceneIdx(idx);
-//             std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
-//             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
-//             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
-//             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-//             vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
-//         }
-//     }
-//     else if (lidarEdgeProcess) {
-//         for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
-//             lidarProcess.setSceneIdx(idx);
-//             std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
-//             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
-//             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
-//             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-//             vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
-//             vector< vector <int> > lidEdgePixels = lidarProcess.edgeToPixel();
-//             lidarProcess.pixLookUp(lidEdgePixels, lidTagsMap, lidCartesianCloud);
-//         }
-//     }
+    lidarProcess.setExtrinsic(params_calib);
+    ROS_ASSERT_MSG(lidarProcess.numScenes == imageProcess.numScenes, "numScenes in imageProcess and lidarProcess is not equal!");
+    /********* Create Dense Pcd for All Scenes *********/
+    if (denseFile) {
+        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+            lidarProcess.setSceneIdx(idx);
+            lidarProcess.createDenseFile();
+        }
+    }
+    if (lidarFlatProcess) {
+        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+            lidarProcess.setSceneIdx(idx);
+            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
+            pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
+            pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
+            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+            vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
+        }
+    }
+    else if (lidarEdgeProcess) {
+        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+            lidarProcess.setSceneIdx(idx);
+            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
+            pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
+            pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
+            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+            vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
+            vector< vector <int> > lidEdgePixels = lidarProcess.edgeToPixel();
+            lidarProcess.pixLookUp(lidEdgePixels, lidTagsMap, lidCartesianCloud);
+        }
+    }
    
     cout << endl;
     cout << "----------------- Ceres Optimization ---------------------" << endl;
     if (ceresOpt) {
-//        /** a0, a1, a2, a3, a4; size of params = 13 **/
+        /** a0, a1, a2, a3, a4; size of params = 13 **/
 //         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
 //         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
 //         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
-         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
-         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
+        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+        vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
@@ -148,7 +145,7 @@ int main(int argc, char** argv){
 //        vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
 //        vector<double> dev = {2e-2, 2e-2, 4e-2, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 4e+0, 2e+0};
 
-//        /** a0, a1, a3, a5; size of params = 12 **/
+        /** a0, a1, a3, a5; size of params = 12 **/
 //        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
 //        vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, -1, 1};
 //        vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 2e+1, 10e+0, 5e+0};
@@ -159,8 +156,6 @@ int main(int argc, char** argv){
         // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
 
         vector<double> params = params_init;
-        // vector<double> params_init = {-0.03, 0.03, 0.1158, 0.0, 0.0, 0.21, 1023.0, 1201.0, 629.93645006, -8.48070567, 3.82415532};
-
         vector<double> lb(dev.size()), ub(dev.size());
         vector<double> bw = {32,24,16,8,4,2};
         string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
@@ -208,19 +203,14 @@ int main(int argc, char** argv){
                 int setConstant = 0;
                 params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
             }
-//            params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
         }
-        lidarProcess.setSceneIdx(1);
-        imageProcess.setSceneIdx(1);
-//    vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        fusionViz3D(imageProcess, lidarProcess, params);
     }
 
-    lidarProcess.setSceneIdx(2);
-    imageProcess.setSceneIdx(2);
-    vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-    fusionViz3D(imageProcess, lidarProcess, params);
-
-
+    if (viz3D) {
+        lidarProcess.setSceneIdx(1);
+        imageProcess.setSceneIdx(1);
+        vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
+        fusionViz3D(imageProcess, lidarProcess, test_params);
+    }
     return 0;
 }

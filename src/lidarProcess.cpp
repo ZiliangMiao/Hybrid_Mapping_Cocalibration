@@ -14,35 +14,20 @@
 #include <pcl/common/common.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-#include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/ModelCoefficients.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/features/principal_curvatures.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_plane.h>
 #include <pcl/search/kdtree.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/common/transforms.h>
 #include <Eigen/Core>
-#include <Eigen/Dense>
 // opencv
 #include <opencv2/opencv.hpp>
 #include <cv_bridge/cv_bridge.h>
 // include mlpack
 #include <mlpack/core.hpp>
 #include <mlpack/methods/kde/kde.hpp>
-#include <mlpack/core/tree/binary_space_tree.hpp>
-#include <mlpack/core/tree/octree.hpp>
-#include <mlpack/core/tree/cover_tree.hpp>
-#include <mlpack/core/tree/rectangle_tree.hpp>
 // heading
 #include "lidarProcess.h"
 
@@ -200,8 +185,8 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
         // assign the polar coordinate to pcl point cloud
         phi = M_PI - atan2(Y, X);
         theta = acos(Z / radius);
-        pt_polar.x = phi;
-        pt_polar.y = theta;
+        pt_polar.x = theta;
+        pt_polar.y = phi;
         pt_polar.z = 0;
         pt_polar.intensity = projProp;
         lidPolar->points.push_back(pt_polar);
@@ -237,23 +222,30 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
     double flatRows = this->flatRows;
     double flatCols = this->flatCols;
 
+    struct Tags
+    {
+        int Label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
+        vector<int> Idx;
+        vector<double> Mean(2);
+        vector<double> Cov(2);
+    };
+
     // define the data container
     cv::Mat flatImage = cv::Mat::zeros(flatRows, flatCols, CV_32FC1); // define the flat image
-    vector<int> tagsList;                                             // define the tag list
-    vector<vector<vector<int>>> tagsMap(flatRows, vector<vector<int>>(flatCols, tagsList));
+    vector<Tags> tagsList; // define the tag list
+    vector<vector<Tags>> tagsMap(flatRows, vector<Tags>(flatCols));
 
     // construct kdtrees and load the point clouds
     // caution: the point cloud need to be setted before the loop
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
     kdtree.setInputCloud(lidPolar);
-    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree2;
-    kdtree2.setInputCloud(lidPolar);
 
     // define the invalid search count
     int invalidSearch = 0; // search invalid count
-    int invalidIndex = 0;  // index invalid count
-    double radPerPix = this->radPerPix;
-    double searchRadius = radPerPix / 2;
+    int invalidIndex = 0; // index invalid count
+    double radPerPix = this -> radPerPix;
+    double scale = 2;
+    double searchRadius = scale * (radPerPix / 2);
     for (int u = 0; u < flatRows; ++u)
     {
         float theta_lb = u * radPerPix;
@@ -268,54 +260,30 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
 
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZI searchPoint;
-            searchPoint.x = phi_center;
-            searchPoint.y = theta_center;
+            searchPoint.x = theta_center;
+            searchPoint.y = phi_center;
             searchPoint.z = 0;
 
             // define the vector container for storing the info of searched points
             std::vector<int> pointIdxRadiusSearch;
             std::vector<float> pointRadiusSquaredDistance; // type of distance vector has to be float
-            int idx = 0;
-
             // use kdtree to search (radius search) the spherical point cloud
             int numRNN = kdtree.radiusSearch(searchPoint, searchRadius, pointIdxRadiusSearch, pointRadiusSquaredDistance); // number of the radius nearest neighbors
             if (numRNN == 0)                                                                                               // no point found
             {
-                // assign the theta and phi center to the searchPoint
-                std::vector<int> pointIdxRadiusSearch2;
-                std::vector<float> pointRadiusSquaredDistance2;
-                int numSecondSearch = 0;
-                double scale = 1;
-                while (numSecondSearch == 0)
-                {
-                    scale = scale + 0.05;
-                    numSecondSearch = kdtree2.radiusSearch(searchPoint, scale * searchRadius, pointIdxRadiusSearch2, pointRadiusSquaredDistance2);
-                    if (scale > 2)
-                    {
-                        flatImage.at<float>(u, v) = 160; // intensity
-                        invalidSearch = invalidSearch + 1;
-                        // add tags
-                        idx = 0;
-                        tagsMap[u][v].push_back(idx);
-                        break;
-                    }
-                }
-                if (numSecondSearch != 0) // there are more points found than one
-                {
-                    double intensity = 0; // intensity channel
-                    for (int i = 0; i < pointIdxRadiusSearch2.size(); ++i)
-                    {
-                        intensity = intensity + (*lidPolar)[pointIdxRadiusSearch2[i]].intensity;
-                        // add tags
-                        idx = pointIdxRadiusSearch2[i];
-                        tagsMap[u][v].push_back(idx);
-                    }
-                    flatImage.at<float>(u, v) = intensity / numSecondSearch; // intensity
-                }
+                flatImage.at<float>(u, v) = 160; // intensity
+                invalidSearch = invalidSearch + 1;
+                // add tags
+                tagsMap[u][v].Label = 0;
+                tagsMap[u][v].Idx.push_back(0);
+                tagsMap[u][v].Mean = 0;
+                tagsMap[u][v].Std = 0;
             }
-            if (numRNN != 0) // corresponding points are found in the radius neighborhood
+            else  // corresponding points are found in the radius neighborhood
             {
                 double intensity = 0; // intensity channel
+                vector<double> Theta;
+                vector<double> Phi;
                 for (int i = 0; i < pointIdxRadiusSearch.size(); ++i)
                 {
                     if (pointIdxRadiusSearch[i] > lidPolar->points.size() - 1)
@@ -326,14 +294,51 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
                         continue;
                     }
                     intensity = intensity + (*lidPolar)[pointIdxRadiusSearch[i]].intensity;
+                    Theta.push_bask((*lidPolar)[pointIdxRadiusSearch[i]].x);
+                    Phi.push_back((*lidPolar)[pointIdxRadiusSearch[i]].y);
                     // add tags
-                    idx = pointIdxRadiusSearch[i];
-                    tagsMap[u][v].push_back(idx);
+                    tagsMap[u][v].Idx.push_back(pointIdxRadiusSearch[i]);
                 }
+                tagsMap[u][v].Label = 1;
+
+
+                tagsMap[u][v].Mean[0] = 0;
+                tagsMap[u][v].Mean[1] = 0;
+                tagsMap[u][v].Cov[0] = 0;
+                tagsMap[u][v].Cov[1] = 0;
                 flatImage.at<float>(u, v) = intensity / numRNN; // intensity
             }
         }
     }
+
+    string tagsMapTxtPath = this -> scenesFilePath[this -> scIdx].TagsMapTxtPath;
+    ofstream outfile;
+    outfile.open(tagsMapTxtPath, ios::out);
+    if (!outfile.is_open())
+    {
+        cout << "Open file failure" << endl;
+    }
+    for (int u = 0; u < flatRows; ++u)
+    {
+        for (int v = 0; v < flatCols; ++v)
+        {
+            cout << tagsMap[u][v].size() << endl;
+            for (int k = 0; k < tagsMap[u][v].size(); ++k) {
+                /** k is the number of lidar points that the [u][v] pixel contains **/
+                if (k == tagsMap[u][v].size() - 1) {
+                    cout << tagsMap[u][v][k] << endl;
+                    outfile << tagsMap[u][v][k] << "\t" << "*****" << "\t" << tagsMap[u][v].size() << endl;
+                }
+                else {
+                    cout << tagsMap[u][v][k] << endl;
+                    outfile << tagsMap[u][v][k] << "\t";
+                }
+            }
+        }
+    }
+
+
+
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
     string flatImgPath = this -> scenesFilePath[this -> scIdx].FlatImgPath;
@@ -651,7 +656,7 @@ void lidarProcess::calculateMaxIncidence()
     float radius;
     float x, y, z;
     int lidarCount = lidarDenseCloud->points.size();
-    vector<float> thetas;
+    vector<float> Theta;
     for (int i = 0; i < lidarCount; i++)
     {
         x = lidarDenseCloud->points[i].x;
@@ -659,11 +664,11 @@ void lidarProcess::calculateMaxIncidence()
         z = lidarDenseCloud->points[i].z;
         radius = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
         theta = asin(z / radius);
-        thetas.push_back(theta);
+        Theta.push_back(theta);
     }
-    sort(thetas.begin(), thetas.end());
+    sort(Theta.begin(), Theta.end());
     int j = 0;
-    for (auto it = thetas.begin(); it != thetas.end(); it++)
+    for (auto it = Theta.begin(); it != Theta.end(); it++)
     {
         if (*it > 0)
         {
