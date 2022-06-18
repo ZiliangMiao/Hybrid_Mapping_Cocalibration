@@ -5,11 +5,13 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <numeric>
 // ros
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <std_msgs/Header.h>
+#include <ros/package.h>
 // pcl
 #include <pcl/common/common.h>
 #include <pcl/io/pcd_io.h>
@@ -217,18 +219,10 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
     return result;
 }
 
-vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar)
+vector<vector<lidarProcess::Tags>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian)
 {
-    double flatRows = this->flatRows;
-    double flatCols = this->flatCols;
-
-    struct Tags
-    {
-        int Label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
-        vector<int> Idx;
-        vector<double> Mean(2);
-        vector<double> Cov(2);
-    };
+    double flatRows = this -> flatRows;
+    double flatCols = this -> flatCols;
 
     // define the data container
     cv::Mat flatImage = cv::Mat::zeros(flatRows, flatCols, CV_32FC1); // define the flat image
@@ -269,22 +263,22 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
             std::vector<float> pointRadiusSquaredDistance; // type of distance vector has to be float
             // use kdtree to search (radius search) the spherical point cloud
             int numRNN = kdtree.radiusSearch(searchPoint, searchRadius, pointIdxRadiusSearch, pointRadiusSquaredDistance); // number of the radius nearest neighbors
-            if (numRNN == 0)                                                                                               // no point found
-            {
+            if (numRNN == 0) {
                 flatImage.at<float>(u, v) = 160; // intensity
                 invalidSearch = invalidSearch + 1;
                 // add tags
                 tagsMap[u][v].Label = 0;
+                tagsMap[u][v].Size = 0;
                 tagsMap[u][v].Idx.push_back(0);
                 tagsMap[u][v].Mean = 0;
                 tagsMap[u][v].Std = 0;
             }
             else  // corresponding points are found in the radius neighborhood
             {
-                double intensity = 0; // intensity channel
+                vector<double> Intensity;
                 vector<double> Theta;
                 vector<double> Phi;
-                for (int i = 0; i < pointIdxRadiusSearch.size(); ++i)
+                for (int i = 0; i < numRNN; ++i)
                 {
                     if (pointIdxRadiusSearch[i] > lidPolar->points.size() - 1)
                     {
@@ -293,20 +287,104 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
                         invalidIndex = invalidIndex + 1;
                         continue;
                     }
-                    intensity = intensity + (*lidPolar)[pointIdxRadiusSearch[i]].intensity;
-                    Theta.push_bask((*lidPolar)[pointIdxRadiusSearch[i]].x);
+                    Intensity.push_back((*lidPolar)[pointIdxRadiusSearch[i]].intensity);
+                    Theta.push_back((*lidPolar)[pointIdxRadiusSearch[i]].x);
                     Phi.push_back((*lidPolar)[pointIdxRadiusSearch[i]].y);
-                    // add tags
+                    /** add tags **/
+                    tagsMap[u][v].Label = 1;
+                    tagsMap[u][v].Size = numRNN;
                     tagsMap[u][v].Idx.push_back(pointIdxRadiusSearch[i]);
                 }
-                tagsMap[u][v].Label = 1;
 
+                /********* Hidden Points Filter *********/
+                for (int i = 0; i < numRNN; ++i) {
+                    if (i > 0 && i < (numRNN - 1)) {
 
-                tagsMap[u][v].Mean[0] = 0;
-                tagsMap[u][v].Mean[1] = 0;
-                tagsMap[u][v].Cov[0] = 0;
-                tagsMap[u][v].Cov[1] = 0;
-                flatImage.at<float>(u, v) = intensity / numRNN; // intensity
+                        pcl::PointXYZI pt = (*lidCartesian)[tagsMap[u][v].Idx[i]];
+                        pcl::PointXYZI pt_former = (*lidCartesian)[tagsMap[u][v].Idx[i - 1]];
+                        pcl::PointXYZI pt_latter = (*lidCartesian)[tagsMap[u][v].Idx[i + 1]];
+
+                        float disFormer = sqrt(pt_former.x * pt_former.x + pt_former.y * pt_former.y + pt_former.z * pt_former.z);
+                        float dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
+                        float disLatter = sqrt(pt_latter.x * pt_latter.x + pt_latter.y * pt_latter.y + pt_latter.z * pt_latter.z);
+
+                        if (disFormer > disLatter) {
+                            float neighborDiffXF = pt.x - pt_former.x;
+                            float neighborDiffYF = pt.y - pt_former.y;
+                            float neighborDiffZF = pt.z - pt_former.z;
+                            float neighborDiffFormer = sqrt(neighborDiffXF * neighborDiffXF + neighborDiffYF * neighborDiffYF + neighborDiffZF * neighborDiffZF);
+                            if (neighborDiffFormer > 0.1 * dis && dis > disFormer) {
+                                /** Erase the hidden points **/
+                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
+                                Intensity.erase(intensity_iter);
+                                vector<double>::iterator theta_iter = Theta.begin() + i;
+                                Theta.erase(theta_iter);
+                                vector<double>::iterator phi_iter = Phi.begin() + i;
+                                Phi.erase(phi_iter);
+                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
+                                tagsMap[u][v].Idx.erase(idx_iter);
+                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
+                            }
+                        }
+                        else {
+                            float neighborDiffXL = pt_latter.x - pt.x;
+                            float neighborDiffYL = pt_latter.y - pt.y;
+                            float neighborDiffZL = pt_latter.z - pt.z;
+                            float neighborDiffLatter = sqrt(neighborDiffXL * neighborDiffXL + neighborDiffYL * neighborDiffYL + neighborDiffZL * neighborDiffZL);
+                            if (neighborDiffLatter > 0.1 * dis && dis > disLatter) {
+                                /** Erase the hidden points **/
+                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
+                                Intensity.erase(intensity_iter);
+                                vector<double>::iterator theta_iter = Theta.begin() + i;
+                                Theta.erase(theta_iter);
+                                vector<double>::iterator phi_iter = Phi.begin() + i;
+                                Phi.erase(phi_iter);
+                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
+                                tagsMap[u][v].Idx.erase(idx_iter);
+                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
+                            }
+                        }
+                    }
+                }
+                /** Check the size of vectors **/
+//                cout << Theta.size() << " " << Phi.size() << " " << Intensity.size() << " " << tagsMap[u][v].Idx.size() << " " << tagsMap[u][v].Size << endl;
+                ROS_ASSERT_MSG((Theta.size() == Phi.size()) && (Phi.size() == Intensity.size()) && (Intensity.size() == tagsMap[u][v].Idx.size()) && (tagsMap[u][v].Idx.size() == tagsMap[u][v].Size), "size of the vectors in a pixel region is not the same!");
+                /** Gaussian Distribution Parameters Estimation **/
+                double thetaMean = std::accumulate(std::begin(Theta), std::end(Theta), 0.0) / tagsMap[u][v].Size; /** central position calculation **/
+                double phiMean = std::accumulate(std::begin(Phi), std::end(Phi), 0.0) / tagsMap[u][v].Size;
+
+                vector<double> Distance(tagsMap[u][v].Size);
+                double distance = 0.0;
+//                cout << numRNN << " " << tagsMap[u][v].Size << endl;
+                for (int i = 0; i < tagsMap[u][v].Size; i++) {
+                    if ((Theta[i] > thetaMean && Phi[i] > phiMean) || (Theta[i] < thetaMean && Phi[i] < phiMean)) {
+                        /** consider these two conditions as positive distance **/
+                        distance = sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
+                        Distance[i] = distance;
+                    }
+                    else if ((Theta[i] > thetaMean && Phi[i] < phiMean) || (Theta[i] < thetaMean && Phi[i] > phiMean)) {
+                        /** consider these two conditions as negative distance **/
+                        distance = - sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
+                        Distance[i] = distance;
+                    }
+                    else if (Theta[i] == thetaMean && Phi[i] == phiMean) {
+                        Distance[i] = 0;
+                    }
+                }
+
+                double distanceMean = std::accumulate(std::begin(Distance), std::end(Distance), 0.0) / tagsMap[u][v].Size;
+                double distanceVar = 0.0;
+                std::for_each (std::begin(Distance), std::end(Distance), [&](const double distance) {
+                    distanceVar  += (distance - distanceMean) * (distance - distanceMean);
+                });
+                distanceVar = distanceVar / (Distance.size() - 1);
+                double distanceStd = sqrt(distanceVar);
+
+                tagsMap[u][v].Mean = distanceMean;
+                tagsMap[u][v].Std = distanceStd;
+
+                double intensityMean = std::accumulate(std::begin(Intensity), std::end(Intensity), 0.0) / tagsMap[u][v].Size;
+                flatImage.at<float>(u, v) = intensityMean;
             }
         }
     }
@@ -314,30 +392,29 @@ vector<vector<vector<int>>> lidarProcess::sphereToPlaneRNN(pcl::PointCloud<pcl::
     string tagsMapTxtPath = this -> scenesFilePath[this -> scIdx].TagsMapTxtPath;
     ofstream outfile;
     outfile.open(tagsMapTxtPath, ios::out);
-    if (!outfile.is_open())
-    {
+    if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-    for (int u = 0; u < flatRows; ++u)
-    {
-        for (int v = 0; v < flatCols; ++v)
-        {
-            cout << tagsMap[u][v].size() << endl;
-            for (int k = 0; k < tagsMap[u][v].size(); ++k) {
-                /** k is the number of lidar points that the [u][v] pixel contains **/
-                if (k == tagsMap[u][v].size() - 1) {
-                    cout << tagsMap[u][v][k] << endl;
-                    outfile << tagsMap[u][v][k] << "\t" << "*****" << "\t" << tagsMap[u][v].size() << endl;
-                }
-                else {
-                    cout << tagsMap[u][v][k] << endl;
-                    outfile << tagsMap[u][v][k] << "\t";
+    for (int u = 0; u < flatRows; ++u) {
+        for (int v = 0; v < flatCols; ++v) {
+            bool idxPrint = false;
+            if (idxPrint) {
+                for (int k = 0; k < tagsMap[u][v].Idx.size(); ++k) {
+                    /** k is the number of lidar points that the [u][v] pixel contains **/
+                    if (k == tagsMap[u][v].Idx.size() - 1) {
+                        cout << tagsMap[u][v].Idx[k] << endl;
+                        outfile << tagsMap[u][v].Idx[k] << "\t" << "*****" << "\t" << tagsMap[u][v].Idx.size() << endl;
+                    }
+                    else {
+                        cout << tagsMap[u][v].Idx[k] << endl;
+                        outfile << tagsMap[u][v].Idx[k] << "\t";
+                    }
                 }
             }
+            outfile << "Lable: " << tagsMap[u][v].Label << "\t" << "Size: " << tagsMap[u][v].Size << "\t" << "Mean: " << tagsMap[u][v].Mean << "\t" << "Std: " << tagsMap[u][v].Std << endl;
         }
     }
-
-
+    outfile.close();
 
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
@@ -392,12 +469,9 @@ vector<vector<int>> lidarProcess::edgeToPixel()
     ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "Size of original fisheye image is incorrect! Scene Index: %d", this -> numScenes);
 
     vector<vector<int>> edgePixels;
-    for (int u = 0; u < edgeImage.rows; ++u)
-    {
-        for (int v = 0; v < edgeImage.cols; ++v)
-        {
-            if (edgeImage.at<uchar>(u, v) > 127)
-            {
+    for (int u = 0; u < edgeImage.rows; ++u) {
+        for (int v = 0; v < edgeImage.cols; ++v) {
+            if (edgeImage.at<uchar>(u, v) > 127) {
                 vector<int> pixel{u, v};
                 edgePixels.push_back(pixel);
             }
@@ -408,12 +482,10 @@ vector<vector<int>> lidarProcess::edgeToPixel()
     string edgeTxtPath = this -> scenesFilePath[this -> scIdx].EdgeTxtPath;
     ofstream outfile;
     outfile.open(edgeTxtPath, ios::out);
-    if (!outfile.is_open())
-    {
+    if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < edgePixels.size(); ++i)
-    {
+    for (int i = 0; i < edgePixels.size(); ++i) {
         outfile << edgePixels[i][0] << "\t" << edgePixels[i][1] << endl;
     }
     outfile.close();
@@ -436,7 +508,7 @@ void lidarProcess::edgePixCheck(vector<vector<int>> edgePixels)
     cv::imwrite(edgeCheckImgPath, edgeCheck);
 }
 
-void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vector<int>>> tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian)
+void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<lidarProcess::Tags>> tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian)
 {
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr lidEdgeOrg(new pcl::PointCloud<pcl::PointXYZ>());
@@ -449,7 +521,7 @@ void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vecto
         float X;
         float Y;
         float Z;
-        int size = tagsMap[u][v].size();
+        int size = tagsMap[u][v].Size;
 
         if (size == 0)
         {
@@ -467,7 +539,7 @@ void lidarProcess::pixLookUp(vector<vector<int>> edgePixels, vector<vector<vecto
             Z = 0;
             for (int j = 0; j < size; ++j)
             {
-                int idx = tagsMap[u][v][j];
+                int idx = tagsMap[u][v].Idx[j];
                 pcl::PointXYZI pt = (*lidCartesian)[idx];
                 X = X + pt.x;
                 Y = Y + pt.y;

@@ -106,7 +106,7 @@ int main(int argc, char** argv){
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
+            vector<vector<lidarProcess::Tags>> lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
         }
     }
     else if (lidarEdgeProcess) {
@@ -116,7 +116,7 @@ int main(int argc, char** argv){
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            vector< vector< vector<int> > > lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud);
+            vector<vector<lidarProcess::Tags>> lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
             vector< vector <int> > lidEdgePixels = lidarProcess.edgeToPixel();
             lidarProcess.pixLookUp(lidEdgePixels, lidTagsMap, lidCartesianCloud);
         }

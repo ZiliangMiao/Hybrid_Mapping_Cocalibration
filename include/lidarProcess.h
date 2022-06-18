@@ -33,6 +33,15 @@ using namespace std;
 
 class lidarProcess{
     public:
+        typedef struct Tags
+        {
+            int Label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
+            int Size; /** number of points **/
+            vector<int> Idx;
+            double Mean;
+            double Std;
+        }Tags; /** "Tags" here is a struct type, equals to "struct Tags", lidarProcess::Tags **/
+
         lidarProcess(string dataPath, bool byIntensity);
         
         void readEdge();
@@ -43,11 +52,11 @@ class lidarProcess{
         int readFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
 
         std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidarToSphere();
-        vector< vector< vector<int> > > sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar);
+        vector<vector<Tags>> sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         vector< vector<double> > edgeTransform();
         vector<vector<double>> edgeVizTransform(vector<double> _p);
         vector< vector <int> > edgeToPixel();
-        void pixLookUp(vector< vector <int> > edgePixels, vector< vector< vector<int> > > tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
+        void pixLookUp(vector< vector <int> > edgePixels, vector<vector<Tags>> tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         void edgePixCheck(vector< vector<int> > edgePixels);
         vector<double> kdeFit(vector< vector <double> > edgePixels, int row_samples, int col_samples);
         void setImageAngle(float camThetaMin, float camThetaMax);
