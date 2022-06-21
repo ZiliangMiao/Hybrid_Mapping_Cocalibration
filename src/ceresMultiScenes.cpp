@@ -276,14 +276,11 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-    for (int idx = 0; idx < numScenes; idx++)
-    {
-        lid.setSceneIdx(idx);
-        lid.readEdge();
-        const double weight = sqrt((double)lid.EdgeOrgCloud->points.size() / 3e+4);
-        for (int j = 0; j < lid.EdgeOrgCloud->points.size(); ++j)
-        {
-            Eigen::Vector3d p_l = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
+    for (int idx = 0; idx < numScenes; idx++) {
+    /** a scene weight could be added here **/
+        for (int j = 0; j < lid.edge_cloud->points.size(); ++j) {
+            const double weight = lid.edge_cloud_vec[idx]->points[j].intensity;
+            Eigen::Vector3d p_l = {lid.edge_cloud_vec[idx]->points[j].x, lid.edge_cloud_vec[idx]->points[j].y, lid.edge_cloud_vec[idx]->points[j].z};
             problem.AddResidualBlock(Calibration::Create(p_l, weight, ref_vals[idx], scale, img_interpolators[idx]),
                                      loss_function,
                                      params,
@@ -291,8 +288,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         }
     }
 
-    switch (setConstant)
-    {
+    switch (setConstant) {
         case 1:
             problem.SetParameterBlockConstant(params);
             break;
@@ -326,7 +322,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     options.use_nonmonotonic_steps = false;
 
      lid.setSceneIdx(1);
-     string paramsOutPath = lid.scenesFilePath[lid.scIdx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
+     string paramsOutPath = lid.scenesFilePath[lid.scene_idx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
      outfile.open(paramsOutPath);
      OutputCallback callback(params);
      options.callbacks.push_back(&callback);
@@ -343,13 +339,12 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 
     for (int idx = 0; idx < numScenes; idx++)
     {
-        lid.setSceneIdx(idx);
         cam.setSceneIdx(idx);
         cam.readEdge();
-        lid.readEdge();
-        vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res);
-        string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
-        fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
+        lid.setSceneIdx(idx);
+        vector<vector<double>> edge_fisheye_projection = lid.EdgeCloudProjectToFisheye(params_res);
+        string edge_proj_txt_path = lid.scenesFilePath[lid.scene_idx].EdgeTransTxtPath;
+        fusionViz(cam, edge_proj_txt_path, edge_fisheye_projection, bandwidth);
     }
 
     return params_res;
@@ -410,10 +405,10 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
 //     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-//     for (int i = 0; i < lid.EdgeOrgCloud -> points.size(); ++i)
+//     for (int i = 0; i < lid.EdgeCloud -> points.size(); ++i)
 //     {
 //         // Eigen::Vector3d p_l_tmp = p_l.row(i);
-//         Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud -> points[i].x, lid.EdgeOrgCloud -> points[i].y, lid.EdgeOrgCloud -> points[i].z};
+//         Eigen::Vector3d p_l_tmp = {lid.EdgeCloud -> points[i].x, lid.EdgeCloud -> points[i].y, lid.EdgeCloud -> points[i].z};
 //         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_val, kde_interpolator, inv_distortion),
 //                                  loss_function,
 //                                  params,
@@ -454,7 +449,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
 //     vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
-//     string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scIdx].EdgeTransTxtPath;
+//     string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scene_idx].EdgeTransTxtPath;
 //     fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
 
 //     return params_res;

@@ -33,46 +33,46 @@ using namespace std;
 
 class lidarProcess{
     public:
+        /** topic name **/
+        string topicName = "/livox/lidar";
+
+        /***** Variables of lidarProcess Class *****/
+        /** tags and maps **/
         typedef struct Tags
         {
-            int Label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
-            int Size; /** number of points **/
-            vector<int> Idx;
-            double Mean;
-            double Std;
-            double Weight;
+            int label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
+            int num_pts; /** number of points **/
+            vector<int> pts_indices;
+            double mean;
+            double sigma; /** sigma is the standard deviation estimation of lidar edge distribution **/
+            double weight;
+            int num_hidden_pts;
         }Tags; /** "Tags" here is a struct type, equals to "struct Tags", lidarProcess::Tags **/
+        typedef vector<vector<Tags>> TagsMap;
+        TagsMap tags_map;
+        vector<TagsMap> tags_map_vec; /** container of tagsMaps of each scene **/
 
-        lidarProcess(string dataPath, bool byIntensity);
-        
-        void readEdge();
-        void bagToPcd(string bagFile);
-        bool createDenseFile();
-        void calculateMaxIncidence();
-
-        int readFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
-
-        std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidarToSphere();
-        vector<vector<Tags>> sphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
-        vector< vector<double> > edgeTransform();
-        vector<vector<double>> edgeVizTransform(vector<double> _p);
-        vector< vector <int> > edgeToPixel();
-        void pixLookUp(vector< vector <int> > edgePixels, vector<vector<Tags>> tagsMap, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
-        void edgePixCheck(vector< vector<int> > edgePixels);
-        vector<double> kdeFit(vector< vector <double> > edgePixels, int row_samples, int col_samples);
-        void setImageAngle(float camThetaMin, float camThetaMax);
-        // void lidFlatImageShift();
-
-    public:
+        /** original data - images and point clouds **/
         bool byIntensity = true;
         static const int numPcds = 500;
-
         int flatRows = int((double)110/90 * 1000) + 1;
         int flatCols = 4000;
         double radPerPix = (M_PI/2) / 1000;
-        string topicName = "/livox/lidar";
-        pcl::PointCloud<pcl::PointXYZ>::Ptr EdgeOrgCloud;
+        /** coordinates of edge pixels (which are considered as the edge) **/
+        typedef vector<vector<int>> EdgePixels;
+        EdgePixels edge_pixels;
+        vector<EdgePixels> edge_pixels_vec;
+        /** spatial coordinates of edge points (center of distribution) **/
+        typedef vector<vector<double>> EdgePts;
+        EdgePts edge_pts;
+        vector<EdgePts> edge_pts_vec;
+        /** mean position of the lidar pts in a specific pixel space **/
+        typedef pcl::PointCloud<pcl::PointXYZI>::Ptr EdgeCloud; /** note: I is used to store the weight **/
+        EdgeCloud edge_cloud;
+        vector<EdgeCloud> edge_cloud_vec; /** container of edgeClouds of each scene **/
 
+
+        /***** Extrinsic Parameters *****/
         struct Extrinsic {
             double rx = 0;
             double ry = 0;
@@ -82,40 +82,13 @@ class lidarProcess{
             double tz = 0;
         } extrinsic;
 
-        void setExtrinsic(vector<double> _p) {
-            this->extrinsic.rx = _p[0];
-            this->extrinsic.ry = _p[1];
-            this->extrinsic.rz = _p[2];
-            this->extrinsic.tx = _p[3];
-            this->extrinsic.ty = _p[4];
-            this->extrinsic.tz = _p[5];
-        }
 
-        /********* 所有Path定义中的/留前不留后 *********/
-        /********* Data Path of Multi-Scenes *********/
-        int scIdx = 0;
-        void setSceneIdx(int scIdx) {
-            this -> scIdx = scIdx;
-        }
+        /***** Data of Multiple Scenes *****/
+        int scene_idx = 0;
+        int num_scenes = 5;
+        vector<string> scenes_path_vec;
 
-        static const int numScenes = 5;
-        struct ScenesPath
-        {
-            ScenesPath(string pkgPath) {
-                this -> sc1 = pkgPath + "/data/runYangIn";
-                this -> sc2 = pkgPath + "/data/huiyuan2";
-                this -> sc3 = pkgPath + "/data/12";
-                this -> sc4 = pkgPath + "/data/conferenceF2-P1";
-                this -> sc5 = pkgPath + "/data/conferenceF2-P2";
-            }
-            string sc1;
-            string sc2;
-            string sc3;
-            string sc4;
-            string sc5;
-        };
-
-        /********* File Path of the Specific Scene *********/
+        /** File Path of the Specific Scene **/
         struct SceneFilePath
         {
             SceneFilePath(string ScenePath) {
@@ -129,12 +102,11 @@ class lidarProcess{
                 this -> PolarPcdPath = this -> ProjPath + "/lidPolar.pcd";
                 this -> CartPcdPath = this -> ProjPath + "/lidCartesian.pcd";
                 this -> EdgeCheckImgPath = this -> ProjPath + "/edgeCheck.bmp";
-                this -> TagsMapTxtPath = this -> ProjPath + "/tagsMap.txt";
+                this -> TagsMapTxtPath = this -> ProjPath + "/tags_map.txt";
                 this -> EdgeTxtPath = this -> OutputPath + "/lidEdgePix.txt";
                 this -> EdgeOrgTxtPath = this -> OutputPath + +"/lid3dOut.txt";
                 this -> EdgeTransTxtPath = this -> OutputPath + "/lidTrans.txt";
                 this -> ParamsRecordPath = this -> OutputPath + "/ParamsRecord.txt";
-
 
                 this -> LidPro2DPath = this -> OutputPath + "/lidPro2d.txt";
                 this -> LidPro3DPath = this -> OutputPath + "/lidPro3d.txt";
@@ -158,5 +130,43 @@ class lidarProcess{
             string LidPro3DPath;
         };
         vector<struct SceneFilePath> scenesFilePath;
+
+public:
+        lidarProcess(string dataPath, bool byIntensity);
+        /***** Point Cloud Generation *****/
+        int readFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
+        void bagToPcd(string bagFile);
+        bool createDenseFile();
+        void calculateMaxIncidence();
+
+
+        /***** Edge Related *****/
+        void EdgeToPixel();
+        void ReadEdge();
+        vector<vector<double>> EdgeCloudProjectToFisheye(vector<double> _p);
+        void EdgePixCheck();
+        vector<double> kdeFit(vector< vector <double> > edgePixels, int row_samples, int col_samples);
+
+
+        /***** LiDAR Pre-Processing *****/
+        void setImageAngle(float camThetaMin, float camThetaMax);
+        std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> LidarToSphere();
+        void SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
+        void PixLookUp(pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
+
+
+        /***** Get and Set Methods *****/
+        void setExtrinsic(vector<double> _p) {
+            this->extrinsic.rx = _p[0];
+            this->extrinsic.ry = _p[1];
+            this->extrinsic.rz = _p[2];
+            this->extrinsic.tx = _p[3];
+            this->extrinsic.ty = _p[4];
+            this->extrinsic.tz = _p[5];
+        }
+
+        void setSceneIdx(int scIdx) {
+            this -> scene_idx = scIdx;
+        }
 };
 #endif

@@ -1162,7 +1162,7 @@ void compute_features()
                                             m_raw_pts_vec[ idx + curvature_ssd_size ].z - m_raw_pts_vec[ idx - curvature_ssd_size ].z );
         m_pts_info_vec[ idx ].view_angle = vector_angle( vec_a  , vec_b, 1 ) * 57.3;
 
-        //printf( "Idx = %d, angle = %.2f\r\n", idx,  m_pts_info_vec[ idx ].view_angle );
+        //printf( "pt_indices = %d, angle = %.2f\r\n", idx,  m_pts_info_vec[ idx ].view_angle );
         if ( m_pts_info_vec[ idx ].view_angle > minimum_view_angle )
         {
 

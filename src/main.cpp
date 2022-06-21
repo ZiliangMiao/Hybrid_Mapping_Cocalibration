@@ -91,34 +91,34 @@ int main(int argc, char** argv){
     bool byIntensity = true;
     lidarProcess lidarProcess(pkgPath, byIntensity);
     lidarProcess.setExtrinsic(params_calib);
-    ROS_ASSERT_MSG(lidarProcess.numScenes == imageProcess.numScenes, "numScenes in imageProcess and lidarProcess is not equal!");
+    ROS_ASSERT_MSG(lidarProcess.num_scenes == imageProcess.numScenes, "num_scenes in imageProcess and lidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
     if (denseFile) {
-        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
             lidarProcess.setSceneIdx(idx);
             lidarProcess.createDenseFile();
         }
     }
     if (lidarFlatProcess) {
-        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
             lidarProcess.setSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
+            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            vector<vector<lidarProcess::Tags>> lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
+            lidarProcess.SphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
         }
     }
     else if (lidarEdgeProcess) {
-        for (int idx = 0; idx < lidarProcess.numScenes; idx++) {
+        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
             lidarProcess.setSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.lidarToSphere();
+            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            vector<vector<lidarProcess::Tags>> lidTagsMap = lidarProcess.sphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
-            vector< vector <int> > lidEdgePixels = lidarProcess.edgeToPixel();
-            lidarProcess.pixLookUp(lidEdgePixels, lidTagsMap, lidCartesianCloud);
+            lidarProcess.SphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
+            lidarProcess.EdgeToPixel();
+            lidarProcess.PixLookUp(lidCartesianCloud);
         }
     }
    
@@ -157,8 +157,7 @@ int main(int argc, char** argv){
 
         vector<double> params = params_init;
         vector<double> lb(dev.size()), ub(dev.size());
-        vector<double> bw = {32,24,16,8,4,2};
-        string lidEdgeTransTxtPath = lidarProcess.scenesFilePath[lidarProcess.scIdx].EdgeTransTxtPath;
+        vector<double> bw = {32, 24, 16, 8, 4, 2};
 
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
@@ -174,18 +173,16 @@ int main(int argc, char** argv){
         }
 
         /********* Initial Visualization *********/
-        for (int idx = 0; idx < imageProcess.numScenes; idx++)
-        {
-            imageProcess.setSceneIdx(idx);
+        for (int idx = 0; idx < imageProcess.numScenes; idx++) {
             lidarProcess.setSceneIdx(idx);
-            lidarProcess.readEdge();
+            imageProcess.setSceneIdx(idx);
+            lidarProcess.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             imageProcess.readEdge();
-            vector<vector<double>> lidProjection = lidarProcess.edgeVizTransform(params_init);
-            fusionViz(imageProcess, lidEdgeTransTxtPath, lidProjection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            vector<vector<double>> edge_fisheye_projection = lidarProcess.EdgeCloudProjectToFisheye(params_init);
+            fusionViz(imageProcess, lidarProcess.scenesFilePath[idx].EdgeTransTxtPath, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
 
-        for (int i = 0; i < bw.size(); i++)
-        {
+        for (int i = 0; i < bw.size(); i++) {
             double bandwidth = bw[i];
             cout << "Round " << i << endl;
             /**
@@ -193,13 +190,13 @@ int main(int argc, char** argv){
              * setConstant = 1 -> enable intrinsics only
              * setConstant = 2 -> enable extrinsics only
              * **/
-            if (i == 0){
+            if (i == 0) {
                 int setConstant = 2;
                 params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
 //                setConstant = 1;
 //                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
             }
-            else{
+            else {
                 int setConstant = 0;
                 params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
             }

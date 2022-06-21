@@ -21,17 +21,16 @@ using namespace std;
 using namespace cv;
 using namespace Eigen;
 
-void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidProjection, double bandwidth){
+void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<double> > lidProjection, double bandwidth){
     cv::Mat image = cam.readOrgImage();
     int rows = image.rows;
     int cols = image.cols;
     cv::Mat lidarRGB = cv::Mat::zeros(rows, cols, CV_8UC3);
     double pixPerRad = 1000 / (M_PI/2);
 
+    /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
-
-    outfile.open(lidPath, ios::out);
-
+    outfile.open(edge_proj_txt_path, ios::out);
     for(int i = 0; i < lidProjection[0].size(); i++){
         double theta = lidProjection[0][i];
         double phi = lidProjection[1][i];
@@ -47,7 +46,6 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
         lidarRGB.at<Vec3b>(u, v)[2] = r;
         outfile << u << "," << v << endl;
     }
-
     outfile.close();
 
     cv::Mat imageShow = cv::Mat::zeros(rows, cols, CV_8UC3);
@@ -97,9 +95,9 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p){
     Eigen::Matrix<double, 2, 1> S;
     Eigen::Matrix<double, 2, 1> p_uv;
 
-    string lidDensePcdPath = lid.scenesFilePath[lid.scIdx].LidDensePcdPath;
-    string lidPro2DPath = lid.scenesFilePath[lid.scIdx].LidPro2DPath;
-    string lidPro3DPath = lid.scenesFilePath[lid.scIdx].LidPro3DPath;
+    string lidDensePcdPath = lid.scenesFilePath[lid.scene_idx].LidDensePcdPath;
+    string lidPro2DPath = lid.scenesFilePath[lid.scene_idx].LidPro2DPath;
+    string lidPro3DPath = lid.scenesFilePath[lid.scene_idx].LidPro3DPath;
     string HdrImgPath = cam.scenesFilePath[cam.scIdx].HdrImgPath;
     pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
