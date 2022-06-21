@@ -133,7 +133,7 @@ struct Calibration
         r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
         S = {-inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
         p_uv = S + uv_0;
-        kde_interpolator_.Evaluate(p_uv(0) * T(scale_), p_uv(1) * T(scale_), &val);
+        kde_interpolator_.Evaluate(p_uv(0) * T(kde_scale_), p_uv(1) * T(kde_scale_), &val);
 
         /**
          * residual:
@@ -142,7 +142,7 @@ struct Calibration
          *  **/
 //        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
 //        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val;
-        res = T(ref_val_) - val;
+        res = T(weight_) * (T(kde_val_) - val);
         cost[0] = res;
         cost[1] = res;
         return true;
@@ -150,11 +150,11 @@ struct Calibration
 
     /** DO NOT remove the "&" of the interpolator! **/
     Calibration(const Eigen::Vector3d point,
-                const Eigen::Vector2d img_size,
+                const double weight,
                 const double ref_val,
                 const double scale,
                 const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-            : point_(std::move(point)), kde_interpolator_(interpolator), img_size_(img_size), ref_val_(ref_val), scale_(std::move(scale)) {}
+            : point_(std::move(point)), kde_interpolator_(interpolator), weight_(weight), kde_val_(ref_val), kde_scale_(std::move(scale)) {}
 
     /**
      * @brief
@@ -168,19 +168,19 @@ struct Calibration
      * @return ** ceres::CostFunction*
      */
     static ceres::CostFunction *Create(const Eigen::Vector3d &point,
-                                       const Eigen::Vector2d &img_size,
-                                       const double &ref_val,
-                                       const double &scale,
+                                       const double &weight,
+                                       const double &kde_val,
+                                       const double &kde_scale,
                                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
     {
         return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
-                new Calibration(point, img_size, ref_val, scale, interpolator));
+                new Calibration(point, weight, kde_val, kde_scale, interpolator));
     }
 
     const Eigen::Vector3d point_;
-    const Eigen::Vector2d img_size_;
-    const double ref_val_;
-    const double scale_;
+    const double weight_;
+    const double kde_val_;
+    const double kde_scale_;
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
     const double ref_theta = 99.5 * M_PI / 180;
 };
@@ -282,10 +282,11 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     {
         lid.setSceneIdx(idx);
         lid.readEdge();
+        const double weight = sqrt((double)lid.EdgeOrgCloud->points.size() / 3e+4);
         for (int j = 0; j < lid.EdgeOrgCloud->points.size(); ++j)
         {
-            Eigen::Vector3d p_l_tmp = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
-            problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_vals[idx], scale, img_interpolators[idx]),
+            Eigen::Vector3d p_l = {lid.EdgeOrgCloud->points[j].x, lid.EdgeOrgCloud->points[j].y, lid.EdgeOrgCloud->points[j].z};
+            problem.AddResidualBlock(Calibration::Create(p_l, weight, ref_vals[idx], scale, img_interpolators[idx]),
                                      loss_function,
                                      params,
                                      params + num_q);

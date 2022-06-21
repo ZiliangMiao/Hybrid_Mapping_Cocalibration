@@ -23,7 +23,7 @@ const bool fisheyeFlatProcess = false;
 const bool fisheyeEdgeProcess = false;
 const bool lidarFlatProcess = false;
 const bool lidarEdgeProcess = false;
-const bool ceresOpt = true;
+const bool ceresOpt = false;
 const bool denseFile = false;
 
 /********* Directory Path of ROS Package *********/
@@ -205,10 +205,10 @@ int main(int argc, char** argv){
             }
 //            params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, distortion, params, name, lb, ub);
         }
-        lidarProcess.setSceneIdx(1);
-        imageProcess.setSceneIdx(1);
-//    vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        fusionViz3D(imageProcess, lidarProcess, params);
+        // lidarProcess.setSceneIdx(1);
+        // imageProcess.setSceneIdx(1);
+        // vector<double> params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
+        // fusionViz3D(imageProcess, lidarProcess, params);
     }
 
     lidarProcess.setSceneIdx(2);

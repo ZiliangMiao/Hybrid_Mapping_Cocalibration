@@ -60,6 +60,7 @@ void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidPro
 }
 
 void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p){
+
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
