@@ -264,8 +264,8 @@ vector<vector<vector<int>>> imageProcess::sphereToPlane(pcl::PointCloud<pcl::Poi
             float phi_center = (phi_ub + phi_lb) / 2;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB searchPoint;
-            searchPoint.x = phi_center;
-            searchPoint.y = theta_center;
+            searchPoint.x = theta_center;
+            searchPoint.y = phi_center;
             searchPoint.z = 0;
             // define the vector container for storing the info of searched points
             std::vector<int> pointIdxRadiusSearch;
