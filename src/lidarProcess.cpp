@@ -67,7 +67,7 @@ lidarProcess::lidarProcess(string pkgPath, bool byIntensity)
 
     for (int idx = 0; idx < num_scenes; ++idx) {
         struct SceneFilePath sc(scenes_path_vec[idx]);
-        this -> scenesFilePath[idx] = sc;
+        this -> scenesFilePath.push_back(sc);
     }
 }
 
@@ -395,17 +395,13 @@ void lidarProcess::SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPola
 
     /** add the tags_map of this specific scene to maps **/
     this -> tags_map = tagsMap;
-    cout << "debug3" << endl;
-    this -> tags_map_vec[this -> scene_idx] = tagsMap;
-    cout << "debug2" << endl;
+    this -> tags_map_vec.push_back(tagsMap);
     string tagsMapTxtPath = this -> scenesFilePath[this -> scene_idx].TagsMapTxtPath;
-    cout << "debug1" << endl;
     ofstream outfile;
     outfile.open(tagsMapTxtPath, ios::out);
     if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-
 
 
     for (int u = 0; u < flatRows; ++u) {
