@@ -149,7 +149,6 @@ public:
 
 
         /***** LiDAR Pre-Processing *****/
-        void setImageAngle(float camThetaMin, float camThetaMax);
         std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> LidarToSphere();
         void SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         void PixLookUp(pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
@@ -165,8 +164,8 @@ public:
             this->extrinsic.tz = _p[5];
         }
 
-        void setSceneIdx(int scIdx) {
-            this -> scene_idx = scIdx;
+        void SetSceneIdx(int scene_idx) {
+            this -> scene_idx = scene_idx;
         }
 };
 #endif

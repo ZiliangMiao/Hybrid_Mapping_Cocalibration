@@ -321,7 +321,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     options.function_tolerance = 1e-7;
     options.use_nonmonotonic_steps = false;
 
-     lid.setSceneIdx(1);
+    lid.SetSceneIdx(1);
      string paramsOutPath = lid.scenesFilePath[lid.scene_idx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
      outfile.open(paramsOutPath);
      OutputCallback callback(params);
@@ -341,7 +341,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     {
         cam.setSceneIdx(idx);
         cam.readEdge();
-        lid.setSceneIdx(idx);
+        lid.SetSceneIdx(idx);
         vector<vector<double>> edge_fisheye_projection = lid.EdgeCloudProjectToFisheye(params_res);
         string edge_proj_txt_path = lid.scenesFilePath[lid.scene_idx].EdgeTransTxtPath;
         fusionViz(cam, edge_proj_txt_path, edge_fisheye_projection, bandwidth);

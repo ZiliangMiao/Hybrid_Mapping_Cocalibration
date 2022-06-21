@@ -21,9 +21,9 @@ using namespace cv;
 
 const bool fisheyeFlatProcess = false;
 const bool fisheyeEdgeProcess = false;
-const bool lidarFlatProcess = true;
-const bool lidarEdgeProcess = false;
-const bool ceresOpt = false;
+const bool lidarFlatProcess = false;
+const bool lidarEdgeProcess = true;
+const bool ceresOpt = true;
 const bool viz3D = false;
 const bool denseFile = false;
 
@@ -95,13 +95,13 @@ int main(int argc, char** argv){
     /********* Create Dense Pcd for All Scenes *********/
     if (denseFile) {
         for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.setSceneIdx(idx);
+            lidarProcess.SetSceneIdx(idx);
             lidarProcess.createDenseFile();
         }
     }
     if (lidarFlatProcess) {
         for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.setSceneIdx(idx);
+            lidarProcess.SetSceneIdx(idx);
             std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
@@ -111,7 +111,7 @@ int main(int argc, char** argv){
     }
     else if (lidarEdgeProcess) {
         for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.setSceneIdx(idx);
+            lidarProcess.SetSceneIdx(idx);
             std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
@@ -174,7 +174,7 @@ int main(int argc, char** argv){
 
         /********* Initial Visualization *********/
         for (int idx = 0; idx < imageProcess.numScenes; idx++) {
-            lidarProcess.setSceneIdx(idx);
+            lidarProcess.SetSceneIdx(idx);
             imageProcess.setSceneIdx(idx);
             lidarProcess.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             imageProcess.readEdge();
@@ -204,7 +204,7 @@ int main(int argc, char** argv){
     }
 
     if (viz3D) {
-        lidarProcess.setSceneIdx(1);
+        lidarProcess.SetSceneIdx(1);
         imageProcess.setSceneIdx(1);
         vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
         fusionViz3D(imageProcess, lidarProcess, test_params);
