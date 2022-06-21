@@ -224,30 +224,33 @@ vector<vector<lidarProcess::Tags>> lidarProcess::sphereToPlaneRNN(pcl::PointClou
     double flatRows = this -> flatRows;
     double flatCols = this -> flatCols;
 
-    // define the data container
+    /** define the data container **/
     cv::Mat flatImage = cv::Mat::zeros(flatRows, flatCols, CV_32FC1); // define the flat image
     vector<Tags> tagsList; // define the tag list
     vector<vector<Tags>> tagsMap(flatRows, vector<Tags>(flatCols));
 
-    // construct kdtrees and load the point clouds
-    // caution: the point cloud need to be setted before the loop
+    /** construct kdtrees and load the point clouds **/
+    /** caution: the point cloud need to be setted before the loop **/
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
     kdtree.setInputCloud(lidPolar);
 
-    // define the invalid search count
-    int invalidSearch = 0; // search invalid count
-    int invalidIndex = 0; // index invalid count
+    /** define the invalid search parameters **/
+    int invalidSearch = 0; /** search invalid count **/
+    int invalidIndex = 0; /** index invalid count **/
     double radPerPix = this -> radPerPix;
     double scale = 2;
     double searchRadius = scale * (radPerPix / 2);
-    for (int u = 0; u < flatRows; ++u)
-    {
+
+    /** std range to generate weights **/
+    double stdMax = 0;
+    double stdMin = 1;
+
+    for (int u = 0; u < flatRows; ++u) {
         float theta_lb = u * radPerPix;
         float theta_ub = (u + 1) * radPerPix;
         float theta_center = (theta_ub + theta_lb) / 2;
 
-        for (int v = 0; v < flatCols; ++v)
-        {
+        for (int v = 0; v < flatCols; ++v) {
             float phi_lb = v * radPerPix;       // upper bound of the current phi unit
             float phi_ub = (v + 1) * radPerPix; // upper bound of the current phi unit
             float phi_center = (phi_ub + phi_lb) / 2;
@@ -272,16 +275,15 @@ vector<vector<lidarProcess::Tags>> lidarProcess::sphereToPlaneRNN(pcl::PointClou
                 tagsMap[u][v].Idx.push_back(0);
                 tagsMap[u][v].Mean = 0;
                 tagsMap[u][v].Std = 0;
+                tagsMap[u][v].Weight = 0;
             }
             else  // corresponding points are found in the radius neighborhood
             {
                 vector<double> Intensity;
                 vector<double> Theta;
                 vector<double> Phi;
-                for (int i = 0; i < numRNN; ++i)
-                {
-                    if (pointIdxRadiusSearch[i] > lidPolar->points.size() - 1)
-                    {
+                for (int i = 0; i < numRNN; ++i) {
+                    if (pointIdxRadiusSearch[i] > lidPolar->points.size() - 1) {
                         // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
                         flatImage.at<float>(u, v) = 160; // intensity
                         invalidIndex = invalidIndex + 1;
@@ -291,100 +293,134 @@ vector<vector<lidarProcess::Tags>> lidarProcess::sphereToPlaneRNN(pcl::PointClou
                     Theta.push_back((*lidPolar)[pointIdxRadiusSearch[i]].x);
                     Phi.push_back((*lidPolar)[pointIdxRadiusSearch[i]].y);
                     /** add tags **/
-                    tagsMap[u][v].Label = 1;
                     tagsMap[u][v].Size = numRNN;
                     tagsMap[u][v].Idx.push_back(pointIdxRadiusSearch[i]);
                 }
 
-                /********* Hidden Points Filter *********/
-                for (int i = 0; i < numRNN; ++i) {
-                    if (i > 0 && i < (numRNN - 1)) {
+//                /********* Hidden Points Filter *********/
+//                for (int i = 0; i < numRNN; ++i) {
+//                    if (i > 0 && i < (numRNN - 1)) {
+//
+//                        pcl::PointXYZI pt = (*lidCartesian)[tagsMap[u][v].Idx[i]];
+//                        pcl::PointXYZI pt_former = (*lidCartesian)[tagsMap[u][v].Idx[i - 1]];
+//                        pcl::PointXYZI pt_latter = (*lidCartesian)[tagsMap[u][v].Idx[i + 1]];
+//
+//                        float disFormer = sqrt(pt_former.x * pt_former.x + pt_former.y * pt_former.y + pt_former.z * pt_former.z);
+//                        float dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
+//                        float disLatter = sqrt(pt_latter.x * pt_latter.x + pt_latter.y * pt_latter.y + pt_latter.z * pt_latter.z);
+//
+//                        if (disFormer > disLatter) {
+//                            float neighborDiffXF = pt.x - pt_former.x;
+//                            float neighborDiffYF = pt.y - pt_former.y;
+//                            float neighborDiffZF = pt.z - pt_former.z;
+//                            float neighborDiffFormer = sqrt(neighborDiffXF * neighborDiffXF + neighborDiffYF * neighborDiffYF + neighborDiffZF * neighborDiffZF);
+//                            if (neighborDiffFormer > 0.1 * dis && dis > disFormer) {
+//                                /** Erase the hidden points **/
+//                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
+//                                Intensity.erase(intensity_iter);
+//                                vector<double>::iterator theta_iter = Theta.begin() + i;
+//                                Theta.erase(theta_iter);
+//                                vector<double>::iterator phi_iter = Phi.begin() + i;
+//                                Phi.erase(phi_iter);
+//                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
+//                                tagsMap[u][v].Idx.erase(idx_iter);
+//                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
+//                            }
+//                        }
+//                        else {
+//                            float neighborDiffXL = pt_latter.x - pt.x;
+//                            float neighborDiffYL = pt_latter.y - pt.y;
+//                            float neighborDiffZL = pt_latter.z - pt.z;
+//                            float neighborDiffLatter = sqrt(neighborDiffXL * neighborDiffXL + neighborDiffYL * neighborDiffYL + neighborDiffZL * neighborDiffZL);
+//                            if (neighborDiffLatter > 0.1 * dis && dis > disLatter) {
+//                                /** Erase the hidden points **/
+//                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
+//                                Intensity.erase(intensity_iter);
+//                                vector<double>::iterator theta_iter = Theta.begin() + i;
+//                                Theta.erase(theta_iter);
+//                                vector<double>::iterator phi_iter = Phi.begin() + i;
+//                                Phi.erase(phi_iter);
+//                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
+//                                tagsMap[u][v].Idx.erase(idx_iter);
+//                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
+//                            }
+//                        }
+//                    }
+//                }
 
-                        pcl::PointXYZI pt = (*lidCartesian)[tagsMap[u][v].Idx[i]];
-                        pcl::PointXYZI pt_former = (*lidCartesian)[tagsMap[u][v].Idx[i - 1]];
-                        pcl::PointXYZI pt_latter = (*lidCartesian)[tagsMap[u][v].Idx[i + 1]];
-
-                        float disFormer = sqrt(pt_former.x * pt_former.x + pt_former.y * pt_former.y + pt_former.z * pt_former.z);
-                        float dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
-                        float disLatter = sqrt(pt_latter.x * pt_latter.x + pt_latter.y * pt_latter.y + pt_latter.z * pt_latter.z);
-
-                        if (disFormer > disLatter) {
-                            float neighborDiffXF = pt.x - pt_former.x;
-                            float neighborDiffYF = pt.y - pt_former.y;
-                            float neighborDiffZF = pt.z - pt_former.z;
-                            float neighborDiffFormer = sqrt(neighborDiffXF * neighborDiffXF + neighborDiffYF * neighborDiffYF + neighborDiffZF * neighborDiffZF);
-                            if (neighborDiffFormer > 0.1 * dis && dis > disFormer) {
-                                /** Erase the hidden points **/
-                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
-                                Intensity.erase(intensity_iter);
-                                vector<double>::iterator theta_iter = Theta.begin() + i;
-                                Theta.erase(theta_iter);
-                                vector<double>::iterator phi_iter = Phi.begin() + i;
-                                Phi.erase(phi_iter);
-                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
-                                tagsMap[u][v].Idx.erase(idx_iter);
-                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
-                            }
-                        }
-                        else {
-                            float neighborDiffXL = pt_latter.x - pt.x;
-                            float neighborDiffYL = pt_latter.y - pt.y;
-                            float neighborDiffZL = pt_latter.z - pt.z;
-                            float neighborDiffLatter = sqrt(neighborDiffXL * neighborDiffXL + neighborDiffYL * neighborDiffYL + neighborDiffZL * neighborDiffZL);
-                            if (neighborDiffLatter > 0.1 * dis && dis > disLatter) {
-                                /** Erase the hidden points **/
-                                vector<double>::iterator intensity_iter = Intensity.begin() + i;
-                                Intensity.erase(intensity_iter);
-                                vector<double>::iterator theta_iter = Theta.begin() + i;
-                                Theta.erase(theta_iter);
-                                vector<double>::iterator phi_iter = Phi.begin() + i;
-                                Phi.erase(phi_iter);
-                                vector<int>::iterator idx_iter = tagsMap[u][v].Idx.begin() + i;
-                                tagsMap[u][v].Idx.erase(idx_iter);
-                                tagsMap[u][v].Size = tagsMap[u][v].Size - 1;
-                            }
-                        }
-                    }
-                }
                 /** Check the size of vectors **/
-//                cout << Theta.size() << " " << Phi.size() << " " << Intensity.size() << " " << tagsMap[u][v].Idx.size() << " " << tagsMap[u][v].Size << endl;
                 ROS_ASSERT_MSG((Theta.size() == Phi.size()) && (Phi.size() == Intensity.size()) && (Intensity.size() == tagsMap[u][v].Idx.size()) && (tagsMap[u][v].Idx.size() == tagsMap[u][v].Size), "size of the vectors in a pixel region is not the same!");
-                /** Gaussian Distribution Parameters Estimation **/
-                double thetaMean = std::accumulate(std::begin(Theta), std::end(Theta), 0.0) / tagsMap[u][v].Size; /** central position calculation **/
-                double phiMean = std::accumulate(std::begin(Phi), std::end(Phi), 0.0) / tagsMap[u][v].Size;
 
-                vector<double> Distance(tagsMap[u][v].Size);
-                double distance = 0.0;
-//                cout << numRNN << " " << tagsMap[u][v].Size << endl;
-                for (int i = 0; i < tagsMap[u][v].Size; i++) {
-                    if ((Theta[i] > thetaMean && Phi[i] > phiMean) || (Theta[i] < thetaMean && Phi[i] < phiMean)) {
-                        /** consider these two conditions as positive distance **/
-                        distance = sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
-                        Distance[i] = distance;
-                    }
-                    else if ((Theta[i] > thetaMean && Phi[i] < phiMean) || (Theta[i] < thetaMean && Phi[i] > phiMean)) {
-                        /** consider these two conditions as negative distance **/
-                        distance = - sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
-                        Distance[i] = distance;
-                    }
-                    else if (Theta[i] == thetaMean && Phi[i] == phiMean) {
-                        Distance[i] = 0;
-                    }
+                if (tagsMap[u][v].Size == 1) {
+                    /** only one point in the theta-phi sub-region of a pixel **/
+                    tagsMap[u][v].Label = 1;
+                    tagsMap[u][v].Mean = 0;
+                    tagsMap[u][v].Std = 0;
+                    tagsMap[u][v].Weight = 1;
+                    double intensityMean = Intensity[0];
+                    flatImage.at<float>(u, v) = intensityMean;
                 }
+                else if (tagsMap[u][v].Size == 0) {
+                    /** no points in a pixel **/
+                    tagsMap[u][v].Label = 0;
+                    tagsMap[u][v].Mean = 99;
+                    tagsMap[u][v].Std = 99;
+                    tagsMap[u][v].Weight = 0;
+                    flatImage.at<float>(u, v) = 160;
+                }
+                else if (tagsMap[u][v].Size >= 2) {
+                    /** Gaussian Distribution Parameters Estimation **/
+                    double thetaMean = std::accumulate(std::begin(Theta), std::end(Theta), 0.0) / tagsMap[u][v].Size; /** central position calculation **/
+                    double phiMean = std::accumulate(std::begin(Phi), std::end(Phi), 0.0) / tagsMap[u][v].Size;
+                    vector<double> Distance(tagsMap[u][v].Size);
+                    double distance = 0.0;
+                    for (int i = 0; i < tagsMap[u][v].Size; i++) {
+                        if ((Theta[i] > thetaMean && Phi[i] >= phiMean) || (Theta[i] < thetaMean && Phi[i] <= phiMean)) {
+                            /** consider these two conditions as positive distance **/
+                            distance = sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
+                            Distance[i] = distance;
+                        }
+                        else if ((Theta[i] >= thetaMean && Phi[i] < phiMean) || (Theta[i] <= thetaMean && Phi[i] > phiMean)) {
+                            /** consider these two conditions as negative distance **/
+                            distance = - sqrt(pow((Theta[i] - thetaMean), 2) + pow((Phi[i] - phiMean), 2));
+                            Distance[i] = distance;
+                        }
+                        else if (Theta[i] == thetaMean && Phi[i] == phiMean) {
+                            Distance[i] = 0;
+                        }
+                    }
 
-                double distanceMean = std::accumulate(std::begin(Distance), std::end(Distance), 0.0) / tagsMap[u][v].Size;
-                double distanceVar = 0.0;
-                std::for_each (std::begin(Distance), std::end(Distance), [&](const double distance) {
-                    distanceVar  += (distance - distanceMean) * (distance - distanceMean);
-                });
-                distanceVar = distanceVar / (Distance.size() - 1);
-                double distanceStd = sqrt(distanceVar);
+                    double distanceMean = std::accumulate(std::begin(Distance), std::end(Distance), 0.0) / tagsMap[u][v].Size;
+                    double distanceVar = 0.0;
+                    std::for_each (std::begin(Distance), std::end(Distance), [&](const double distance) {
+                        distanceVar += (distance - distanceMean) * (distance - distanceMean);
+                    });
+                    distanceVar = distanceVar / tagsMap[u][v].Size;
+                    double distanceStd = sqrt(distanceVar);
 
-                tagsMap[u][v].Mean = distanceMean;
-                tagsMap[u][v].Std = distanceStd;
+                    if (distanceStd > stdMax) {
+                        stdMax = distanceStd;
+                    }
+                    else if (distanceStd < stdMin) {
+                        stdMin = distanceStd;
+                    }
 
-                double intensityMean = std::accumulate(std::begin(Intensity), std::end(Intensity), 0.0) / tagsMap[u][v].Size;
-                flatImage.at<float>(u, v) = intensityMean;
+                    tagsMap[u][v].Mean = distanceMean;
+                    tagsMap[u][v].Std = distanceStd;
+                    double intensityMean = std::accumulate(std::begin(Intensity), std::end(Intensity), 0.0) / tagsMap[u][v].Size;
+                    flatImage.at<float>(u, v) = intensityMean;
+                }
+            }
+        }
+    }
+
+    double weightMax = 1;
+    double weightMin = 0.7;
+    cout << stdMin << " " << stdMax << endl;
+    for (int u = 0; u < flatRows; ++u) {
+        for (int v = 0; v < flatCols; ++v) {
+            if (tagsMap[u][v].Size > 1) {
+                tagsMap[u][v].Weight = (stdMax - tagsMap[u][v].Std) / (stdMax - stdMin) * (weightMax - weightMin) + weightMin;
             }
         }
     }
@@ -411,7 +447,7 @@ vector<vector<lidarProcess::Tags>> lidarProcess::sphereToPlaneRNN(pcl::PointClou
                     }
                 }
             }
-            outfile << "Lable: " << tagsMap[u][v].Label << "\t" << "Size: " << tagsMap[u][v].Size << "\t" << "Mean: " << tagsMap[u][v].Mean << "\t" << "Std: " << tagsMap[u][v].Std << endl;
+            outfile << "Lable: " << tagsMap[u][v].Label << "\t" << "Size: " << tagsMap[u][v].Size << "\t" << "Weight: " << tagsMap[u][v].Weight << endl;
         }
     }
     outfile.close();

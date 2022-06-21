@@ -35,7 +35,7 @@ string getPkgPath() {
 string pkgPath = getPkgPath();
 
 bool checkFolder(string FolderPath){
-    if(opendir(FolderPath.c_str()) == NULL){             // The first parameter of 'opendir' is char *
+    if(opendir(FolderPath.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
         int ret = mkdir(FolderPath.c_str(), (S_IRWXU | S_IRWXG | S_IRWXO));       // 'mkdir' used for creating new directory
         if(ret == 0){
             cout << "Successfully create file folder!" << endl;

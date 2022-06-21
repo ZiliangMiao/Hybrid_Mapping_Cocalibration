@@ -40,6 +40,7 @@ class lidarProcess{
             vector<int> Idx;
             double Mean;
             double Std;
+            double Weight;
         }Tags; /** "Tags" here is a struct type, equals to "struct Tags", lidarProcess::Tags **/
 
         lidarProcess(string dataPath, bool byIntensity);
