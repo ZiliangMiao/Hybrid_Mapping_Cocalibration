@@ -134,10 +134,9 @@ class lidarProcess{
 public:
         lidarProcess(string dataPath, bool byIntensity);
         /***** Point Cloud Generation *****/
-        int readFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
-        void bagToPcd(string bagFile);
-        bool createDenseFile();
-        void calculateMaxIncidence();
+        int ReadFileList(const std::string &folderPath, std::vector<std::string> &vFileList);
+        void CreateDensePcd();
+        void BagToPcd(string bagFile);
 
 
         /***** Edge Related *****/

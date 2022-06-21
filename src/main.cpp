@@ -96,7 +96,7 @@ int main(int argc, char** argv){
     if (denseFile) {
         for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
             lidarProcess.SetSceneIdx(idx);
-            lidarProcess.createDenseFile();
+            lidarProcess.CreateDensePcd();
         }
     }
     if (lidarFlatProcess) {
