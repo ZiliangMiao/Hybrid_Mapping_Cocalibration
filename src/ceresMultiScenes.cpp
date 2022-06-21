@@ -124,7 +124,6 @@ struct Calibration
         /** r - theta representation: r = f(theta) in polynomial form **/
         theta = acos(p_trans(2) / sqrt((p_trans(0) * p_trans(0)) + (p_trans(1) * p_trans(1)) + (p_trans(2) * p_trans(2))));
         inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
-        // inv_r = a0 + a1 * theta + a3 * pow(theta, 3) + a5 * pow(theta, 5);
         // phi = atan2(p_trans(1), p_trans(0));
         // inv_u = (inv_r * cos(phi) + u0);
         // inv_v = (inv_r * sin(phi) + v0);
@@ -160,11 +159,10 @@ struct Calibration
      * @brief
      * create multiscenes costfunction for optimization.
      * @param point-xyz coordinate of a 3d lidar edge point;
-     * @param img_size-size of the original fisheye image;
-     * @param ref_val-default reference value of lidar points;
-     * @param scale-normalization coefficient determined by the relative size of scenes;
+     * @param weight-weight assigned to the 3d lidar edge point;
+     * @param kde_val-default reference value of lidar points;
+     * @param kde_scale-scale of the kde image relative to original image;
      * @param interpolator-bicubic interpolator for original fisheye image;
-     * @param inv_distortion-inverse distortion matrix [c, d; e, 1] for fisheye camera;
      * @return ** ceres::CostFunction*
      */
     static ceres::CostFunction *Create(const Eigen::Vector3d &point,

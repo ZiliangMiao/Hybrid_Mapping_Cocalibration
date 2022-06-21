@@ -11,12 +11,15 @@
 #include <ros/package.h>
 // pcl
 #include <pcl/common/io.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 // heading
 #include "imageProcess.h"
 #include "lidarProcess.h"
 
 using namespace std;
 using namespace cv;
+using namespace Eigen;
 
 void fusionViz(imageProcess cam, string lidPath, vector< vector<double> > lidProjection, double bandwidth){
     cv::Mat image = cam.readOrgImage();
