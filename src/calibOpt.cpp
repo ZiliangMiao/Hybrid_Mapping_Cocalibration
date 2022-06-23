@@ -702,8 +702,8 @@ void lidarFeatureExtractor(lidarProcess lidarProcess) {
 }
 
 void calibOpt(imageProcess imageProcess, lidarProcess lidarProcess) {
-    imageProcess.readEdge();
-    vector< vector <double> > camEdgePolar = imageProcess.edgeTransform();
+    imageProcess.ReadEdge();
+    vector< vector <double> > camEdgePolar = imageProcess.EdgeTransform();
 
     lidarProcess.extrinsic.rx = 0.001;
     lidarProcess.extrinsic.ry = 0.0197457;

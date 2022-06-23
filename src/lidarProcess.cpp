@@ -51,10 +51,10 @@ lidarProcess::lidarProcess(string pkgPath, bool byIntensity)
     EdgeCloud edge_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     this -> edge_cloud = edge_cloud;
     /** reserve the memory for vectors stated in LidarProcess.h **/
-    this -> scenesFilePath.reserve(this -> num_scenes);
+    this -> scenes_files_path_vec.reserve(this -> num_scenes);
+    this -> edge_pixels_vec.reserve(this -> num_scenes);
     this -> edge_cloud_vec.reserve(this -> num_scenes);
     this -> edge_pts_vec.reserve(this -> num_scenes);
-    this -> edge_pixels.reserve(this -> num_scenes);
     this -> tags_map_vec.reserve(this -> num_scenes);
 
     /** push the data directory path into vector **/
@@ -69,7 +69,7 @@ lidarProcess::lidarProcess(string pkgPath, bool byIntensity)
 
     for (int idx = 0; idx < num_scenes; ++idx) {
         struct SceneFilePath sc(scenes_path_vec[idx]);
-        this -> scenesFilePath.push_back(sc);
+        this -> scenes_files_path_vec.push_back(sc);
     }
 }
 
@@ -82,7 +82,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
     double thetaMin = M_PI, thetaMax = -M_PI;
 
     bool byIntensity = this->byIntensity;
-    string lidDensePcdPath = this -> scenesFilePath[this -> scene_idx].LidDensePcdPath;
+    string lidDensePcdPath = this -> scenes_files_path_vec[this -> scene_idx].LidDensePcdPath;
     // original cartesian point cloud
     pcl::PointCloud<pcl::PointXYZI>::Ptr lid3dOrg(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::io::loadPCDFile(lidDensePcdPath, *lid3dOrg);
@@ -136,19 +136,16 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
     int cloudSizeStaFlt = lidStaFlt->points.size();
     cout << "statistically filtered cloud size:" << cloudSizeStaFlt << endl;
 
-    for (int i = 0; i < cloudSizeStaFlt; i++)
-    {
+    for (int i = 0; i < cloudSizeStaFlt; i++) {
         // assign the cartesian coordinate to pcl point cloud
         X = lidStaFlt->points[i].x;
         Y = lidStaFlt->points[i].y;
         Z = lidStaFlt->points[i].z;
         projProp = lidStaFlt->points[i].intensity;
-        if (!byIntensity)
-        {
+        if (!byIntensity) {
             radius = projProp;
         }
-        else
-        {
+        else {
             radius = sqrt(pow(X, 2) + pow(Y, 2) + pow(Z, 2));
         }
 
@@ -161,24 +158,20 @@ std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>
         pt_polar.intensity = projProp;
         lidPolar->points.push_back(pt_polar);
 
-        if (theta > thetaMax)
-        {
+        if (theta > thetaMax) {
             thetaMax = theta;
         }
-        if (theta < thetaMin)
-        {
+        if (theta < thetaMin) {
             thetaMin = theta;
         }
     }
 
     // output the important features of the point cloud
     cout << "polar cloud size:" << lidPolar->points.size() << endl;
-    cout << "Min theta of lidar: " << thetaMin << endl;
-    cout << "Max theta of lidar: " << thetaMax << endl;
 
     // save to pcd files and create tuple return
-    string polarPcdPath = this -> scenesFilePath[this -> scene_idx].PolarPcdPath;
-    string cartPcdPath = this -> scenesFilePath[this -> scene_idx].CartPcdPath;
+    string polarPcdPath = this -> scenes_files_path_vec[this -> scene_idx].PolarPcdPath;
+    string cartPcdPath = this -> scenes_files_path_vec[this -> scene_idx].CartPcdPath;
     pcl::io::savePCDFileBinary(cartPcdPath, *lidStaFlt);
     pcl::io::savePCDFileBinary(polarPcdPath, *lidPolar);
     std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> result;
@@ -375,6 +368,7 @@ void lidarProcess::SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPola
                         stdMin = distanceStd;
                     }
 
+                    tagsMap[u][v].label = 1;
                     tagsMap[u][v].mean = distanceMean;
                     tagsMap[u][v].sigma = distanceStd;
                     double intensityMean = std::accumulate(std::begin(Intensity), std::end(Intensity), 0.0) / tagsMap[u][v].num_pts;
@@ -398,7 +392,7 @@ void lidarProcess::SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPola
     /** add the tags_map of this specific scene to maps **/
     this -> tags_map = tagsMap;
     this -> tags_map_vec.push_back(tagsMap);
-    string tagsMapTxtPath = this -> scenesFilePath[this -> scene_idx].TagsMapTxtPath;
+    string tagsMapTxtPath = this -> scenes_files_path_vec[this -> scene_idx].TagsMapTxtPath;
     ofstream outfile;
     outfile.open(tagsMapTxtPath, ios::out);
     if (!outfile.is_open()) {
@@ -429,14 +423,14 @@ void lidarProcess::SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPola
 
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
-    string flatImgPath = this -> scenesFilePath[this -> scene_idx].FlatImgPath;
+    string flatImgPath = this -> scenes_files_path_vec[this -> scene_idx].FlatImgPath;
     cout << "LiDAR flat image path: " << flatImgPath << endl;
     cv::imwrite(flatImgPath, flatImage);
     cout << "LiDAR flat image generated successfully! Scene Index: " << this -> scene_idx << endl;
 }
 
 void lidarProcess::EdgeToPixel() {
-    string edgeImgPath = this -> scenesFilePath[this -> scene_idx].EdgeImgPath;
+    string edgeImgPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeImgPath;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
@@ -451,8 +445,10 @@ void lidarProcess::EdgeToPixel() {
         }
     }
 
+    this -> edge_pixels_vec.push_back(this -> edge_pixels);
+
     /***** Write the Pixel Coordinates into .txt File *****/
-    string edgeTxtPath = this -> scenesFilePath[this -> scene_idx].EdgeTxtPath;
+    string edgeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeTxtPath;
     ofstream outfile;
     outfile.open(edgeTxtPath, ios::out);
     if (!outfile.is_open()) {
@@ -475,7 +471,7 @@ void lidarProcess::EdgePixCheck()
         int v = edge_pixels[i][1];
         edge_check_img.at<uchar>(u, v) = 255;
     }
-    string edge_check_img_path = this -> scenesFilePath[this -> scene_idx].EdgeCheckImgPath;
+    string edge_check_img_path = this -> scenes_files_path_vec[this -> scene_idx].EdgeCheckImgPath;
     cv::imwrite(edge_check_img_path, edge_check_img);
 }
 
@@ -526,7 +522,7 @@ void lidarProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian) 
     edge_cloud_vec.push_back(this -> edge_cloud);
 
     /** write the coordinates and weights into .txt file **/
-    string edgeOrgTxtPath = this -> scenesFilePath[this -> scene_idx].EdgeOrgTxtPath;
+    string edgeOrgTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
     ofstream outfile;
     outfile.open(edgeOrgTxtPath, ios::out);
     if (!outfile.is_open()) {
@@ -543,8 +539,10 @@ void lidarProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian) 
 }
 
 void lidarProcess::ReadEdge() {
-    string edgeOrgTxtPath = this -> scenesFilePath[this -> scene_idx].EdgeOrgTxtPath;
-    ifstream infile(edgeOrgTxtPath);
+    cout << "----- lidar.ReadEdge() -----" << endl;
+    cout << "Scene Index in LiDAR ReadEdge: " << this -> scene_idx << endl;
+    string edge_cloud_txt_path = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
+    ifstream infile(edge_cloud_txt_path);
     string line;
     while (getline(infile, line))
     {
@@ -567,6 +565,8 @@ void lidarProcess::ReadEdge() {
     cout << "Imported LiDAR points: " << this -> edge_pts.size() << endl;
     std::sort(this -> edge_pts.begin(), this -> edge_pts.end());
     this -> edge_pts.erase(unique(this -> edge_pts.begin(), this -> edge_pts.end()), this -> edge_pts.end());
+    cout << "LiDAR Edge Points after Dumplicated Removed: " << this -> edge_pts.size() << endl;
+    this -> edge_pts_vec.push_back(this -> edge_pts);
 
     /** construct pcl pointcloud **/
     pcl::PointXYZI pt;
@@ -578,11 +578,13 @@ void lidarProcess::ReadEdge() {
         this -> edge_cloud -> points.push_back(pt);
     }
     cout << "Filtered LiDAR points: " << this -> edge_cloud -> points.size() << endl;
-    this -> edge_cloud_vec[this -> scene_idx] = this -> edge_cloud;
+    this -> edge_cloud_vec.push_back(this -> edge_cloud);
 }
 
 /***** Extrinsic and Inverse Intrinsic Transform for Visualization of LiDAR Points in Flat Image *****/
 vector<vector<double>> lidarProcess::EdgeCloudProjectToFisheye(vector<double> _p) {
+    cout << "Scene Index in EdgeCloudProjectToFisheye:" << this -> scene_idx << endl;
+
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
@@ -618,8 +620,7 @@ vector<vector<double>> lidarProcess::EdgeCloudProjectToFisheye(vector<double> _p
 
     vector<vector<double>> edge_fisheye_projection(2, vector<double>(this->edge_cloud_vec[this->scene_idx]->points.size()));
 
-    for (int i = 0; i < this->edge_cloud_vec[this->scene_idx]->points.size(); i++)
-    {
+    for (int i = 0; i < this->edge_cloud_vec[this->scene_idx]->points.size(); i++) {
         p_ << this->edge_cloud_vec[this->scene_idx]->points[i].x, this->edge_cloud_vec[this->scene_idx]->points[i].y, this->edge_cloud_vec[this->scene_idx]->points[i].z;
         p_trans = R * p_ + t;
         // phi = atan2(p_trans(1), p_trans(0)) + M_PI;
@@ -676,7 +677,7 @@ void lidarProcess::BagToPcd(string bagFile)
         pcl_conversions::toPCL(*input, pcl_pc2);
         pcl::fromPCLPointCloud2(pcl_pc2, *intensityCloud);
         string id_str = to_string(i);
-        string pcdsPath = this -> scenesFilePath[this -> scene_idx].PcdsPath;
+        string pcdsPath = this -> scenes_files_path_vec[this -> scene_idx].PcdsPath;
         pcl::io::savePCDFileBinary(pcdsPath + "/" + id_str + ".pcd", *intensityCloud);
     }
 }
@@ -684,7 +685,7 @@ void lidarProcess::BagToPcd(string bagFile)
 void lidarProcess::CreateDensePcd(){
     pcl::PCDReader reader; /** used for read PCD files **/
     vector <string> nameList;
-    string pcdsPath = this -> scenesFilePath[this -> scene_idx].PcdsPath;
+    string pcdsPath = this -> scenes_files_path_vec[this -> scene_idx].PcdsPath;
     ReadFileList(pcdsPath, nameList);
     sort(nameList.begin(),nameList.end()); /** sort file names by order **/
 
@@ -711,7 +712,7 @@ void lidarProcess::CreateDensePcd(){
             }
             nameIter++;
         }
-        string outputPath = this -> scenesFilePath[this -> scene_idx].OutputPath;
+        string outputPath = this -> scenes_files_path_vec[this -> scene_idx].OutputPath;
         pcl::io::savePCDFileBinary(outputPath + "/lidDense" + to_string(groupSize) + ".pcd", *output);
         cout << "create dense file success" << endl;
     }
@@ -720,7 +721,7 @@ void lidarProcess::CreateDensePcd(){
 //void lidarProcess::calculateMaxIncidence()
 //{
 //    pcl::PointCloud<pcl::PointXYZI>::Ptr lidarDenseCloud(new pcl::PointCloud<pcl::PointXYZI>);
-//    string lidDensePcdPath = this -> scenesFilePath[this -> scene_idx].LidDensePcdPath;
+//    string lidDensePcdPath = this -> scenes_files_path_vec[this -> scene_idx].LidDensePcdPath;
 //    pcl::io::loadPCDFile(lidDensePcdPath, *lidarDenseCloud);
 //    float theta;
 //    float radius;

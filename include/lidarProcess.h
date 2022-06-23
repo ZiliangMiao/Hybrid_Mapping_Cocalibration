@@ -58,19 +58,21 @@ class lidarProcess{
         int flatRows = int((double)110/90 * 1000) + 1;
         int flatCols = 4000;
         double radPerPix = (M_PI/2) / 1000;
+
         /** coordinates of edge pixels (which are considered as the edge) **/
         typedef vector<vector<int>> EdgePixels;
         EdgePixels edge_pixels;
         vector<EdgePixels> edge_pixels_vec;
+
         /** spatial coordinates of edge points (center of distribution) **/
         typedef vector<vector<double>> EdgePts;
         EdgePts edge_pts;
         vector<EdgePts> edge_pts_vec;
+
         /** mean position of the lidar pts in a specific pixel space **/
         typedef pcl::PointCloud<pcl::PointXYZI>::Ptr EdgeCloud; /** note: I is used to store the weight **/
         EdgeCloud edge_cloud;
         vector<EdgeCloud> edge_cloud_vec; /** container of edgeClouds of each scene **/
-
 
         /***** Extrinsic Parameters *****/
         struct Extrinsic {
@@ -129,7 +131,7 @@ class lidarProcess{
             string LidPro2DPath;
             string LidPro3DPath;
         };
-        vector<struct SceneFilePath> scenesFilePath;
+        vector<struct SceneFilePath> scenes_files_path_vec;
 
 public:
         lidarProcess(string dataPath, bool byIntensity);
@@ -138,7 +140,6 @@ public:
         void CreateDensePcd();
         void BagToPcd(string bagFile);
 
-
         /***** Edge Related *****/
         void EdgeToPixel();
         void ReadEdge();
@@ -146,12 +147,10 @@ public:
         void EdgePixCheck();
         vector<double> kdeFit(vector< vector <double> > edgePixels, int row_samples, int col_samples);
 
-
         /***** LiDAR Pre-Processing *****/
         std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> LidarToSphere();
         void SphereToPlaneRNN(pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolar, pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
         void PixLookUp(pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesian);
-
 
         /***** Get and Set Methods *****/
         void setExtrinsic(vector<double> _p) {

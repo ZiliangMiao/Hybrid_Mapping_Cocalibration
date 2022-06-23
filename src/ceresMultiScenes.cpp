@@ -230,7 +230,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
                                      int setConstant)
 {
     const int num_params = params_init.size();
-    const int numScenes = cam.numScenes;
+    const int num_scenes = cam.num_scenes;
     const double scale = 1.0;
 
     double params[num_params];
@@ -241,25 +241,27 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     std::vector<double> ref_vals;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
 
-    for (int idx = 0; idx < numScenes; idx++)
+    for (int idx = 0; idx < num_scenes; idx++)
     {
-        cam.setSceneIdx(idx);
-        cam.readEdge();
+        cam.SetSceneIdx(idx);
+        lid.SetSceneIdx(idx);
         /********* Fisheye KDE *********/
-        vector<double> p_c = cam.kdeBlur(bandwidth, scale, false);
+        vector<double> p_c = cam.Kde(bandwidth, scale, false);
         // Data is a row-major array of kGridRows x kGridCols values of function
         // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
         // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
         double *kde_data = new double[p_c.size()];
         memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 //        double *kde_data = p_c.data();
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows * scale, 0, cam.kdeCols * scale);
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.orgRows * scale, 0, cam.orgCols * scale);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
-    for (int idx = 0; idx < numScenes; idx++)
+    for (int idx = 0; idx < num_scenes; idx++)
     {
+        cam.SetSceneIdx(idx);
+        lid.SetSceneIdx(idx);
         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
         interpolators.push_back(kde_interpolator);
     }
@@ -276,7 +278,9 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
-    for (int idx = 0; idx < numScenes; idx++) {
+    for (int idx = 0; idx < num_scenes; idx++) {
+        cam.SetSceneIdx(idx);
+        lid.SetSceneIdx(idx);
     /** a scene weight could be added here **/
         for (int j = 0; j < lid.edge_cloud->points.size(); ++j) {
             const double weight = lid.edge_cloud_vec[idx]->points[j].intensity;
@@ -322,7 +326,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     options.use_nonmonotonic_steps = false;
 
     lid.SetSceneIdx(1);
-     string paramsOutPath = lid.scenesFilePath[lid.scene_idx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
+     string paramsOutPath = lid.scenes_files_path_vec[lid.scene_idx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
      outfile.open(paramsOutPath);
      OutputCallback callback(params);
      options.callbacks.push_back(&callback);
@@ -337,13 +341,11 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
-    for (int idx = 0; idx < numScenes; idx++)
-    {
-        cam.setSceneIdx(idx);
-        cam.readEdge();
+    for (int idx = 0; idx < num_scenes; idx++) {
+        cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         vector<vector<double>> edge_fisheye_projection = lid.EdgeCloudProjectToFisheye(params_res);
-        string edge_proj_txt_path = lid.scenesFilePath[lid.scene_idx].EdgeTransTxtPath;
+        string edge_proj_txt_path = lid.scenes_files_path_vec[lid.scene_idx].EdgeTransTxtPath;
         fusionViz(cam, edge_proj_txt_path, edge_fisheye_projection, bandwidth);
     }
 
@@ -372,7 +374,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //                                   vector<double> lb,
 //                                   vector<double> ub)
 // {
-//     std::vector<double> p_c = cam.kdeBlur(bandwidth, 1.0, false);
+//     std::vector<double> p_c = cam.Kde(bandwidth, 1.0, false);
 //     const double ref_val = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
 //     const int num_params = params_init.size();
 
@@ -449,7 +451,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
 //     vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
-//     string lidEdgeTransTxtPath = lid.scenesFilePath[lid.scene_idx].EdgeTransTxtPath;
+//     string lidEdgeTransTxtPath = lid.scenes_files_path_vec[lid.scene_idx].EdgeTransTxtPath;
 //     fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
 
 //     return params_res;

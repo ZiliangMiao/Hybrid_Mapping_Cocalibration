@@ -1,0 +1,6 @@
+<launch>
+    <node name="mainNode" pkg="data_process" type="mainNode" output="screen"> 
+        <param name="param_test" type="double" value="11.11" /> 
+    </node>
+</launch>
+

@@ -26,12 +26,12 @@ void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<doubl
     int rows = image.rows;
     int cols = image.cols;
     cv::Mat lidarRGB = cv::Mat::zeros(rows, cols, CV_8UC3);
-    double pixPerRad = 1000 / (M_PI/2);
+//    double pixPerRad = 1000 / (M_PI/2);
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
     outfile.open(edge_proj_txt_path, ios::out);
-    for(int i = 0; i < lidProjection[0].size(); i++){
+    for (int i = 0; i < lidProjection[0].size(); i++){
         double theta = lidProjection[0][i];
         double phi = lidProjection[1][i];
         // int u = (int)pixPerRad * theta;
@@ -47,20 +47,20 @@ void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<doubl
         outfile << u << "," << v << endl;
     }
     outfile.close();
-
+    /** fusion image generation **/
     cv::Mat imageShow = cv::Mat::zeros(rows, cols, CV_8UC3);
     cv::addWeighted(image, 1, lidarRGB, 0.8, 0, imageShow);
 
+    /***** need to be modified *****/
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
             cam.fisheyeImageToSphere(imageShow);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    vector< vector< vector<int> > > camtagsMap =
-            cam.sphereToPlane(camOrgPolarCloud, bandwidth);
+    vector< vector< vector<int> > > camtagsMap = cam.sphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p){
+void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p) {
 
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
@@ -95,10 +95,10 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p){
     Eigen::Matrix<double, 2, 1> S;
     Eigen::Matrix<double, 2, 1> p_uv;
 
-    string lidDensePcdPath = lid.scenesFilePath[lid.scene_idx].LidDensePcdPath;
-    string lidPro2DPath = lid.scenesFilePath[lid.scene_idx].LidPro2DPath;
-    string lidPro3DPath = lid.scenesFilePath[lid.scene_idx].LidPro3DPath;
-    string HdrImgPath = cam.scenesFilePath[cam.scIdx].HdrImgPath;
+    string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].LidDensePcdPath;
+    string lidPro2DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro2DPath;
+    string lidPro3DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro3DPath;
+    string HdrImgPath = cam.scenes_files_path_vec[cam.scIdx].HdrImgPath;
     pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::io::loadPCDFile(lidDensePcdPath, *lidRaw);
