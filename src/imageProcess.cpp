@@ -61,6 +61,7 @@ using namespace mlpack::kernel;
 using namespace arma;
 
 imageProcess::imageProcess(string pkgPath) {
+    cout << "----- Fisheye: ImageProcess -----" << endl;
     this -> num_scenes = 5;
     /** reserve the memory for vectors stated in LidarProcess.h **/
     this -> scenes_files_path_vec.reserve(this -> num_scenes);
@@ -79,10 +80,11 @@ imageProcess::imageProcess(string pkgPath) {
         struct SceneFilePath sc(scenes_path_vec[idx]);
         this -> scenes_files_path_vec.push_back(sc);
     }
+    cout << endl;
 }
 
 void imageProcess::ReadEdge() {
-    cout << "----- fisheye.ReadEdge() -----" << endl;
+    cout << "----- Fisheye: ReadEdge -----" << endl;
     cout << "Scene Index in Fisheye ReadEdge: " << this -> scene_idx << endl;
     string edge_fisheye_txt_path = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
 
@@ -111,27 +113,33 @@ void imageProcess::ReadEdge() {
     this -> edge_fisheye_pixels.erase(unique(this -> edge_fisheye_pixels.begin(), this -> edge_fisheye_pixels.end()), this -> edge_fisheye_pixels.end());
     cout << "Fisheye Edge Points after Dumplicated Removed: " << this -> edge_fisheye_pixels.size() << endl;
     this -> edge_fisheye_pixels_vec.push_back(this -> edge_fisheye_pixels);
+    cout << endl;
 }
 
 cv::Mat imageProcess::readOrgImage() {
+    cout << "----- Fisheye: ReadOrgImage -----" << endl;
     string HdrImgPath = this -> scenes_files_path_vec[this -> scene_idx].HdrImgPath;
     cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
     ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
+    cout << endl;
     return image;
 }
 
 std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> imageProcess::fisheyeImageToSphere()
 {
+    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
     // read the origin fisheye image and check the image size
     cv::Mat image = readOrgImage();
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
     result = fisheyeImageToSphere(image);
+    cout << endl;
     return result;
 }
 
 std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> imageProcess::fisheyeImageToSphere(cv::Mat image)
 {
+    cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
     // color space
     int r, g, b;   
     // cartesian coordinates (3d vector)
@@ -220,17 +228,20 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
 
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
     result = std::make_tuple(camOrgPolarCloud, camOrgPixelCloud);
-
+    cout << endl;
     return result;
 }
 
 void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar)
 {
+    cout << "----- Fisheye: SphereToPlane2 -----" << endl;
     SphereToPlane(sphereCloudPolar, -1.0);
+    cout << endl;
 }
 
 void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth)
 {
+    cout << "----- Fisheye: SphereToPlane -----" << endl;
     double flat_rows = this -> flatRows;
     double flat_cols = this -> flatCols;
     cv::Mat flatImage = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
@@ -347,9 +358,11 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
         string fusionImgPath = resultPath + "/sc_" + to_string(this -> scene_idx) + "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusionImgPath, flatImage); /** fusion image generation **/
     }
+    cout << endl;
 }
 
 void imageProcess::EdgeToPixel() {
+    cout << "----- Fisheye: EdgeToPixel -----" << endl;
     string edgeImgPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeImgPath;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
@@ -380,9 +393,11 @@ void imageProcess::EdgeToPixel() {
         outfile << this -> edge_pixels[i][0] << "\t" << this -> edge_pixels[i][1] << endl;
     }
     outfile.close();
+    cout << endl;
 }
 
 void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud) {
+    cout << "----- Fisheye: PixLookUp -----" << endl;
     vector<vector<double>> pixUV;
     int invalid_edge_pix = 0;
     for (int i = 0; i < this -> edge_pixels.size(); ++i) {
@@ -428,11 +443,13 @@ void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelC
         outfile << pixUV[i][0] << "\t" << pixUV[i][1] << endl;
     }
     outfile.close();
+    cout << endl;
 }
 
 // create static blur image for autodiff ceres optimization
 // the "scale" and "polar" option is implemented but not tested/supported in optimization.
 std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar) {
+    cout << "----- Fisheye: Kde -----" << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
     const int n_rows = scale * this->orgRows;
@@ -519,6 +536,7 @@ std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar
     cout << "New kde image generated with sum = " << kde_sum << " and max = " << kde_max << endl;
     cout << "The run time is: " <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
     return img;
+    cout << endl;
 }
 
 
