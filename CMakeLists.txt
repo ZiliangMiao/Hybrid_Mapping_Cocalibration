@@ -38,12 +38,12 @@ include_directories(
 
 ## Declare a C++ library
 add_library(imageProcess
-  include/imageProcess.h
-  src/imageProcess.cpp
+        include/FisheyeProcess.h
+        src/FisheyeProcess.cpp
 )
 add_library(lidarProcess
-  include/lidarProcess.h
-  src/lidarProcess.cpp
+        include/LidarProcess.h
+        src/LidarProcess.cpp
 )
 add_library(MeanShift
   include/MeanShift.h

@@ -47,7 +47,7 @@
 #include <mlpack/core/tree/cover_tree.hpp>
 #include <mlpack/core/tree/rectangle_tree.hpp>
 // include other files
-#include "imageProcess.h"
+#include "FisheyeProcess.h"
 
 using namespace std;
 using namespace cv;
@@ -60,7 +60,7 @@ using namespace mlpack::kernel;
 
 using namespace arma;
 
-imageProcess::imageProcess(string pkgPath) {
+FisheyeProcess::FisheyeProcess(string pkgPath) {
     cout << "----- Fisheye: ImageProcess -----" << endl;
     this -> num_scenes = 5;
     /** reserve the memory for vectors stated in LidarProcess.h **/
@@ -83,40 +83,38 @@ imageProcess::imageProcess(string pkgPath) {
     cout << endl;
 }
 
-void imageProcess::ReadEdge() {
+void FisheyeProcess::ReadEdge() {
     cout << "----- Fisheye: ReadEdge -----" << endl;
     cout << "Scene Index in Fisheye ReadEdge: " << this -> scene_idx << endl;
     string edge_fisheye_txt_path = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
 
     ifstream infile(edge_fisheye_txt_path);
     string line;
-
-    while (getline(infile, line))
-    {
+    EdgeFisheyePixels edge_fisheye_pixels;
+    while (getline(infile, line)) {
         stringstream ss(line);
         string tmp;
         vector<double> v;
-        while (getline(ss, tmp, '\t')) // split string with "\t"
-        {                           
+        while (getline(ss, tmp, '\t')) {
+            // split string with "\t"
             v.push_back(stod(tmp)); // string -> double
         }
-        if (v.size() == 2)
-        {
-            this -> edge_fisheye_pixels.push_back(v);
+        if (v.size() == 2) {
+            edge_fisheye_pixels.push_back(v);
         }
     }
-    ROS_ASSERT_MSG(this -> edge_fisheye_pixels.size() != 0, "Fisheye Read Edge Fault! Scene Index: %d", this -> num_scenes);
-    cout << "Imported Fisheye Edge Points: " << this -> edge_fisheye_pixels.size() << endl;
+    ROS_ASSERT_MSG(edge_fisheye_pixels.size() != 0, "Fisheye Read Edge Fault! Scene Index: %d", this -> num_scenes);
+    cout << "Imported Fisheye Edge Points: " << edge_fisheye_pixels.size() << endl;
 
     /** remove dumplicated points **/
-    std::sort(this -> edge_fisheye_pixels.begin(), this -> edge_fisheye_pixels.end());
-    this -> edge_fisheye_pixels.erase(unique(this -> edge_fisheye_pixels.begin(), this -> edge_fisheye_pixels.end()), this -> edge_fisheye_pixels.end());
-    cout << "Fisheye Edge Points after Dumplicated Removed: " << this -> edge_fisheye_pixels.size() << endl;
-    this -> edge_fisheye_pixels_vec.push_back(this -> edge_fisheye_pixels);
+    std::sort(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end());
+    edge_fisheye_pixels.erase(unique(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end()), edge_fisheye_pixels.end());
+    cout << "Fisheye Edge Points after Dumplicated Removed: " << edge_fisheye_pixels.size() << endl;
+    this -> edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels);
     cout << endl;
 }
 
-cv::Mat imageProcess::readOrgImage() {
+cv::Mat FisheyeProcess::readOrgImage() {
     cout << "----- Fisheye: ReadOrgImage -----" << endl;
     string HdrImgPath = this -> scenes_files_path_vec[this -> scene_idx].HdrImgPath;
     cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
@@ -126,7 +124,7 @@ cv::Mat imageProcess::readOrgImage() {
     return image;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> imageProcess::fisheyeImageToSphere()
+std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::fisheyeImageToSphere()
 {
     cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
     // read the origin fisheye image and check the image size
@@ -137,7 +135,7 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     return result;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> imageProcess::fisheyeImageToSphere(cv::Mat image)
+std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::fisheyeImageToSphere(cv::Mat image)
 {
     cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
     // color space
@@ -232,35 +230,33 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     return result;
 }
 
-void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar)
+void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar)
 {
     cout << "----- Fisheye: SphereToPlane2 -----" << endl;
     SphereToPlane(sphereCloudPolar, -1.0);
     cout << endl;
 }
 
-void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth)
+void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth)
 {
     cout << "----- Fisheye: SphereToPlane -----" << endl;
     double flat_rows = this -> flatRows;
     double flat_cols = this -> flatCols;
     cv::Mat flatImage = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
 
-    // define the tag list
-    vector<vector<int>> tags_map (flat_rows, vector<int>(flat_cols));
+    vector<vector<Tags>> tags_map (flatRows, vector<Tags>(flatCols));
 
     // define the variables of KDTree search
     pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
     kdtree.setInputCloud(sphereCloudPolar);
-
-    // define the variables of KDTree search
     pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree2;
     kdtree2.setInputCloud(sphereCloudPolar);
 
-    int invalidSearch = 0; // search invalid count
-    int invalidIndex = 0;  // index invalid count
+    int invalidSearch = 0;
+    int invalidIndex = 0;
     double radPerPix = this -> radPerPix;
     double searchRadius = radPerPix / 2;
+
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flat_rows; ++u) {
         // upper bound and lower bound of the current theta unit
@@ -301,8 +297,7 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
                         flatImage.at<cv::Vec3b>(u, v)[1] = 0; // g
                         flatImage.at<cv::Vec3b>(u, v)[2] = 0; // r
                         invalidSearch = invalidSearch + 1;
-                        // add tags
-                        this -> tags_map[u][v].push_back(0);
+                        tags_map[u][v].pts_indices.push_back(0);
                         break;
                     }
                 }
@@ -312,14 +307,13 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
                         B = B + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].b;
                         G = G + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].g;
                         R = R + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].r;
-                        this -> tags_map[u][v].push_back(pointIdxRadiusSearch[i]);
+                        tags_map[u][v].pts_indices.push_back(pointIdxRadiusSearch[i]);
                     }
                     flatImage.at<cv::Vec3b>(u, v)[0] = int(B / numSecondSearch); // b
                     flatImage.at<cv::Vec3b>(u, v)[1] = int(G / numSecondSearch); // g
                     flatImage.at<cv::Vec3b>(u, v)[2] = int(R / numSecondSearch); // r
                 }
             }
-
             else {
                 int B = 0, G = 0, R = 0; // mean value of RGB channels
                 for (int i = 0; i < pointIdxRadiusSearch.size(); ++i) {
@@ -334,7 +328,7 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
                     B = B + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].b;
                     G = G + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].g;
                     R = R + (*sphereCloudPolar)[pointIdxRadiusSearch[i]].r;
-                    this -> tags_map[u][v].push_back(pointIdxRadiusSearch[i]);
+                    tags_map[u][v].pts_indices.push_back(pointIdxRadiusSearch[i]);
                 }
                 flatImage.at<cv::Vec3b>(u, v)[0] = int(B / numRNN); // b
                 flatImage.at<cv::Vec3b>(u, v)[1] = int(G / numRNN); // g
@@ -342,7 +336,7 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
             }
         }
     }
-    this -> tags_map_vec.push_back(this -> tags_map);
+    this -> tags_map_vec.push_back(tags_map);
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
 
@@ -361,24 +355,23 @@ void imageProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCl
     cout << endl;
 }
 
-void imageProcess::EdgeToPixel() {
+void FisheyeProcess::EdgeToPixel() {
     cout << "----- Fisheye: EdgeToPixel -----" << endl;
     string edgeImgPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeImgPath;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
     ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
-
+    EdgePixels edge_pixels;
     for (int u = 0; u < edgeImage.rows; ++u) {
         for (int v = 0; v < edgeImage.cols; ++v) {
             if (edgeImage.at<uchar>(u, v) > 127) {
                 vector<int> pixel{u, v};
-                this -> edge_pixels.push_back(pixel);
+                edge_pixels.push_back(pixel);
             }
         }
     }
-
-    this -> edge_pixels_vec.push_back(this -> edge_pixels);
+    this -> edge_pixels_vec.push_back(edge_pixels);
 
     /********* write the coordinates into txt file *********/
     string edgeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeTxtPath;
@@ -388,25 +381,27 @@ void imageProcess::EdgeToPixel() {
     {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < this -> edge_pixels.size(); ++i)
+    for (int i = 0; i < edge_pixels.size(); ++i)
     {
-        outfile << this -> edge_pixels[i][0] << "\t" << this -> edge_pixels[i][1] << endl;
+        outfile << edge_pixels[i][0] << "\t" << edge_pixels[i][1] << endl;
     }
     outfile.close();
     cout << endl;
 }
 
-void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud) {
+void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud) {
     cout << "----- Fisheye: PixLookUp -----" << endl;
-    vector<vector<double>> pixUV;
     int invalid_edge_pix = 0;
-    for (int i = 0; i < this -> edge_pixels.size(); ++i) {
-        int u = this -> edge_pixels[i][0];
-        int v = this -> edge_pixels[i][1];
+    EdgeFisheyePixels edge_fisheye_pixels;
+    EdgePixels edge_pixels = this -> edge_pixels_vec[this -> scene_idx];
+    TagsMap tags_map = this -> tags_map_vec[this -> scene_idx];
+    for (int i = 0; i < edge_pixels.size(); ++i) {
+        int u = edge_pixels[i][0];
+        int v = edge_pixels[i][1];
         double x = 0;
         double y = 0;
 
-        int size = this -> tags_map[u][v].size();
+        int size = tags_map[u][v].pts_indices.size();
         if (size == 0) {
             invalid_edge_pix = invalid_edge_pix + 1;
             x = 0;
@@ -415,19 +410,17 @@ void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelC
         }
         else {
             for (int j = 0; j < size; ++j) {
-                pcl::PointXYZRGB pt = (*camOrgPixelCloud)[this -> tags_map[u][v][j]];
+                pcl::PointXYZRGB pt = (*camOrgPixelCloud)[tags_map[u][v].pts_indices[j]];
                 x = x + pt.x;
                 y = y + pt.y;
             }
-            x = x / this -> tags_map[u][v].size();
-            y = y / this -> tags_map[u][v].size();
+            x = x / tags_map[u][v].pts_indices.size();
+            y = y / tags_map[u][v].pts_indices.size();
             vector<double> pixel{x, y};
-            pixUV.push_back(pixel);
+            edge_fisheye_pixels.push_back(pixel);
         }
     }
-
-    this -> edge_fisheye_pixels = pixUV;
-    this -> edge_fisheye_pixels_vec.push_back(this -> edge_fisheye_pixels);
+    this -> edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels);
     cout << "number of invalid lookups(image): " << invalid_edge_pix << endl;
 
     string edgeOrgTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
@@ -438,9 +431,9 @@ void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelC
     {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < pixUV.size(); ++i)
+    for (int i = 0; i < edge_fisheye_pixels.size(); ++i)
     {
-        outfile << pixUV[i][0] << "\t" << pixUV[i][1] << endl;
+        outfile << edge_fisheye_pixels[i][0] << "\t" << edge_fisheye_pixels[i][1] << endl;
     }
     outfile.close();
     cout << endl;
@@ -448,54 +441,44 @@ void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelC
 
 // create static blur image for autodiff ceres optimization
 // the "scale" and "polar" option is implemented but not tested/supported in optimization.
-std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar) {
+std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
     cout << "----- Fisheye: Kde -----" << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
     const int n_rows = scale * this->orgRows;
     const int n_cols = scale * this->orgCols;
-
     arma::mat query;
-
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
-    const int ref_size = this -> edge_fisheye_pixels.size();
+    EdgeFisheyePixels edge_fisheye_pixels = this -> edge_fisheye_pixels_vec[this -> scene_idx];
+    const int ref_size = edge_fisheye_pixels.size();
     arma::mat reference(2, ref_size);
-    for (int i = 0; i < ref_size; ++i)
-    {
-        reference(0, i) = (double)this -> edge_fisheye_pixels[i][0];
-        reference(1, i) = (double)this -> edge_fisheye_pixels[i][1];
+    for (int i = 0; i < ref_size; ++i) {
+        reference(0, i) = (double)edge_fisheye_pixels[i][0];
+        reference(1, i) = (double)edge_fisheye_pixels[i][1];
     }
 
-    if (!polar)
-    {
+    if (!polar) {
         query = arma::mat(2, n_cols * n_rows);
         arma::vec rows = arma::linspace(0, this->orgRows - 1, n_rows);
         arma::vec cols = arma::linspace(0, this->orgCols - 1, n_cols);
 
-        for (int i = 0; i < n_rows; ++i)
-        {
-            for (int j = 0; j < n_cols; ++j)
-            {
+        for (int i = 0; i < n_rows; ++i) {
+            for (int j = 0; j < n_cols; ++j) {
                 query(0, i * n_cols + j) = rows.at(n_rows - 1 - i);
                 query(1, i * n_cols + j) = cols.at(j);
             }
         }
     }
-    else
-    {
+    else {
         query = arma::mat(2, n_cols * n_rows);
         arma::vec r_q = arma::linspace(1, this->flatRows, n_rows);
         arma::vec sin_q = arma::linspace(0, (2 * M_PI) * (1 - 1 / n_cols), n_cols);
         arma::vec cos_q = sin_q;
-        sin_q.for_each([](mat::elem_type &val)
-                       { val = sin(val); });
-        cos_q.for_each([](mat::elem_type &val)
-                       { val = cos(val); });
+        sin_q.for_each([](mat::elem_type &val) { val = sin(val); });
+        cos_q.for_each([](mat::elem_type &val) { val = cos(val); });
 
-        for (int i = 0; i < n_rows; ++i)
-        {
-            for (int j = 0; j < n_cols; ++j)
-            {
+        for (int i = 0; i < n_rows; ++i) {
+            for (int j = 0; j < n_cols; ++j) {
                 query(0, i * n_cols + j) = r_q.at(i) * cos_q.at(j) + this->intrinsic.u0;
                 query(1, i * n_cols + j) = r_q.at(i) * sin_q.at(j) + this->intrinsic.v0;
             }
@@ -510,19 +493,14 @@ std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar
     kde.Evaluate(query, kdeEstimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kdeEstimations);
-
-
     string kdeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].KdeTxtPath;
     ofstream outfile;
     outfile.open(kdeTxtPath, ios::out);
-    if (!outfile.is_open())
-    {
+    if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < n_rows; ++i)
-    {
-        for (int j = 0; j < n_cols; j++)
-        {
+    for (int i = 0; i < n_rows; ++i) {
+        for (int j = 0; j < n_cols; j++) {
             int index = i * n_cols + j;
             outfile << query.at(0, index) << "\t"
                     << query.at(1, index) << "\t"
@@ -540,7 +518,7 @@ std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar
 }
 
 
-//void imageProcess::EdgeTransform() {
+//void FisheyeProcess::EdgeTransform() {
 //    vector<double> camEdgeRows(this->edge_fisheye_pixels.size());
 //    vector<double> camEdgeCols(this->edge_fisheye_pixels.size());
 //
@@ -585,21 +563,17 @@ std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar
 //}
 
 // convert cv::Mat to arma::mat (static and stable method)
-static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out)
-{
+static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out) {
     // convert unsigned int cv::Mat to arma::Mat<double>
-    for (int r = 0; r < cv_mat_in.rows; r++)
-    {
-        for (int c = 0; c < cv_mat_in.cols; c++)
-        {
+    for (int r = 0; r < cv_mat_in.rows; r++) {
+        for (int c = 0; c < cv_mat_in.cols; c++) {
             arma_mat_out(r, c) = cv_mat_in.data[r * cv_mat_in.cols + c] / 255.0;
         }
     }
 }
 
 // convert arma::mat to Eigen::Matrix (static and stable method)
-static Eigen::MatrixXd arma_cast_eigen(arma::mat arma_A)
-{
+static Eigen::MatrixXd arma_cast_eigen(arma::mat arma_A) {
 
     Eigen::MatrixXd eigen_B = Eigen::Map<Eigen::MatrixXd>(arma_A.memptr(),
                                                           arma_A.n_rows,

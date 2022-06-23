@@ -13,8 +13,8 @@
 #include "ceres/rotation.h"
 #include "glog/logging.h"
 // heading
-#include "imageProcess.h"
-#include "lidarProcess.h"
+#include "FisheyeProcess.h"
+#include "LidarProcess.h"
 #include "visualization.cpp"
 
 using namespace std;
@@ -31,35 +31,29 @@ static const int num_p = 7;
  * @param x input variable with type T (double and ceres::Jet)
  * @return **
  */
-double get_double(double x)
-{
+double get_double(double x) {
     return static_cast<double>(x);
 }
 
 template <typename SCALAR, int N>
-double get_double(const ceres::Jet<SCALAR, N> &x)
-{
+double get_double(const ceres::Jet<SCALAR, N> &x) {
     return static_cast<double>(x.a);
 }
 
-void customOutput(vector<const char *> name, double *params, vector<double> params_init)
-{
+void customOutput(vector<const char *> name, double *params, vector<double> params_init) {
     std::cout << "Initial ";
-    for (unsigned int i = 0; i < name.size(); i++)
-    {
+    for (unsigned int i = 0; i < name.size(); i++) {
         std::cout << name[i] << ": " << params_init[i] << " ";
     }
     std::cout << "\n";
     std::cout << "Final   ";
-    for (unsigned int i = 0; i < name.size(); i++)
-    {
+    for (unsigned int i = 0; i < name.size(); i++) {
         std::cout << name[i] << ": " << params[i] << " ";
     }
     std::cout << "\n";
 }
 
-void initQuaternion(double rx, double ry, double rz, vector<double> &init)
-{
+void initQuaternion(double rx, double ry, double rz, vector<double> &init) {
     Eigen::Vector3d eulerAngle(rx, ry, rz);
     Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
     Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
@@ -73,18 +67,15 @@ void initQuaternion(double rx, double ry, double rz, vector<double> &init)
     init[3] = q.w();
 }
 
-struct Calibration
-{
+struct Calibration {
     template <typename T>
-    bool operator()(const T *const _q, const T *const _p, T *cost) const
-    {
+    bool operator()(const T *const _q, const T *const _p, T *cost) const {
         // intrinsic parameters
         Eigen::Matrix<T, 3, 1> eulerAngle(_q[0], _q[1], _q[2]);
         Eigen::Matrix<T, 3, 1> t{_q[3], _q[4], _q[5]};
         Eigen::Matrix<T, 2, 1> uv_0{_p[0], _p[1]};
         Eigen::Matrix<T, 6, 1> a_;
-        switch (num_p + num_q)
-        {
+        switch (num_p + num_q) {
             case 13:
                 a_ << _p[2], _p[3], _p[4], _p[5], _p[6], T(0);
                 break;
@@ -169,8 +160,7 @@ struct Calibration
                                        const double &weight,
                                        const double &kde_val,
                                        const double &kde_scale,
-                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-    {
+                                       const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator) {
         return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
                 new Calibration(point, weight, kde_val, kde_scale, interpolator));
     }
@@ -194,8 +184,7 @@ public:
 
     ceres::CallbackReturnType operator()(
             const ceres::IterationSummary& summary) override {
-        for (int i = 0; i < num_p + num_q; i++)
-        {
+        for (int i = 0; i < num_p + num_q; i++) {
             const double params_out = params_[i];
             outfile << params_out << "\t";
         }
@@ -211,7 +200,7 @@ private:
  * @brief
  * Ceres-solver Optimization
  * @param cam camProcess
- * @param lid lidarProcess
+ * @param lid LidarProcess
  * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
  * @param distortion distortion matrix {c, d; e, 1}
  * @param params_init initial parameters
@@ -220,15 +209,14 @@ private:
  * @param ub upper bounds of the parameters
  * @return ** std::vector<double>
  */
-std::vector<double> ceresMultiScenes(imageProcess cam,
-                                     lidarProcess lid,
+std::vector<double> ceresMultiScenes(FisheyeProcess cam,
+                                     LidarProcess lid,
                                      double bandwidth,
                                      vector<double> params_init,
                                      vector<const char *> name,
                                      vector<double> lb,
                                      vector<double> ub,
-                                     int setConstant)
-{
+                                     int setConstant) {
     const int num_params = params_init.size();
     const int num_scenes = cam.num_scenes;
     const double scale = 1.0;
@@ -258,8 +246,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
-    for (int idx = 0; idx < num_scenes; idx++)
-    {
+    for (int idx = 0; idx < num_scenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
@@ -281,8 +268,8 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     for (int idx = 0; idx < num_scenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
-    /** a scene weight could be added here **/
-        for (int j = 0; j < lid.edge_cloud->points.size(); ++j) {
+        /** a scene weight could be added here **/
+        for (int j = 0; j < lid.edge_cloud_vec[idx]->points.size(); ++j) {
             const double weight = lid.edge_cloud_vec[idx]->points[j].intensity;
             Eigen::Vector3d p_l = {lid.edge_cloud_vec[idx]->points[j].x, lid.edge_cloud_vec[idx]->points[j].y, lid.edge_cloud_vec[idx]->points[j].z};
             problem.AddResidualBlock(Calibration::Create(p_l, weight, ref_vals[idx], scale, img_interpolators[idx]),
@@ -326,7 +313,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
     options.use_nonmonotonic_steps = false;
 
     lid.SetSceneIdx(1);
-     string paramsOutPath = lid.scenes_files_path_vec[lid.scene_idx].OutputPath + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
+     string paramsOutPath = lid.scenes_files_path_vec[lid.scene_idx].output_folder_path + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
      outfile.open(paramsOutPath);
      OutputCallback callback(params);
      options.callbacks.push_back(&callback);
@@ -345,7 +332,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         vector<vector<double>> edge_fisheye_projection = lid.EdgeCloudProjectToFisheye(params_res);
-        string edge_proj_txt_path = lid.scenes_files_path_vec[lid.scene_idx].EdgeTransTxtPath;
+        string edge_proj_txt_path = lid.scenes_files_path_vec[lid.scene_idx].edge_fisheye_projection_path;
         fusionViz(cam, edge_proj_txt_path, edge_fisheye_projection, bandwidth);
     }
 
@@ -356,7 +343,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //  * @brief
 //  * Ceres-solver Optimization
 //  * @param cam camProcess
-//  * @param lid lidarProcess
+//  * @param lid LidarProcess
 //  * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
 //  * @param distortion distortion matrix {c, d; e, 1}
 //  * @param params_init initial parameters
@@ -365,8 +352,8 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //  * @param ub upper bounds of the parameters
 //  * @return ** std::vector<double>
 //  */
-// std::vector<double> ceresAutoDiff(imageProcess cam,
-//                                   lidarProcess lid,
+// std::vector<double> ceresAutoDiff(FisheyeProcess cam,
+//                                   LidarProcess lid,
 //                                   double bandwidth,
 //                                   const Eigen::Matrix2d distortion,
 //                                   vector<double> params_init,
@@ -451,7 +438,7 @@ std::vector<double> ceresMultiScenes(imageProcess cam,
 //     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
 //     vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
-//     string lidEdgeTransTxtPath = lid.scenes_files_path_vec[lid.scene_idx].EdgeTransTxtPath;
+//     string lidEdgeTransTxtPath = lid.scenes_files_path_vec[lid.scene_idx].edge_fisheye_projection_path;
 //     fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
 
 //     return params_res;

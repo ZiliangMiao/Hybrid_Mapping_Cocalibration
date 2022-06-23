@@ -1,29 +1,12 @@
 #ifndef _IMAGEEDGE_H
 #define _IMAGEEDGE_H
-#include "CustomMsg.h"
+
 #include "common.h"
 #include <Eigen/Core>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <cv_bridge/cv_bridge.h>
 #include <fstream>
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/common/io.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/features/principal_curvatures.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_plane.h>
-#include <pcl/search/kdtree.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/visualization/cloud_viewer.h> 
-#include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
 #include <sstream>
 #include <std_msgs/Header.h>
 #include <stdio.h>
@@ -36,7 +19,7 @@
 #include <math.h>
 #include <armadillo>
 
-class imageProcess{
+class FisheyeProcess{
 public:
     /** original data - images **/
     int orgRows = 2048;
@@ -47,17 +30,20 @@ public:
 
     /** coordinates of edge pixels in flat images **/
     typedef vector<vector<int>> EdgePixels;
-    EdgePixels edge_pixels;
     vector<EdgePixels> edge_pixels_vec;
 
     /** coordinates of edge pixels in fisheye images **/
     typedef vector<vector<double>> EdgeFisheyePixels;
-    EdgeFisheyePixels edge_fisheye_pixels;
     vector<EdgeFisheyePixels> edge_fisheye_pixels_vec;
 
     /** tagsmap container **/
-    typedef vector<vector<vector<int>>> TagsMap;
-    TagsMap tags_map;
+    typedef struct Tags
+    {
+        int label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
+        int num_pts; /** number of points **/
+        vector<int> pts_indices;
+    }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
+    typedef vector<vector<Tags>> TagsMap;
     vector<TagsMap> tags_map_vec; /** container of tagsMaps of each scene **/
 
     /***** Intrinsic Parameters *****/
@@ -106,7 +92,7 @@ public:
     vector<struct SceneFilePath> scenes_files_path_vec;
 
 public:
-    imageProcess(string pkgPath);
+    FisheyeProcess(string pkgPath);
     /***** Fisheye Pre-Processing *****/
     cv::Mat readOrgImage();
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeImageToSphere();

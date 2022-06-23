@@ -25,8 +25,8 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/principal_curvatures.h>
 //heading
-#include "imageProcess.h"
-#include "lidarProcess.h"
+#include "FisheyeProcess.h"
+#include "LidarProcess.h"
 
 using namespace std;
 
@@ -321,7 +321,7 @@ pcl::PointCloud<PointType>::Ptr getModelCurvatures(pcl::PointCloud<PointType>::P
 
 
 /********* LIVOX_HORIZON_LOAM - LIVOX *********/
-void lidarFeatureExtractor(lidarProcess lidarProcess) {
+void lidarFeatureExtractor(LidarProcess lidarProcess) {
     pcl::PointCloud<PointType>::Ptr lidarCloudOrg(new pcl::PointCloud<PointType>);
     pcl::io::loadPCDFile(dataPath + "outputs/lidDense50.pcd", *lidarCloudOrg);
 
@@ -701,7 +701,7 @@ void lidarFeatureExtractor(lidarProcess lidarProcess) {
     }
 }
 
-void calibOpt(imageProcess imageProcess, lidarProcess lidarProcess) {
+void calibOpt(FisheyeProcess imageProcess, LidarProcess lidarProcess) {
     imageProcess.ReadEdge();
     vector< vector <double> > camEdgePolar = imageProcess.EdgeTransform();
 

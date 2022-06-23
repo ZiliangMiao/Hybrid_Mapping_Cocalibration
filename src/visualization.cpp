@@ -14,14 +14,14 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 // heading
-#include "imageProcess.h"
-#include "lidarProcess.h"
+#include "FisheyeProcess.h"
+#include "LidarProcess.h"
 
 using namespace std;
 using namespace cv;
 using namespace Eigen;
 
-void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<double> > lidProjection, double bandwidth){
+void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector< vector<double> > lidProjection, double bandwidth){
     cv::Mat image = cam.readOrgImage();
     int rows = image.rows;
     int cols = image.cols;
@@ -60,7 +60,7 @@ void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<doubl
     cam.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p) {
+void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> _p) {
 
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
@@ -95,7 +95,7 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p) {
     Eigen::Matrix<double, 2, 1> S;
     Eigen::Matrix<double, 2, 1> p_uv;
 
-    string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].LidDensePcdPath;
+    string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
     string lidPro2DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro2DPath;
     string lidPro3DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro3DPath;
     string HdrImgPath = cam.scenes_files_path_vec[cam.scene_idx].HdrImgPath;

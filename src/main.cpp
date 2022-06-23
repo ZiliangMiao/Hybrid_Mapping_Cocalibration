@@ -12,8 +12,8 @@
 // pcl
 #include <pcl/common/io.h>
 // heading
-#include "imageProcess.h"
-#include "lidarProcess.h"
+#include "FisheyeProcess.h"
+#include "LidarProcess.h"
 #include "ceresMultiScenes.cpp"
 
 using namespace std;
@@ -44,7 +44,7 @@ bool checkFolder(string FolderPath){
     return 1;
 }
 
-int main(int argc, char** argv){
+int main(int argc, char** argv) {
     ros::init(argc, argv, "mainNode");
     ros::NodeHandle nh;
 
@@ -75,7 +75,7 @@ int main(int argc, char** argv){
     };
 
     cout << "----------------- Camera Processing ---------------------" << endl;
-    imageProcess imageProcess(pkgPath);
+    FisheyeProcess imageProcess(pkgPath);
     imageProcess.SetIntrinsic(params_calib);
 
     if (fisheyeFlatProcess) {
@@ -104,9 +104,9 @@ int main(int argc, char** argv){
     cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     bool byIntensity = true;
-    lidarProcess lidarProcess(pkgPath, byIntensity);
-    lidarProcess.setExtrinsic(params_calib);
-    ROS_ASSERT_MSG(lidarProcess.num_scenes == imageProcess.num_scenes, "num_scenes in imageProcess and lidarProcess is not equal!");
+    LidarProcess lidarProcess(pkgPath, byIntensity);
+    lidarProcess.SetExtrinsic(params_calib);
+    ROS_ASSERT_MSG(lidarProcess.num_scenes == imageProcess.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
     if (denseFile) {
         for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
@@ -194,8 +194,8 @@ int main(int argc, char** argv){
             lidarProcess.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             imageProcess.ReadEdge();
             vector<vector<double>> edge_fisheye_projection = lidarProcess.EdgeCloudProjectToFisheye(params_init);
-            cout << "Edge Trans Txt Path:" << lidarProcess.scenes_files_path_vec[idx].EdgeTransTxtPath << endl;
-            fusionViz(imageProcess, lidarProcess.scenes_files_path_vec[idx].EdgeTransTxtPath, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            cout << "Edge Trans Txt Path:" << lidarProcess.scenes_files_path_vec[idx].edge_fisheye_projection_path << endl;
+            fusionViz(imageProcess, lidarProcess.scenes_files_path_vec[idx].edge_fisheye_projection_path, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
 
         for (int i = 0; i < bw.size(); i++) {
@@ -210,7 +210,7 @@ int main(int argc, char** argv){
                 int setConstant = 2;
                 params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
 //                setConstant = 1;
-//                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+//                params = ceresMultiScenes(FisheyeProcess, LidarProcess, bandwidth, params, name, lb, ub, setConstant);
             }
             else {
                 int setConstant = 0;
