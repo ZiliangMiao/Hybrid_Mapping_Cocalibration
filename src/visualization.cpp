@@ -57,7 +57,7 @@ void fusionViz(imageProcess cam, string edge_proj_txt_path, vector< vector<doubl
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    vector< vector< vector<int> > > camtagsMap = cam.sphereToPlane(camOrgPolarCloud, bandwidth);
+    cam.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
 void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p) {
@@ -98,7 +98,7 @@ void fusionViz3D(imageProcess cam, lidarProcess lid, vector<double> _p) {
     string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].LidDensePcdPath;
     string lidPro2DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro2DPath;
     string lidPro3DPath = lid.scenes_files_path_vec[lid.scene_idx].LidPro3DPath;
-    string HdrImgPath = cam.scenes_files_path_vec[cam.scIdx].HdrImgPath;
+    string HdrImgPath = cam.scenes_files_path_vec[cam.scene_idx].HdrImgPath;
     pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::io::loadPCDFile(lidDensePcdPath, *lidRaw);

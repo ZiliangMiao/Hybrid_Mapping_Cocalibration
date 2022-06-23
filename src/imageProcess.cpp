@@ -432,7 +432,7 @@ void imageProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelC
 
 // create static blur image for autodiff ceres optimization
 // the "scale" and "polar" option is implemented but not tested/supported in optimization.
-std::vector<double> imageProcess::kdeBlur(double bandwidth, double scale, bool polar) {
+std::vector<double> imageProcess::Kde(double bandwidth, double scale, bool polar) {
     clock_t start_time = clock();
     const double relError = 0.05;
     const int n_rows = scale * this->orgRows;
