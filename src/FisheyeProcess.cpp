@@ -1,63 +1,38 @@
 // include headings
 #include <stdio.h>
-#include <stdlib.h>
-#include <fstream>
 #include <iostream>
-#include <sstream>
 #include <unordered_map>
-#include <iomanip>
 #include <string>
 #include <vector>
 #include <cmath>
-#include <math.h>
 #include <time.h>
 // include packages
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
 // include pcl package
 #include <pcl/common/io.h>
 #include <pcl/point_cloud.h>
-#include <pcl/search/kdtree.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/ModelCoefficients.h>
 #include <pcl/visualization/cloud_viewer.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/normal_3d_omp.h>
 #include <pcl/features/principal_curvatures.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/sample_consensus/ransac.h>
-#include <pcl/sample_consensus/sac_model_plane.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl_conversions/pcl_conversions.h>
 // include ros
 #include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-// include ros message
-#include <std_msgs/Header.h>
 // include mlpack
 #include <mlpack/core.hpp>
 #include <mlpack/methods/kde/kde.hpp>
-#include <mlpack/core/tree/binary_space_tree.hpp>
 #include <mlpack/core/tree/octree.hpp>
 #include <mlpack/core/tree/cover_tree.hpp>
-#include <mlpack/core/tree/rectangle_tree.hpp>
 // include other files
 #include "FisheyeProcess.h"
 
 using namespace std;
 using namespace cv;
-
-// using namespace mlpack;
 using namespace mlpack::kde;
 using namespace mlpack::metric;
 using namespace mlpack::tree;
 using namespace mlpack::kernel;
-
 using namespace arma;
 
 FisheyeProcess::FisheyeProcess(string pkgPath) {
@@ -86,7 +61,7 @@ FisheyeProcess::FisheyeProcess(string pkgPath) {
 void FisheyeProcess::ReadEdge() {
     cout << "----- Fisheye: ReadEdge -----" << endl;
     cout << "Scene Index in Fisheye ReadEdge: " << this -> scene_idx << endl;
-    string edge_fisheye_txt_path = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
+    string edge_fisheye_txt_path = this -> scenes_files_path_vec[this -> scene_idx].edge_fisheye_pixels_path;
 
     ifstream infile(edge_fisheye_txt_path);
     string line;
@@ -114,29 +89,27 @@ void FisheyeProcess::ReadEdge() {
     cout << endl;
 }
 
-cv::Mat FisheyeProcess::readOrgImage() {
+cv::Mat FisheyeProcess::ReadFisheyeImage() {
     cout << "----- Fisheye: ReadOrgImage -----" << endl;
-    string HdrImgPath = this -> scenes_files_path_vec[this -> scene_idx].HdrImgPath;
+    string HdrImgPath = this -> scenes_files_path_vec[this -> scene_idx].fisheye_hdr_img_path;
     cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
-    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
+    ROS_ASSERT_MSG((image.rows == this->fisheyeRows || image.cols == this->fisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
     cout << endl;
     return image;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::fisheyeImageToSphere()
-{
+std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::FisheyeImageToSphere() {
     cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
     // read the origin fisheye image and check the image size
-    cv::Mat image = readOrgImage();
+    cv::Mat image = ReadFisheyeImage();
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
-    result = fisheyeImageToSphere(image);
+    result = FisheyeImageToSphere(image);
     cout << endl;
     return result;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::fisheyeImageToSphere(cv::Mat image)
-{
+std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::FisheyeImageToSphere(cv::Mat image) {
     cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
     // color space
     int r, g, b;   
@@ -172,17 +145,14 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
 
-    ROS_ASSERT_MSG((image.rows == this->orgRows || image.cols == this->orgCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
+    ROS_ASSERT_MSG((image.rows == this->fisheyeRows || image.cols == this->fisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
 
-    for (int u = 0; u < this->orgRows; u++)
-    {
-        for (int v = 0; v < this->orgCols; v++)
-        {
+    for (int u = 0; u < this->fisheyeRows; u++) {
+        for (int v = 0; v < this->fisheyeCols; v++) {
             X = c * u + d * v - u0;
             Y = e * u + 1 * v - v0;
             radius = sqrt(pow(X, 2) + pow(Y, 2));
-            if (radius != 0)
-            {
+            if (radius != 0) {
                 Z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
                 // spherical coordinates
                 // caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi
@@ -230,15 +200,13 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     return result;
 }
 
-void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar)
-{
+void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar) {
     cout << "----- Fisheye: SphereToPlane2 -----" << endl;
     SphereToPlane(sphereCloudPolar, -1.0);
     cout << endl;
 }
 
-void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth)
-{
+void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth) {
     cout << "----- Fisheye: SphereToPlane -----" << endl;
     double flat_rows = this -> flatRows;
     double flat_cols = this -> flatCols;
@@ -340,9 +308,9 @@ void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphere
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
 
-    string flatImgPath = this -> scenes_files_path_vec[this -> scene_idx].FlatImgPath;
-    string fusionImgPath = this -> scenes_files_path_vec[this -> scene_idx].FusionImgPath;
-    string resultPath = this -> scenes_files_path_vec[this -> scene_idx].ResultPath;
+    string flatImgPath = this -> scenes_files_path_vec[this -> scene_idx].flat_img_path;
+    string fusionImgPath = this -> scenes_files_path_vec[this -> scene_idx].fusion_img_path;
+    string resultPath = this -> scenes_files_path_vec[this -> scene_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
     if (bandwidth < 0) {
@@ -357,7 +325,7 @@ void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphere
 
 void FisheyeProcess::EdgeToPixel() {
     cout << "----- Fisheye: EdgeToPixel -----" << endl;
-    string edgeImgPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeImgPath;
+    string edgeImgPath = this -> scenes_files_path_vec[this -> scene_idx].edge_img_path;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
@@ -373,19 +341,18 @@ void FisheyeProcess::EdgeToPixel() {
     }
     this -> edge_pixels_vec.push_back(edge_pixels);
 
-    /********* write the coordinates into txt file *********/
-    string edgeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeTxtPath;
-    ofstream outfile;
-    outfile.open(edgeTxtPath, ios::out);
-    if (!outfile.is_open())
-    {
-        cout << "Open file failure" << endl;
-    }
-    for (int i = 0; i < edge_pixels.size(); ++i)
-    {
-        outfile << edge_pixels[i][0] << "\t" << edge_pixels[i][1] << endl;
-    }
-    outfile.close();
+//    /********* write the coordinates into txt file *********/
+//    string edgeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeTxtPath;
+//    ofstream outfile;
+//    outfile.open(edgeTxtPath, ios::out);
+//    if (!outfile.is_open()) {
+//        cout << "Open file failure" << endl;
+//    }
+//    for (int i = 0; i < edge_pixels.size(); ++i) {
+//        outfile << edge_pixels[i][0] << "\t" << edge_pixels[i][1] << endl;
+//    }
+//    outfile.close();
+
     cout << endl;
 }
 
@@ -423,16 +390,14 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixe
     this -> edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels);
     cout << "number of invalid lookups(image): " << invalid_edge_pix << endl;
 
-    string edgeOrgTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeOrgTxtPath;
+    string edgeOrgTxtPath = this -> scenes_files_path_vec[this -> scene_idx].edge_fisheye_pixels_path;
     /********* write the coordinates into txt file *********/
     ofstream outfile;
     outfile.open(edgeOrgTxtPath, ios::out);
-    if (!outfile.is_open())
-    {
+    if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < edge_fisheye_pixels.size(); ++i)
-    {
+    for (int i = 0; i < edge_fisheye_pixels.size(); ++i) {
         outfile << edge_fisheye_pixels[i][0] << "\t" << edge_fisheye_pixels[i][1] << endl;
     }
     outfile.close();
@@ -445,8 +410,8 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     cout << "----- Fisheye: Kde -----" << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
-    const int n_rows = scale * this->orgRows;
-    const int n_cols = scale * this->orgCols;
+    const int n_rows = scale * this -> fisheyeRows;
+    const int n_cols = scale * this -> fisheyeCols;
     arma::mat query;
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
     EdgeFisheyePixels edge_fisheye_pixels = this -> edge_fisheye_pixels_vec[this -> scene_idx];
@@ -459,8 +424,8 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
 
     if (!polar) {
         query = arma::mat(2, n_cols * n_rows);
-        arma::vec rows = arma::linspace(0, this->orgRows - 1, n_rows);
-        arma::vec cols = arma::linspace(0, this->orgCols - 1, n_cols);
+        arma::vec rows = arma::linspace(0, this -> fisheyeRows - 1, n_rows);
+        arma::vec cols = arma::linspace(0, this -> fisheyeCols - 1, n_cols);
 
         for (int i = 0; i < n_rows; ++i) {
             for (int j = 0; j < n_cols; ++j) {
@@ -471,7 +436,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     }
     else {
         query = arma::mat(2, n_cols * n_rows);
-        arma::vec r_q = arma::linspace(1, this->flatRows, n_rows);
+        arma::vec r_q = arma::linspace(1, this -> flatRows, n_rows);
         arma::vec sin_q = arma::linspace(0, (2 * M_PI) * (1 - 1 / n_cols), n_cols);
         arma::vec cos_q = sin_q;
         sin_q.for_each([](mat::elem_type &val) { val = sin(val); });
@@ -479,8 +444,8 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
 
         for (int i = 0; i < n_rows; ++i) {
             for (int j = 0; j < n_cols; ++j) {
-                query(0, i * n_cols + j) = r_q.at(i) * cos_q.at(j) + this->intrinsic.u0;
-                query(1, i * n_cols + j) = r_q.at(i) * sin_q.at(j) + this->intrinsic.v0;
+                query(0, i * n_cols + j) = r_q.at(i) * cos_q.at(j) + this -> intrinsic.u0;
+                query(1, i * n_cols + j) = r_q.at(i) * sin_q.at(j) + this -> intrinsic.v0;
             }
         }
     }
@@ -493,7 +458,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     kde.Evaluate(query, kdeEstimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kdeEstimations);
-    string kdeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].KdeTxtPath;
+    string kdeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].kde_samples_path;
     ofstream outfile;
     outfile.open(kdeTxtPath, ios::out);
     if (!outfile.is_open()) {
@@ -513,8 +478,26 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     outfile.close();
     cout << "New kde image generated with sum = " << kde_sum << " and max = " << kde_max << endl;
     cout << "The run time is: " <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
-    return img;
     cout << endl;
+    return img;
+}
+
+// convert cv::Mat to arma::mat (static and stable method)
+static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out) {
+    // convert unsigned int cv::Mat to arma::Mat<double>
+    for (int r = 0; r < cv_mat_in.rows; r++) {
+        for (int c = 0; c < cv_mat_in.cols; c++) {
+            arma_mat_out(r, c) = cv_mat_in.data[r * cv_mat_in.cols + c] / 255.0;
+        }
+    }
+}
+
+// convert arma::mat to Eigen::Matrix (static and stable method)
+static Eigen::MatrixXd arma_cast_eigen(arma::mat arma_A) {
+    Eigen::MatrixXd eigen_B = Eigen::Map<Eigen::MatrixXd>(arma_A.memptr(),
+                                                          arma_A.n_rows,
+                                                          arma_A.n_cols);
+    return eigen_B;
 }
 
 
@@ -561,23 +544,3 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
 //    camEdgePolar[0] = camEdgeRows;
 //    camEdgePolar[1] = camEdgeCols;
 //}
-
-// convert cv::Mat to arma::mat (static and stable method)
-static void cv_cast_arma(const cv::Mat &cv_mat_in, arma::mat &arma_mat_out) {
-    // convert unsigned int cv::Mat to arma::Mat<double>
-    for (int r = 0; r < cv_mat_in.rows; r++) {
-        for (int c = 0; c < cv_mat_in.cols; c++) {
-            arma_mat_out(r, c) = cv_mat_in.data[r * cv_mat_in.cols + c] / 255.0;
-        }
-    }
-}
-
-// convert arma::mat to Eigen::Matrix (static and stable method)
-static Eigen::MatrixXd arma_cast_eigen(arma::mat arma_A) {
-
-    Eigen::MatrixXd eigen_B = Eigen::Map<Eigen::MatrixXd>(arma_A.memptr(),
-                                                          arma_A.n_rows,
-                                                          arma_A.n_cols);
-
-    return eigen_B;
-}

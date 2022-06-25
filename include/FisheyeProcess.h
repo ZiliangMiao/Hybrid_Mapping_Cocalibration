@@ -1,32 +1,17 @@
-#ifndef _IMAGEEDGE_H
-#define _IMAGEEDGE_H
-
-#include "common.h"
-#include <Eigen/Core>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <cv_bridge/cv_bridge.h>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <std_msgs/Header.h>
-#include <stdio.h>
 #include <string>
 #include <vector>
-#include <time.h>
-#include <unordered_map>
-#include <iomanip>
-#include <cmath>
-#include <math.h>
-#include <armadillo>
+#include <pcl/common/common.h>
+using namespace std;
 
+typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr RGBCloudPtr;
 class FisheyeProcess{
 public:
     /** original data - images **/
-    int orgRows = 2048;
-    int orgCols = 2448;
-    int flatRows = int((double)110/90 * 1000) + 1;
-    int flatCols = 4000;
-    double radPerPix = (M_PI/2) / 1000;
+    const int fisheyeRows = 2048;
+    const int fisheyeCols = 2448;
+    const int flatRows = int((double)110/90 * 1000) + 1;
+    const int flatCols = 4000;
+    const double radPerPix = (M_PI/2) / 1000;
 
     /** coordinates of edge pixels in flat images **/
     typedef vector<vector<int>> EdgePixels;
@@ -69,66 +54,57 @@ public:
     struct SceneFilePath
     {
         SceneFilePath(string ScenePath) {
-            this -> OutputPath = ScenePath + "/outputs";
-            this -> ResultPath = ScenePath + "/results";
-            this -> HdrImgPath = ScenePath + "/images/grab_0.bmp";
-            this -> EdgeImgPath = ScenePath + "/edges/camEdge.png";
-            this -> FlatImgPath = this -> OutputPath + "/flatImage.bmp";
-            this -> EdgeTxtPath = this -> OutputPath + "/camEdgePix.txt";
-            this -> EdgeOrgTxtPath = this -> OutputPath + "/camPixOut.txt";
-            this -> KdeTxtPath = this -> OutputPath + "/camKDE.txt";
-            this -> FusionImgPath = this -> ResultPath + "/fusion.bmp";
+            this -> output_folder_path = ScenePath + "/outputs";
+            this -> fusion_result_folder_path = ScenePath + "/results";
+            this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";
+            this -> edge_img_path = ScenePath + "/edges/camEdge.png";
+            this -> flat_img_path = this -> output_folder_path + "/flatImage.bmp";
+            this -> edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
+            this -> kde_samples_path = this -> output_folder_path + "/camKDE.txt";
+            this -> fusion_img_path = this -> fusion_result_folder_path + "/fusion.bmp";
         }
-        string OutputPath;
-        string ResultPath;
-        string FusionImgPath;
-        string HdrImgPath;
-        string EdgeImgPath;
-        string FlatImgPath;
-        string EdgeTxtPath;
-        string EdgeOrgTxtPath;
-        string KdeTxtPath;
+        string output_folder_path;
+        string fusion_result_folder_path;
+        string fusion_img_path;
+        string fisheye_hdr_img_path;
+        string edge_img_path;
+        string flat_img_path;
+        string edge_fisheye_pixels_path;
+        string kde_samples_path;
     };
     vector<struct SceneFilePath> scenes_files_path_vec;
 
 public:
     FisheyeProcess(string pkgPath);
-    /***** Fisheye Pre-Processing *****/
-    cv::Mat readOrgImage();
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeImageToSphere();
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeImageToSphere(cv::Mat image);
-    void SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar);
-    void SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth);
+    /** Fisheye Pre-Processing **/
+    cv::Mat ReadFisheyeImage();
+    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
+    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat image);
+    void SphereToPlane(RGBCloudPtr sphere_polar_cloud);
+    void SphereToPlane(RGBCloudPtr sphere_polar_cloud, double bandwidth);
 
-
-    /***** Edge Related *****/
+    /** Edge Related **/
     void ReadEdge();
     void EdgeToPixel();
-    void PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud);
+    void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale, bool polar);
 
-
-    /***** Get and Set Methods *****/
+    /** Get and Set Methods **/
     void SetIntrinsic(vector<double> parameters) {
-        // polynomial params
+        /** polynomial params **/
         this->intrinsic.a0 = parameters[6];
         this->intrinsic.a2 = parameters[7];
         this->intrinsic.a3 = parameters[8];
         this->intrinsic.a4 = parameters[9];
-        // expansion and distortion
+        /** expansion and distortion **/
         this->intrinsic.c = parameters[10];
         this->intrinsic.d = parameters[11];
         this->intrinsic.e = parameters[12];
-        // center
+        /** center **/
         this->intrinsic.u0 = parameters[13];
         this->intrinsic.v0 = parameters[14];
     }
     void SetSceneIdx(int scene_idx) {
         this -> scene_idx = scene_idx;
     }
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr rgbCloud;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr imageCloud;
 };
-
-#endif

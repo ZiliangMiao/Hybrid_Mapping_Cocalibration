@@ -12,8 +12,6 @@
 // pcl
 #include <pcl/common/io.h>
 // heading
-#include "FisheyeProcess.h"
-#include "LidarProcess.h"
 #include "ceresMultiScenes.cpp"
 
 using namespace std;
@@ -81,7 +79,7 @@ int main(int argc, char** argv) {
     if (fisheyeFlatProcess) {
         for (int idx = 0; idx < imageProcess.num_scenes; idx++) {
             imageProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
+            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.FisheyeImageToSphere();
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
             std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
@@ -91,7 +89,7 @@ int main(int argc, char** argv) {
     else if (fisheyeEdgeProcess) {
         for (int idx = 0; idx < imageProcess.num_scenes; idx++) {
             imageProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.fisheyeImageToSphere();
+            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.FisheyeImageToSphere();
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
             pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
             std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
@@ -103,8 +101,7 @@ int main(int argc, char** argv) {
 
     cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
-    bool byIntensity = true;
-    LidarProcess lidarProcess(pkgPath, byIntensity);
+    LidarProcess lidarProcess(pkgPath);
     lidarProcess.SetExtrinsic(params_calib);
     ROS_ASSERT_MSG(lidarProcess.num_scenes == imageProcess.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
@@ -121,7 +118,7 @@ int main(int argc, char** argv) {
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidarProcess.SphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
+            lidarProcess.SphereToPlane(lidPolarCloud, lidCartesianCloud);
         }
     }
     else if (lidarEdgeProcess) {
@@ -131,7 +128,7 @@ int main(int argc, char** argv) {
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
             pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidarProcess.SphereToPlaneRNN(lidPolarCloud, lidCartesianCloud);
+            lidarProcess.SphereToPlane(lidPolarCloud, lidCartesianCloud);
             lidarProcess.EdgeToPixel();
             lidarProcess.PixLookUp(lidCartesianCloud);
         }

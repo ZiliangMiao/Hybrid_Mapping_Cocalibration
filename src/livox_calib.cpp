@@ -10,7 +10,6 @@
 #include <vector>
 #include <string>
 
-#include "common.h"
 // #include "result_verify.h"
 
 using namespace std;

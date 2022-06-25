@@ -45,15 +45,8 @@ add_library(lidarProcess
         include/LidarProcess.h
         src/LidarProcess.cpp
 )
-add_library(MeanShift
-  include/MeanShift.h
-  src/MeanShift.cpp
-)
 add_library(ceresMultiScenes
   src/ceresMultiScenes.cpp
-)
-add_library(visualization
-  src/visualization.cpp
 )
 
 ## Add executable cpp files
@@ -64,13 +57,10 @@ add_executable(rvizPub src/rvizPub.cpp)
 add_dependencies(mainNode ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(imageProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(lidarProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(MeanShift ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rvizPub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(visualization ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Link libraries
-target_link_libraries(MeanShift ${catkin_LIBRARIES})
 target_link_libraries(lidarProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(imageProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
 target_link_libraries(rvizPub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
@@ -79,7 +69,6 @@ target_link_libraries(mainNode
   imageProcess
   lidarProcess
   ceresMultiScenes
-  visualization
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}

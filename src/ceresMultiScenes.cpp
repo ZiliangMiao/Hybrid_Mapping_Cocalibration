@@ -1,9 +1,14 @@
 // basic
 #include <iostream>
 #include <algorithm>
+#include <string>
 #include <vector>
 // eigen
 #include <Eigen/Core>
+// ros
+#include <ros/ros.h>
+#include <std_msgs/Header.h>
+#include <ros/package.h>
 // opencv
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -12,12 +17,19 @@
 #include "ceres/cubic_interpolation.h"
 #include "ceres/rotation.h"
 #include "glog/logging.h"
-// heading
+// pcl
+#include <pcl/common/io.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
+// headings
 #include "FisheyeProcess.h"
 #include "LidarProcess.h"
-#include "visualization.cpp"
 
 using namespace std;
+using namespace cv;
+using namespace Eigen;
 
 ofstream outfile;
 
@@ -65,6 +77,119 @@ void initQuaternion(double rx, double ry, double rz, vector<double> &init) {
     init[1] = q.y();
     init[2] = q.z();
     init[3] = q.w();
+}
+
+void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector< vector<double> > lidProjection, double bandwidth){
+    cv::Mat image = cam.ReadFisheyeImage();
+    int rows = image.rows;
+    int cols = image.cols;
+    cv::Mat lidarRGB = cv::Mat::zeros(rows, cols, CV_8UC3);
+//    double pixPerRad = 1000 / (M_PI/2);
+
+    /** write the edge points projected on fisheye to .txt file **/
+    ofstream outfile;
+    outfile.open(edge_proj_txt_path, ios::out);
+    for (int i = 0; i < lidProjection[0].size(); i++){
+        double theta = lidProjection[0][i];
+        double phi = lidProjection[1][i];
+        // int u = (int)pixPerRad * theta;
+        // int v = (int)pixPerRad * phi;
+        int u = std::clamp(lidarRGB.rows - 1 - theta, (double)0.0, (double)(lidarRGB.rows-1));
+        int v = std::clamp(phi, (double)0.0, (double)(lidarRGB.cols-1));;
+        int b = 0;
+        int g = 0;
+        int r = 255;
+        lidarRGB.at<Vec3b>(u, v)[0] = b;
+        lidarRGB.at<Vec3b>(u, v)[1] = g;
+        lidarRGB.at<Vec3b>(u, v)[2] = r;
+        outfile << u << "," << v << endl;
+    }
+    outfile.close();
+    /** fusion image generation **/
+    cv::Mat imageShow = cv::Mat::zeros(rows, cols, CV_8UC3);
+    cv::addWeighted(image, 1, lidarRGB, 0.8, 0, imageShow);
+
+    /***** need to be modified *****/
+    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
+            cam.FisheyeImageToSphere(imageShow);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
+    std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
+    cam.SphereToPlane(camOrgPolarCloud, bandwidth);
+}
+
+void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> _p) {
+
+    Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
+    Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
+    Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
+    Eigen::Matrix<double, 6, 1> a_;
+    switch (_p.size())
+    {
+        case 13:
+            a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
+            break;
+        case 12:
+            a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
+            break;
+        default:
+            a_ << double(0), _p[8], double(0), _p[9], double(0), _p[10];
+            break;
+    }
+
+    double phi, theta;
+    double inv_r, r;
+    double res, val;
+
+    // extrinsic transform
+    Eigen::Matrix<double, 3, 3> R;
+    Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
+    Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
+    Eigen::AngleAxisd zAngle(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
+    R = zAngle * yAngle * xAngle;
+
+    Eigen::Matrix<double, 3, 1> p_;
+    Eigen::Matrix<double, 3, 1> p_trans;
+    Eigen::Matrix<double, 2, 1> S;
+    Eigen::Matrix<double, 2, 1> p_uv;
+
+    string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
+    string HdrImgPath = cam.scenes_files_path_vec[cam.scene_idx].fisheye_hdr_img_path;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::io::loadPCDFile(lidDensePcdPath, *lidRaw);
+    cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
+    int pixelThresh = 10;
+    int rows = image.rows;
+    int cols = image.cols;
+
+    pcl::PointXYZRGB pt;
+    vector<double> ptLoc(3, 0);
+    vector<vector<vector<double>>> dict(rows, vector<vector<double>>(cols, ptLoc));
+
+    cout << "---------------Coloring------------" << endl;
+    for(int i = 0; i < rows; i++){
+        for(int j = 0; j < cols; j++){
+            if(image.at<cv::Vec3b>(i, j)[0] > pixelThresh || image.at<cv::Vec3b>(i, j)[1] > pixelThresh || image.at<cv::Vec3b>(i, j)[2] > pixelThresh){
+                if(dict[i][j][0] != 0 && dict[i][j][1] != 0 && dict[i][j][2] != 0){
+                    pt.x = dict[i][j][0];
+                    pt.y = dict[i][j][1];
+                    pt.z = dict[i][j][2];
+                    pt.b = image.at<cv::Vec3b>(i, j)[0];
+                    pt.g = image.at<cv::Vec3b>(i, j)[1];
+                    pt.r = image.at<cv::Vec3b>(i, j)[2];
+                    showCloud -> points.push_back(pt);
+                }
+            }
+        }
+    }
+    pcl::visualization::CloudViewer viewer("Viewer");
+    viewer.showCloud(showCloud);
+
+    while(!viewer.wasStopped()){
+
+    }
+    cv::waitKey();
 }
 
 struct Calibration {
@@ -241,7 +366,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
         double *kde_data = new double[p_c.size()];
         memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 //        double *kde_data = p_c.data();
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.orgRows * scale, 0, cam.orgCols * scale);
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.fisheyeRows * scale, 0, cam.fisheyeCols * scale);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
@@ -264,7 +389,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
     problem.AddParameterBlock(params + num_q, num_params - num_q);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-    Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
+    Eigen::Vector2d img_size = {cam.fisheyeRows, cam.fisheyeCols};
     for (int idx = 0; idx < num_scenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
@@ -339,6 +464,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
     return params_res;
 }
 
+
 // /**
 //  * @brief
 //  * Ceres-solver Optimization
@@ -393,7 +519,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
 //     problem.AddParameterBlock(params + num_q, num_params - num_q);
 //     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-//     Eigen::Vector2d img_size = {cam.orgRows, cam.orgCols};
+//     Eigen::Vector2d img_size = {cam.fisheyeRows, cam.fisheyeCols};
 //     for (int i = 0; i < lid.EdgeCloud -> points.size(); ++i)
 //     {
 //         // Eigen::Vector3d p_l_tmp = p_l.row(i);
