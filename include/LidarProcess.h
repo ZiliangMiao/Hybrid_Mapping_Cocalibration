@@ -3,6 +3,7 @@
 #include <pcl/common/common.h>
 using namespace std;
 
+typedef pcl::PointCloud<pcl::PointXYZI>::Ptr IntensityCloudPtr; /** note: I is used to store the weight **/
 class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
@@ -36,8 +37,7 @@ public:
     vector<EdgePts> edge_pts_vec;
 
     /** mean position of the lidar pts in a specific pixel space **/
-    typedef pcl::PointCloud<pcl::PointXYZI>::Ptr EdgeCloud; /** note: I is used to store the weight **/
-    vector<EdgeCloud> edge_cloud_vec; /** container of edgeClouds of each scene **/
+    vector<IntensityCloudPtr> edge_cloud_vec; /** container of edgeClouds of each scene **/
 
     /***** Extrinsic Parameters *****/
     struct Extrinsic {
@@ -102,9 +102,9 @@ public:
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
 
     /***** LiDAR Pre-Processing *****/
-    std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> LidarToSphere();
-    void SphereToPlane(const pcl::PointCloud<pcl::PointXYZI>::Ptr& polar_cloud, const pcl::PointCloud<pcl::PointXYZI>::Ptr& cart_cloud);
-    void PixLookUp(const pcl::PointCloud<pcl::PointXYZI>::Ptr& cart_cloud);
+    std::tuple<IntensityCloudPtr, IntensityCloudPtr> LidarToSphere();
+    void SphereToPlane(const IntensityCloudPtr& polar_cloud, const IntensityCloudPtr& cart_cloud);
+    void PixLookUp(const IntensityCloudPtr& cart_cloud);
 
     /***** Get and Set Methods *****/
     void SetExtrinsic(vector<double> _p) {

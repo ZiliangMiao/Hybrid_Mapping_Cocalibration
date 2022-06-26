@@ -7,11 +7,11 @@ typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr RGBCloudPtr;
 class FisheyeProcess{
 public:
     /** original data - images **/
-    const int fisheyeRows = 2048;
-    const int fisheyeCols = 2448;
-    const int flatRows = int((double)110/90 * 1000) + 1;
-    const int flatCols = 4000;
-    const double radPerPix = (M_PI/2) / 1000;
+    const int kFisheyeRows = 2048;
+    const int kFisheyeCols = 2448;
+    const int kFlatRows = int((double)110 / 90 * 1000) + 1;
+    const int kFlatCols = 4000;
+    const float kRadPerPix = (M_PI / 2) / 1000;
 
     /** coordinates of edge pixels in flat images **/
     typedef vector<vector<int>> EdgePixels;
@@ -53,7 +53,7 @@ public:
     /********* File Path of the Specific Scene *********/
     struct SceneFilePath
     {
-        SceneFilePath(string ScenePath) {
+        SceneFilePath(const string& ScenePath) {
             this -> output_folder_path = ScenePath + "/outputs";
             this -> fusion_result_folder_path = ScenePath + "/results";
             this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";

@@ -1,4 +1,4 @@
-// include headings
+/** basic **/
 #include <stdio.h>
 #include <iostream>
 #include <unordered_map>
@@ -6,27 +6,27 @@
 #include <vector>
 #include <cmath>
 #include <time.h>
-// include packages
-#include <Eigen/Core>
+/** opencv **/
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-// include pcl package
+/** pcl **/
 #include <pcl/common/io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/features/principal_curvatures.h>
-// include ros
+#include <Eigen/Core>
+/** ros **/
 #include <ros/ros.h>
-// include mlpack
+/** mlpack **/
 #include <mlpack/core.hpp>
 #include <mlpack/methods/kde/kde.hpp>
 #include <mlpack/core/tree/octree.hpp>
 #include <mlpack/core/tree/cover_tree.hpp>
-// include other files
+/** headings **/
 #include "FisheyeProcess.h"
-
+/** namespace **/
 using namespace std;
 using namespace cv;
 using namespace mlpack::kde;
@@ -71,65 +71,53 @@ void FisheyeProcess::ReadEdge() {
         string tmp;
         vector<double> v;
         while (getline(ss, tmp, '\t')) {
-            // split string with "\t"
-            v.push_back(stod(tmp)); // string -> double
+            v.push_back(stod(tmp)); /** split string with "\t" **/
         }
         if (v.size() == 2) {
             edge_fisheye_pixels.push_back(v);
         }
     }
-    ROS_ASSERT_MSG(edge_fisheye_pixels.size() != 0, "Fisheye Read Edge Fault! Scene Index: %d", this -> num_scenes);
+    ROS_ASSERT_MSG(!edge_fisheye_pixels.empty(), "Fisheye Read Edge Fault! Scene Index: %d", this -> num_scenes);
     cout << "Imported Fisheye Edge Points: " << edge_fisheye_pixels.size() << endl;
 
-    /** remove dumplicated points **/
+    /** remove duplicated points **/
     std::sort(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end());
     edge_fisheye_pixels.erase(unique(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end()), edge_fisheye_pixels.end());
-    cout << "Fisheye Edge Points after Dumplicated Removed: " << edge_fisheye_pixels.size() << endl;
+    cout << "Fisheye Edge Points after Duplicated Removed: " << edge_fisheye_pixels.size() << endl;
     this -> edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels);
     cout << endl;
 }
 
 cv::Mat FisheyeProcess::ReadFisheyeImage() {
     cout << "----- Fisheye: ReadOrgImage -----" << endl;
-    string HdrImgPath = this -> scenes_files_path_vec[this -> scene_idx].fisheye_hdr_img_path;
-    cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
-    ROS_ASSERT_MSG(((image.rows != 0 && image.cols != 0) || (image.rows < 16384 || image.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
-    ROS_ASSERT_MSG((image.rows == this->fisheyeRows || image.cols == this->fisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
+    string fisheye_hdr_img_path = this -> scenes_files_path_vec[this -> scene_idx].fisheye_hdr_img_path;
+    cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+    ROS_ASSERT_MSG(((fisheye_hdr_image.rows != 0 && fisheye_hdr_image.cols != 0) || (fisheye_hdr_image.rows < 16384 || fisheye_hdr_image.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
+    ROS_ASSERT_MSG((fisheye_hdr_image.rows == this->kFisheyeRows || fisheye_hdr_image.cols == this->kFisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
     cout << endl;
-    return image;
+    return fisheye_hdr_image;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::FisheyeImageToSphere() {
+std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
-    // read the origin fisheye image and check the image size
+    /** read the origin fisheye image and check the image size **/
     cv::Mat image = ReadFisheyeImage();
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
+    std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = FisheyeImageToSphere(image);
     cout << endl;
     return result;
 }
 
-std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> FisheyeProcess::FisheyeImageToSphere(cv::Mat image) {
+std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat image) {
     cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
-    // color space
-    int r, g, b;   
-    // cartesian coordinates (3d vector)
-    double X, Y, Z;    
-    // radius of each pixel point
-    double radius;
-    // angle with u-axis (rows-axis, x-axis)
-    double phi;
-    // angle with z-axis
-    double theta;
-    // intrinsic parameters
-    double a0, a2, a3, a4;
-    double c, d, e;
-    double u0, v0;
-    // theta range
-    double thetaMin = M_PI, thetaMax = -M_PI;
-    double phiMin = M_PI, phiMax = -M_PI;
-
-    // intrinsic params
+    int r, g, b;
+    float x, y, z;
+    float radius, theta, phi;
+    float thetaMin = M_PI, thetaMax = -M_PI, phiMin = M_PI, phiMax = -M_PI;    
+    /** intrinsic parameters **/
+    float a0, a2, a3, a4;
+    float c, d, e;
+    float u0, v0;
     a0 = this->intrinsic.a0;
     a2 = this->intrinsic.a2;
     a3 = this->intrinsic.a3;
@@ -140,43 +128,42 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
     u0 = this->intrinsic.u0;
     v0 = this->intrinsic.v0;
 
-    pcl::PointXYZRGB ptPixel;
-    pcl::PointXYZRGB ptPolar;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    pcl::PointXYZRGB pixel_pt;
+    pcl::PointXYZRGB polar_pt;
+    RGBCloudPtr fisheye_pixel_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    RGBCloudPtr polar_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
 
-    ROS_ASSERT_MSG((image.rows == this->fisheyeRows || image.cols == this->fisheyeCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
-
-    for (int u = 0; u < this->fisheyeRows; u++) {
-        for (int v = 0; v < this->fisheyeCols; v++) {
-            X = c * u + d * v - u0;
-            Y = e * u + 1 * v - v0;
-            radius = sqrt(pow(X, 2) + pow(Y, 2));
+    for (int u = 0; u < this -> kFisheyeRows; u++) {
+        for (int v = 0; v < this -> kFisheyeCols; v++) {
+            x = c * u + d * v - u0;
+            y = e * u + 1 * v - v0;
+            radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                Z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                // spherical coordinates
-                // caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi
-                phi = atan2(Y, X) + M_PI; // note that atan2 is defined as Y/X
-                theta = acos(Z / sqrt(pow(X, 2) + pow(Y, 2) + pow(Z, 2)));
-
+                z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
+                /** spherical coordinates **/
+                /** caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi **/
+                phi = atan2(y, x) + M_PI; // note that atan2 is defined as Y/X
+                theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
                 ROS_ASSERT_MSG((theta != 0), "Theta equals to zero! Scene Index: %d", this -> num_scenes);
 
-                // point cloud with origin polar coordinates
-                ptPolar.x = theta;
-                ptPolar.y = phi;
-                ptPolar.z = 0;
-                ptPolar.b = image.at<cv::Vec3b>(u, v)[0];
-                ptPolar.g = image.at<cv::Vec3b>(u, v)[1];
-                ptPolar.r = image.at<cv::Vec3b>(u, v)[2];
-                camOrgPolarCloud->points.push_back(ptPolar);
-                // point cloud with origin pixel coordinates
-                ptPixel.x = u;
-                ptPixel.y = v;
-                ptPixel.z = 0;
-                ptPixel.b = image.at<cv::Vec3b>(u, v)[0];
-                ptPixel.g = image.at<cv::Vec3b>(u, v)[1];
-                ptPixel.r = image.at<cv::Vec3b>(u, v)[2];
-                camOrgPixelCloud->points.push_back(ptPixel);
+                /** point cloud with origin polar coordinates **/
+                polar_pt.x = theta;
+                polar_pt.y = phi;
+                polar_pt.z = 0;
+                polar_pt.b = image.at<cv::Vec3b>(u, v)[0];
+                polar_pt.g = image.at<cv::Vec3b>(u, v)[1];
+                polar_pt.r = image.at<cv::Vec3b>(u, v)[2];
+                polar_cloud->points.push_back(polar_pt);
+                
+                /** point cloud with origin pixel coordinates **/
+                pixel_pt.x = u;
+                pixel_pt.y = v;
+                pixel_pt.z = 0;
+                pixel_pt.b = image.at<cv::Vec3b>(u, v)[0];
+                pixel_pt.g = image.at<cv::Vec3b>(u, v)[1];
+                pixel_pt.r = image.at<cv::Vec3b>(u, v)[2];
+                fisheye_pixel_cloud->points.push_back(pixel_pt);
 
                 if (theta > thetaMax) {
                     thetaMax = theta;
@@ -193,26 +180,25 @@ std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZ
             }
         }
     }
-
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> result;
-    result = std::make_tuple(camOrgPolarCloud, camOrgPixelCloud);
+    std::tuple<RGBCloudPtr, RGBCloudPtr> result;
+    result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
     cout << endl;
     return result;
 }
 
-void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr sphereCloudPolar) {
     cout << "----- Fisheye: SphereToPlane2 -----" << endl;
     SphereToPlane(sphereCloudPolar, -1.0);
     cout << endl;
 }
 
-void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphereCloudPolar, double bandwidth) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr sphereCloudPolar, double bandwidth) {
     cout << "----- Fisheye: SphereToPlane -----" << endl;
-    double flat_rows = this -> flatRows;
-    double flat_cols = this -> flatCols;
+    double flat_rows = this -> kFlatRows;
+    double flat_cols = this -> kFlatCols;
     cv::Mat flatImage = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
 
-    vector<vector<Tags>> tags_map (flatRows, vector<Tags>(flatCols));
+    vector<vector<Tags>> tags_map (kFlatRows, vector<Tags>(kFlatCols));
 
     // define the variables of KDTree search
     pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
@@ -222,7 +208,7 @@ void FisheyeProcess::SphereToPlane(pcl::PointCloud<pcl::PointXYZRGB>::Ptr sphere
 
     int invalidSearch = 0;
     int invalidIndex = 0;
-    double radPerPix = this -> radPerPix;
+    double radPerPix = this -> kRadPerPix;
     double searchRadius = radPerPix / 2;
 
     // use KDTree to search the spherical point cloud
@@ -329,7 +315,7 @@ void FisheyeProcess::EdgeToPixel() {
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)), "size of original fisheye image is 0, check the path and filename! Scene Index: %d", this -> num_scenes);
-    ROS_ASSERT_MSG((edgeImage.rows == this->flatRows || edgeImage.cols == this->flatCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
+    ROS_ASSERT_MSG((edgeImage.rows == this->kFlatRows || edgeImage.cols == this->kFlatCols), "size of original fisheye image is incorrect! Scene Index: %d", this -> num_scenes);
     EdgePixels edge_pixels;
     for (int u = 0; u < edgeImage.rows; ++u) {
         for (int v = 0; v < edgeImage.cols; ++v) {
@@ -340,23 +326,10 @@ void FisheyeProcess::EdgeToPixel() {
         }
     }
     this -> edge_pixels_vec.push_back(edge_pixels);
-
-//    /********* write the coordinates into txt file *********/
-//    string edgeTxtPath = this -> scenes_files_path_vec[this -> scene_idx].EdgeTxtPath;
-//    ofstream outfile;
-//    outfile.open(edgeTxtPath, ios::out);
-//    if (!outfile.is_open()) {
-//        cout << "Open file failure" << endl;
-//    }
-//    for (int i = 0; i < edge_pixels.size(); ++i) {
-//        outfile << edge_pixels[i][0] << "\t" << edge_pixels[i][1] << endl;
-//    }
-//    outfile.close();
-
     cout << endl;
 }
 
-void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud) {
+void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pixel_cloud) {
     cout << "----- Fisheye: PixLookUp -----" << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
@@ -377,7 +350,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixe
         }
         else {
             for (int j = 0; j < size; ++j) {
-                pcl::PointXYZRGB pt = (*camOrgPixelCloud)[tags_map[u][v].pts_indices[j]];
+                pcl::PointXYZRGB pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
                 x = x + pt.x;
                 y = y + pt.y;
             }
@@ -410,8 +383,8 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     cout << "----- Fisheye: Kde -----" << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
-    const int n_rows = scale * this -> fisheyeRows;
-    const int n_cols = scale * this -> fisheyeCols;
+    const int n_rows = scale * this -> kFisheyeRows;
+    const int n_cols = scale * this -> kFisheyeCols;
     arma::mat query;
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
     EdgeFisheyePixels edge_fisheye_pixels = this -> edge_fisheye_pixels_vec[this -> scene_idx];
@@ -424,8 +397,8 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
 
     if (!polar) {
         query = arma::mat(2, n_cols * n_rows);
-        arma::vec rows = arma::linspace(0, this -> fisheyeRows - 1, n_rows);
-        arma::vec cols = arma::linspace(0, this -> fisheyeCols - 1, n_cols);
+        arma::vec rows = arma::linspace(0, this -> kFisheyeRows - 1, n_rows);
+        arma::vec cols = arma::linspace(0, this -> kFisheyeCols - 1, n_cols);
 
         for (int i = 0; i < n_rows; ++i) {
             for (int j = 0; j < n_cols; ++j) {
@@ -436,7 +409,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     }
     else {
         query = arma::mat(2, n_cols * n_rows);
-        arma::vec r_q = arma::linspace(1, this -> flatRows, n_rows);
+        arma::vec r_q = arma::linspace(1, this -> kFlatRows, n_rows);
         arma::vec sin_q = arma::linspace(0, (2 * M_PI) * (1 - 1 / n_cols), n_cols);
         arma::vec cos_q = sin_q;
         sin_q.for_each([](mat::elem_type &val) { val = sin(val); });

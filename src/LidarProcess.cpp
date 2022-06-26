@@ -403,7 +403,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     EdgePixels edge_pixels = this -> edge_pixels_vec[this -> scene_idx];
     TagsMap tags_map = this -> tags_map_vec[this -> scene_idx];
     EdgePts edge_pts;
-    EdgeCloud edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    IntensityCloudPtr edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
     for (auto & edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
@@ -492,7 +492,7 @@ void LidarProcess::ReadEdge() {
 
     /** construct pcl point cloud **/
     pcl::PointXYZI pt;
-    EdgeCloud edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    IntensityCloudPtr edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
     for (auto & edge_pt : edge_pts) {
         pt.x = edge_pt[0];
         pt.y = edge_pt[1];

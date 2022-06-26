@@ -366,7 +366,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
         double *kde_data = new double[p_c.size()];
         memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
 //        double *kde_data = p_c.data();
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.fisheyeRows * scale, 0, cam.fisheyeCols * scale);
+        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kFisheyeRows * scale, 0, cam.kFisheyeCols * scale);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
@@ -389,7 +389,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
     problem.AddParameterBlock(params + num_q, num_params - num_q);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-    Eigen::Vector2d img_size = {cam.fisheyeRows, cam.fisheyeCols};
+    Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
     for (int idx = 0; idx < num_scenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
@@ -519,11 +519,11 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
 //     problem.AddParameterBlock(params + num_q, num_params - num_q);
 //     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-//     Eigen::Vector2d img_size = {cam.fisheyeRows, cam.fisheyeCols};
-//     for (int i = 0; i < lid.EdgeCloud -> points.size(); ++i)
+//     Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
+//     for (int i = 0; i < lid.IntensityCloudPtr -> points.size(); ++i)
 //     {
 //         // Eigen::Vector3d p_l_tmp = p_l.row(i);
-//         Eigen::Vector3d p_l_tmp = {lid.EdgeCloud -> points[i].x, lid.EdgeCloud -> points[i].y, lid.EdgeCloud -> points[i].z};
+//         Eigen::Vector3d p_l_tmp = {lid.IntensityCloudPtr -> points[i].x, lid.IntensityCloudPtr -> points[i].y, lid.IntensityCloudPtr -> points[i].z};
 //         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_val, kde_interpolator, inv_distortion),
 //                                  loss_function,
 //                                  params,

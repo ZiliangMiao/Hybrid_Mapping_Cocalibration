@@ -17,24 +17,24 @@
 using namespace std;
 using namespace cv;
 
-const bool fisheyeFlatProcess = false;
-const bool fisheyeEdgeProcess = true;
-const bool lidarFlatProcess = false;
-const bool lidarEdgeProcess = true;
-const bool ceresOpt = true;
-const bool viz3D = false;
-const bool denseFile = false;
+const bool kFisheyeFlatProcess = false;
+const bool kFisheyeEdgeProcess = true;
+const bool kLidarFlatProcess = false;
+const bool kLidarEdgeProcess = true;
+const bool kCeresOptimization = true;
+const bool k3DViz = false;
+const bool kCreateDensePcd = false;
 
 /********* Directory Path of ROS Package *********/
 string getPkgPath() {
-    std::string pkgPath = ros::package::getPath("data_process");
-    return pkgPath;
+    std::string pkg_path = ros::package::getPath("data_process");
+    return pkg_path;
 }
-string pkgPath = getPkgPath();
+string pkg_path = getPkgPath();
 
-bool checkFolder(string FolderPath){
-    if(opendir(FolderPath.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
-        int ret = mkdir(FolderPath.c_str(), (S_IRWXU | S_IRWXG | S_IRWXO));       // 'mkdir' used for creating new directory
+bool checkFolder(string folder_path){
+    if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
+        int ret = mkdir(folder_path.c_str(), (S_IRWXU | S_IRWXG | S_IRWXO));       // 'mkdir' used for creating new directory
         if(ret == 0){
             cout << "Successfully create file folder!" << endl;
         }
@@ -46,8 +46,8 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "mainNode");
     ros::NodeHandle nh;
 
-    string pkgPath = getPkgPath();
-    if(!checkFolder(pkgPath)){
+    string pkg_path = getPkgPath();
+    if(!checkFolder(pkg_path)){
         return -1;
     }
 
@@ -73,70 +73,70 @@ int main(int argc, char** argv) {
     };
 
     cout << "----------------- Camera Processing ---------------------" << endl;
-    FisheyeProcess imageProcess(pkgPath);
-    imageProcess.SetIntrinsic(params_calib);
+    FisheyeProcess fisheye_process(pkg_path);
+    fisheye_process.SetIntrinsic(params_calib);
 
-    if (fisheyeFlatProcess) {
-        for (int idx = 0; idx < imageProcess.num_scenes; idx++) {
-            imageProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.FisheyeImageToSphere();
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
-            std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-            imageProcess.SphereToPlane(camOrgPolarCloud);
+    if (kFisheyeFlatProcess) {
+        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+            fisheye_process.SetSceneIdx(idx);
+            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+            RGBCloudPtr fisheye_polar_cloud;
+            RGBCloudPtr fisheye_pixel_cloud;
+            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+            fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
     }
-    else if (fisheyeEdgeProcess) {
-        for (int idx = 0; idx < imageProcess.num_scenes; idx++) {
-            imageProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult = imageProcess.FisheyeImageToSphere();
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
-            pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
-            std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-            imageProcess.SphereToPlane(camOrgPolarCloud);
-            imageProcess.EdgeToPixel();
-            imageProcess.PixLookUp(camOrgPixelCloud);
+    else if (kFisheyeEdgeProcess) {
+        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+            fisheye_process.SetSceneIdx(idx);
+            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+            RGBCloudPtr fisheye_polar_cloud;
+            RGBCloudPtr fisheye_pixel_cloud;
+            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+            fisheye_process.SphereToPlane(fisheye_polar_cloud);
+            fisheye_process.EdgeToPixel();
+            fisheye_process.PixLookUp(fisheye_pixel_cloud);
         }
     }
 
     cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
-    LidarProcess lidarProcess(pkgPath);
-    lidarProcess.SetExtrinsic(params_calib);
-    ROS_ASSERT_MSG(lidarProcess.num_scenes == imageProcess.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
+    LidarProcess lidar_process(pkg_path);
+    lidar_process.SetExtrinsic(params_calib);
+    ROS_ASSERT_MSG(lidar_process.num_scenes == fisheye_process.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
-    if (denseFile) {
-        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.SetSceneIdx(idx);
-            lidarProcess.CreateDensePcd();
+    if (kCreateDensePcd) {
+        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
+            lidar_process.SetSceneIdx(idx);
+            lidar_process.CreateDensePcd();
         }
     }
-    if (lidarFlatProcess) {
-        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
-            pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
-            pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
+    if (kLidarFlatProcess) {
+        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
+            lidar_process.SetSceneIdx(idx);
+            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
+            IntensityCloudPtr lidCartesianCloud;
+            IntensityCloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidarProcess.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
         }
     }
-    else if (lidarEdgeProcess) {
-        for (int idx = 0; idx < lidarProcess.num_scenes; idx++) {
-            lidarProcess.SetSceneIdx(idx);
-            std::tuple<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> lidResult = lidarProcess.LidarToSphere();
-            pcl::PointCloud<pcl::PointXYZI>::Ptr lidCartesianCloud;
-            pcl::PointCloud<pcl::PointXYZI>::Ptr lidPolarCloud;
+    else if (kLidarEdgeProcess) {
+        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
+            lidar_process.SetSceneIdx(idx);
+            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
+            IntensityCloudPtr lidCartesianCloud;
+            IntensityCloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidarProcess.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-            lidarProcess.EdgeToPixel();
-            lidarProcess.PixLookUp(lidCartesianCloud);
+            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+            lidar_process.EdgeToPixel();
+            lidar_process.PixLookUp(lidCartesianCloud);
         }
     }
    
     cout << endl;
     cout << "----------------- Ceres Optimization ---------------------" << endl;
-    if (ceresOpt) {
+    if (kCeresOptimization) {
         /** a0, a1, a2, a3, a4; size of params = 13 **/
 //         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
 //         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
@@ -185,14 +185,14 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        for (int idx = 0; idx < imageProcess.num_scenes; idx++) {
-            lidarProcess.SetSceneIdx(idx);
-            imageProcess.SetSceneIdx(idx);
-            lidarProcess.ReadEdge(); /** this is the only time when ReadEdge method appears **/
-            imageProcess.ReadEdge();
-            vector<vector<double>> edge_fisheye_projection = lidarProcess.EdgeCloudProjectToFisheye(params_init);
-            cout << "Edge Trans Txt Path:" << lidarProcess.scenes_files_path_vec[idx].edge_fisheye_projection_path << endl;
-            fusionViz(imageProcess, lidarProcess.scenes_files_path_vec[idx].edge_fisheye_projection_path, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+            lidar_process.SetSceneIdx(idx);
+            fisheye_process.SetSceneIdx(idx);
+            lidar_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+            fisheye_process.ReadEdge();
+            vector<vector<double>> edge_fisheye_projection = lidar_process.EdgeCloudProjectToFisheye(params_init);
+            cout << "Edge Trans Txt Path:" << lidar_process.scenes_files_path_vec[idx].edge_fisheye_projection_path << endl;
+            fusionViz(fisheye_process, lidar_process.scenes_files_path_vec[idx].edge_fisheye_projection_path, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
 
         for (int i = 0; i < bw.size(); i++) {
@@ -205,22 +205,22 @@ int main(int argc, char** argv) {
              * **/
             if (i == 0) {
                 int setConstant = 2;
-                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, setConstant);
 //                setConstant = 1;
 //                params = ceresMultiScenes(FisheyeProcess, LidarProcess, bandwidth, params, name, lb, ub, setConstant);
             }
             else {
                 int setConstant = 0;
-                params = ceresMultiScenes(imageProcess, lidarProcess, bandwidth, params, name, lb, ub, setConstant);
+                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, setConstant);
             }
         }
     }
 
-    if (viz3D) {
-        lidarProcess.SetSceneIdx(1);
-        imageProcess.SetSceneIdx(1);
+    if (k3DViz) {
+        lidar_process.SetSceneIdx(1);
+        fisheye_process.SetSceneIdx(1);
         vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        fusionViz3D(imageProcess, lidarProcess, test_params);
+        fusionViz3D(fisheye_process, lidar_process, test_params);
     }
     return 0;
 }
