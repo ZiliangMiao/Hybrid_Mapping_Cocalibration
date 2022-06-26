@@ -335,9 +335,9 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
     EdgeFisheyePixels edge_fisheye_pixels;
     EdgePixels edge_pixels = this -> edge_pixels_vec[this -> scene_idx];
     TagsMap tags_map = this -> tags_map_vec[this -> scene_idx];
-    for (int i = 0; i < edge_pixels.size(); ++i) {
-        int u = edge_pixels[i][0];
-        int v = edge_pixels[i][1];
+    for (auto & edge_pixel : edge_pixels) {
+        int u = edge_pixel[0];
+        int v = edge_pixel[1];
         double x = 0;
         double y = 0;
 
@@ -370,8 +370,8 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
     if (!outfile.is_open()) {
         cout << "Open file failure" << endl;
     }
-    for (int i = 0; i < edge_fisheye_pixels.size(); ++i) {
-        outfile << edge_fisheye_pixels[i][0] << "\t" << edge_fisheye_pixels[i][1] << endl;
+    for (auto & edge_fisheye_pixel : edge_fisheye_pixels) {
+        outfile << edge_fisheye_pixel[0] << "\t" << edge_fisheye_pixel[1] << endl;
     }
     outfile.close();
     cout << endl;

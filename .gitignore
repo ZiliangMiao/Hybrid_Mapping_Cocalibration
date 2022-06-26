@@ -1,5 +1,14 @@
-build/*
-data/*
+calibration/build/*
+calibration/data/*
+calibration/cmake-build-debug/*
+calibration/.idea/*
+calibration/.vscode/*
+
+gimbal/build/*
+gimbal/data/*
+gimbal/cmake-build-debug/*
+gimbal/.idea/*
+gimbal/.vscode/*
+
 .idea/*
 .vscode/*
-cmake-build-debug/*

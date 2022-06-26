@@ -26,11 +26,11 @@ const bool k3DViz = false;
 const bool kCreateDensePcd = false;
 
 /********* Directory Path of ROS Package *********/
-string getPkgPath() {
-    std::string pkg_path = ros::package::getPath("data_process");
+string GetPkgPath() {
+    std::string pkg_path = ros::package::getPath("calibration");
     return pkg_path;
 }
-string pkg_path = getPkgPath();
+string pkg_path = GetPkgPath();
 
 bool checkFolder(string folder_path){
     if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
@@ -43,10 +43,10 @@ bool checkFolder(string folder_path){
 }
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "mainNode");
+    ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
 
-    string pkg_path = getPkgPath();
+    string pkg_path = GetPkgPath();
     if(!checkFolder(pkg_path)){
         return -1;
     }

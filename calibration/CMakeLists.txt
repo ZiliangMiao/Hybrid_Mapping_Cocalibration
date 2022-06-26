@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(data_process)
+project(calibration)
 
 set(MAKE_CXX_STANDARD 11)
 set(CMAKE_BUILD_TYPE "Debug")
@@ -37,11 +37,11 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(imageProcess
+add_library(FisheyeProcess
         include/FisheyeProcess.h
         src/FisheyeProcess.cpp
 )
-add_library(lidarProcess
+add_library(LidarProcess
         include/LidarProcess.h
         src/LidarProcess.cpp
 )
@@ -50,24 +50,24 @@ add_library(ceresMultiScenes
 )
 
 ## Add executable cpp files
-add_executable(mainNode src/main.cpp)
+add_executable(calibration src/calibration.cpp)
 add_executable(rvizPub src/rvizPub.cpp)
 
 ## Add dependencies
-add_dependencies(mainNode ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(imageProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(lidarProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(FisheyeProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(LidarProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rvizPub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Link libraries
-target_link_libraries(lidarProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
-target_link_libraries(imageProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
+target_link_libraries(LidarProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(FisheyeProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
 target_link_libraries(rvizPub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 
-target_link_libraries(mainNode
-  imageProcess
-  lidarProcess
+target_link_libraries(calibration
+  FisheyeProcess
+  LidarProcess
   ceresMultiScenes
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
@@ -76,8 +76,8 @@ target_link_libraries(mainNode
 )
 
 target_link_libraries(ceresMultiScenes
-  imageProcess
-  lidarProcess
+  FisheyeProcess
+  LidarProcess
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${PCL_LIBRARIES}
