@@ -258,7 +258,9 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                 }
                 /** check the size of vectors **/
                 ROS_ASSERT_MSG((theta_vec.size() == phi_vec.size()) && (phi_vec.size() == intensity_vec.size()) && (intensity_vec.size() == tags_map[u][v].pts_indices.size()) && (tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
-                cout << "Size of the hidden points: " << hidden_pt_num << endl;
+                if (hidden_pt_num != 0){
+                    cout << "hidden points: " << hidden_pt_num << "/" << theta_vec.size() << endl;
+                }
                 if (tags_map[u][v].num_pts == 1) {
                     /** only one point in the theta-phi sub-region of a pixel **/
                     tags_map[u][v].label = 1;

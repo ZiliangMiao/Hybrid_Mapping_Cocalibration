@@ -21,8 +21,8 @@ const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
-const bool k3DViz = false;
-const bool kCreateDensePcd = true;
+const bool k3DViz = true;
+const bool kCreateDensePcd = false;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
 
         vector<double> params = params_init;
         vector<double> lb(dev.size()), ub(dev.size());
-        vector<double> bw = {32, 24, 16, 8, 4, 2};
+        vector<double> bw = {32, 32, 16, 8, 4, 2};
 
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
@@ -198,19 +198,19 @@ int main(int argc, char** argv) {
             double bandwidth = bw[i];
             cout << "Round " << i << endl;
             /**
-             * setConstant = 0 -> enable all the params
-             * setConstant = 1 -> enable intrinsics only
-             * setConstant = 2 -> enable extrinsics only
+             * kDisabledBlock = 0 -> enable all the params
+             * kDisabledBlock = 1 -> enable intrinsics only
+             * kDisabledBlock = 2 -> enable extrinsics only
              * **/
             if (i == 0) {
-                int setConstant = 2;
-                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, setConstant);
-//                setConstant = 1;
-//                params = ceresMultiScenes(FisheyeProcess, LidarProcess, bandwidth, params, name, lb, ub, setConstant);
+                int kDisabledBlock = 2;
+                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, kDisabledBlock);
+//                kDisabledBlock = 1;
+//                params = ceresMultiScenes(FisheyeProcess, LidarProcess, bandwidth, params, name, lb, ub, kDisabledBlock);
             }
             else {
-                int setConstant = 0;
-                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, setConstant);
+                int kDisabledBlock = 0;
+                params = ceresMultiScenes(fisheye_process, lidar_process, bandwidth, params, name, lb, ub, kDisabledBlock);
             }
         }
     }
@@ -219,7 +219,8 @@ int main(int argc, char** argv) {
         lidar_process.SetSceneIdx(1);
         fisheye_process.SetSceneIdx(1);
         vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        fusionViz3D(fisheye_process, lidar_process, test_params);
+        int step = 5;
+        fusionViz3D(fisheye_process, lidar_process, test_params, 5);
     }
     return 0;
 }

@@ -33,9 +33,9 @@ using namespace Eigen;
 
 ofstream outfile;
 
-/** num_p + num_q = number of parameters **/
-static const int num_q = 6;
-static const int num_p = 7;
+/** kExtrinsics + kIntrinsics = number of parameters **/
+static const int kExtrinsics = 6;
+static const int kIntrinsics = 7;
 
 /**
  * @brief Get double from type T (double and ceres::Jet) variables in the ceres optimization process
@@ -43,59 +43,58 @@ static const int num_p = 7;
  * @param x input variable with type T (double and ceres::Jet)
  * @return **
  */
-double get_double(double x) {
+double getDouble(double x) {
     return static_cast<double>(x);
 }
 
 template <typename SCALAR, int N>
-double get_double(const ceres::Jet<SCALAR, N> &x) {
+double getDouble(const ceres::Jet<SCALAR, N> &x) {
     return static_cast<double>(x.a);
 }
 
 void customOutput(vector<const char *> name, double *params, vector<double> params_init) {
     std::cout << "Initial ";
-    for (unsigned int i = 0; i < name.size(); i++) {
+    for (unsigned int i = 0; i < name.size(); i++)
+    {
         std::cout << name[i] << ": " << params_init[i] << " ";
     }
     std::cout << "\n";
     std::cout << "Final   ";
-    for (unsigned int i = 0; i < name.size(); i++) {
+    for (unsigned int i = 0; i < name.size(); i++)
+    {
         std::cout << name[i] << ": " << params[i] << " ";
     }
     std::cout << "\n";
 }
 
-void initQuaternion(double rx, double ry, double rz, vector<double> &init) {
-    Eigen::Vector3d eulerAngle(rx, ry, rz);
-    Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
-    Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
-    Eigen::AngleAxisd zAngle(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
-    Eigen::Matrix3d R;
-    R = zAngle * yAngle * xAngle;
-    Eigen::Quaterniond q(R);
-    init[0] = q.x();
-    init[1] = q.y();
-    init[2] = q.z();
-    init[3] = q.w();
-}
+// void initQuaternion(double rx, double ry, double rz, vector<double> &init) {
+//     Eigen::Vector3d r(rx, ry, rz);
+//     Eigen::AngleAxisd Rx(Eigen::AngleAxisd(r(0), Eigen::Vector3d::UnitX()));
+//     Eigen::AngleAxisd Ry(Eigen::AngleAxisd(r(1), Eigen::Vector3d::UnitY()));
+//     Eigen::AngleAxisd Rz(Eigen::AngleAxisd(r(2), Eigen::Vector3d::UnitZ()));
+//     Eigen::Matrix3d R;
+//     R = Rz * Ry * Rx;
+//     Eigen::Quaterniond q(R);
+//     init[0] = q.x();
+//     init[1] = q.y();
+//     init[2] = q.z();
+//     init[3] = q.w();
+// }
 
-void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector< vector<double> > lidProjection, double bandwidth){
-    cv::Mat image = cam.ReadFisheyeImage();
-    int rows = image.rows;
-    int cols = image.cols;
+void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector<vector<double>> lid_projection, double bandwidth) {
+    cv::Mat raw_image = cam.ReadFisheyeImage();
+    int rows = raw_image.rows;
+    int cols = raw_image.cols;
     cv::Mat lidarRGB = cv::Mat::zeros(rows, cols, CV_8UC3);
-//    double pixPerRad = 1000 / (M_PI/2);
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
     outfile.open(edge_proj_txt_path, ios::out);
-    for (int i = 0; i < lidProjection[0].size(); i++){
-        double theta = lidProjection[0][i];
-        double phi = lidProjection[1][i];
-        // int u = (int)pixPerRad * theta;
-        // int v = (int)pixPerRad * phi;
-        int u = std::clamp(lidarRGB.rows - 1 - theta, (double)0.0, (double)(lidarRGB.rows-1));
-        int v = std::clamp(phi, (double)0.0, (double)(lidarRGB.cols-1));;
+    for (int i = 0; i < lid_projection[0].size(); i++) {
+        double theta = lid_projection[0][i];
+        double phi = lid_projection[1][i];
+        int u = std::clamp(lidarRGB.rows - 1 - theta, (double)0.0, (double)(lidarRGB.rows - 1));
+        int v = std::clamp(phi, (double)0.0, (double)(lidarRGB.cols - 1));
         int b = 0;
         int g = 0;
         int r = 255;
@@ -107,34 +106,32 @@ void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector< vector<dou
     outfile.close();
     /** fusion image generation **/
     cv::Mat imageShow = cv::Mat::zeros(rows, cols, CV_8UC3);
-    cv::addWeighted(image, 1, lidarRGB, 0.8, 0, imageShow);
+    cv::addWeighted(raw_image, 1, lidarRGB, 0.8, 0, imageShow);
 
     /***** need to be modified *****/
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
-            cam.FisheyeImageToSphere(imageShow);
+        cam.FisheyeImageToSphere(imageShow);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
     cam.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params)
-{
-    Eigen::Matrix<double, 3, 1> eulerAngle(params[0], params[1], params[2]);
-    Eigen::Matrix<double, 3, 1> t{params[3], params[4], params[5]};
-    Eigen::Matrix<double, 2, 1> uv_0{params[6], params[7]};
+void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params, int step) {
+    Eigen::Vector3d r(params[0], params[1], params[2]);
+    Eigen::Vector3d t{params[3], params[4], params[5]};
+    Eigen::Vector2d uv_0{params[6], params[7]};
     Eigen::Matrix<double, 6, 1> a_;
-    switch (params.size())
-    {
-        case 13:
-            a_ << params[8], params[9], params[10], params[11], params[12], 0.0;
-            break;
-        case 12:
-            a_ << params[8], params[9], 0.0, params[10], 0.0, params[11];
-            break;
-        default:
-            a_ << 0.0, params[8], 0.0, params[9], 0.0, params[10];
-            break;
+    switch (params.size()) {
+    case 13:
+        a_ << params[8], params[9], params[10], params[11], params[12], 0.0;
+        break;
+    case 12:
+        a_ << params[8], params[9], 0.0, params[10], 0.0, params[11];
+        break;
+    default:
+        a_ << 0.0, params[8], 0.0, params[9], 0.0, params[10];
+        break;
     }
 
     double phi, theta;
@@ -143,30 +140,28 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params)
 
     // extrinsic transform
     Eigen::Matrix<double, 3, 3> R;
-    Eigen::AngleAxisd Rx(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
-    Eigen::AngleAxisd Ry(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
-    Eigen::AngleAxisd Rz(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
+    Eigen::AngleAxisd Rx(Eigen::AngleAxisd(r(0), Eigen::Vector3d::UnitX()));
+    Eigen::AngleAxisd Ry(Eigen::AngleAxisd(r(1), Eigen::Vector3d::UnitY()));
+    Eigen::AngleAxisd Rz(Eigen::AngleAxisd(r(2), Eigen::Vector3d::UnitZ()));
     R = Rz * Ry * Rx;
 
-    Eigen::Matrix<double, 3, 1> lid_point;
-    Eigen::Matrix<double, 3, 1> lid_trans;
-    Eigen::Matrix<double, 2, 1> projection;
+    Eigen::Vector3d lid_point;
+    Eigen::Vector3d lid_trans;
+    Eigen::Vector2d projection;
 
     string lid_dense_pcd_path = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
     string fisheye_hdr_img_path = cam.scenes_files_path_vec[lid.scene_idx].fisheye_hdr_img_path;
     pcl::PointCloud<pcl::PointXYZI>::Ptr lid_dense(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl::io::loadPCDFile(lid_dense_pcd_path, *lid_dense);
-    cv::Mat image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+    cv::Mat raw_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     int pixelThresh = 10;
-    int rows = image.rows;
-    int cols = image.cols;
+    int rows = raw_image.rows;
+    int cols = raw_image.cols;
 
     pcl::PointXYZRGB pt;
-    vector<double> ptLoc(3, 0);
-    vector<vector<vector<double>>> dict(rows, vector<vector<double>>(cols, ptLoc));
-    cout << "---------------Save 2D and 3D txt file------------" << endl;
-    for (int i = 0; i < lid_dense->points.size(); i=i+10) {
+    cout << "---------------Generating RGBXYZ Pointcloud------------" << endl;
+    for (int i = 0; i < lid_dense->points.size(); i=i+step) {
         if (lid_dense->points[i].x != 0 || lid_dense->points[i].y != 0 || lid_dense->points[i].z != 0) {
             lid_point << lid_dense->points[i].x, lid_dense->points[i].y, lid_dense->points[i].z;
             lid_trans = R * lid_point + t;
@@ -176,98 +171,91 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params)
             projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
             int u = int(projection(0));
             int v = int(projection(1));
-            if ((0 <= u && u < rows && 0 <= v && v < cols) && (image.at<cv::Vec3b>(u, v)[0] > pixelThresh || image.at<cv::Vec3b>(u, v)[1] > pixelThresh || image.at<cv::Vec3b>(u, v)[2] > pixelThresh)) {
-                // dict[u][v][0] = lid_point(0);
-                // dict[u][v][1] = lid_point(1);
-                // dict[u][v][2] = lid_point(2);
-                pt.x = dict[u][v][0];
-                pt.y = dict[u][v][1];
-                pt.z = dict[u][v][2];
-                pt.b = image.at<cv::Vec3b>(u, v)[0];
-                pt.g = image.at<cv::Vec3b>(u, v)[1];
-                pt.r = image.at<cv::Vec3b>(u, v)[2];
+            if ((0 <= u && u < rows && 0 <= v && v < cols) && (raw_image.at<cv::Vec3b>(u, v)[0] > pixelThresh || raw_image.at<cv::Vec3b>(u, v)[1] > pixelThresh || raw_image.at<cv::Vec3b>(u, v)[2] > pixelThresh)) {
+                pt.x = lid_point(0);
+                pt.y = lid_point(1);
+                pt.z = lid_point(2);
+                pt.b = raw_image.at<cv::Vec3b>(u, v)[0];
+                pt.g = raw_image.at<cv::Vec3b>(u, v)[1];
+                pt.r = raw_image.at<cv::Vec3b>(u, v)[2];
                 showCloud->points.push_back(pt);
             }
         }
-        if (i % 1000000 == 0) {
-            cout << i << " / " << lid_dense->points.size() << " points written" << endl;
+    
+        if ((i * 10) % lid_dense->points.size() == 0) {
+            if(i == 0){
+                std::cout << endl;
+            }
+            std::cout << "\33[1A" << i << "/" << lid_dense->points.size() << " points loaded" << endl;
+            fflush(stdout);
         }
     }
     cout << "---------------Coloring------------" << endl;
     pcl::visualization::CloudViewer viewer("Viewer");
     viewer.showCloud(showCloud);
 
-    while (!viewer.wasStopped())
-    {
+    while (!viewer.wasStopped()) {
     }
     cv::waitKey();
 }
 
 struct Calibration {
     template <typename T>
-    bool operator()(const T *const _q, const T *const _p, T *cost) const {
+    bool operator()(const T *const ext_, const T *const int_, T *cost) const {
         // intrinsic parameters
-        Eigen::Matrix<T, 3, 1> eulerAngle(_q[0], _q[1], _q[2]);
-        Eigen::Matrix<T, 3, 1> t{_q[3], _q[4], _q[5]};
-        Eigen::Matrix<T, 2, 1> uv_0{_p[0], _p[1]};
+        Eigen::Matrix<T, 3, 1> r(ext_[0], ext_[1], ext_[2]);
+        Eigen::Matrix<T, 3, 1> t{ext_[3], ext_[4], ext_[5]};
+        Eigen::Matrix<T, 2, 1> uv_0{int_[0], int_[1]};
         Eigen::Matrix<T, 6, 1> a_;
-        switch (num_p + num_q) {
-            case 13:
-                a_ << _p[2], _p[3], _p[4], _p[5], _p[6], T(0);
-                break;
-            case 12:
-                a_ << _p[2], _p[3], T(0), _p[4], T(0), _p[5];
-                break;
-            default:
-                a_ << T(0), _p[2], T(0), _p[3], T(0), _p[4];
-                break;
+        switch (kIntrinsics + kExtrinsics) {
+        case 13:
+            a_ << int_[2], int_[3], int_[4], int_[5], int_[6], T(0);
+            break;
+        case 12:
+            a_ << int_[2], int_[3], T(0), int_[4], T(0), int_[5];
+            break;
+        default:
+            a_ << T(0), int_[2], T(0), int_[3], T(0), int_[4];
+            break;
         }
 
-        Eigen::Matrix<T, 3, 1> p_ = point_.cast<T>();
-        Eigen::Matrix<T, 3, 1> p_trans;
+        Eigen::Matrix<T, 3, 1> lid_trans;
 
-        T phi, theta, r;
-        T inv_r;
+        T phi, theta, uv_radius;
+        T inv_uv_radius;
         T res, val;
 
         /** extrinsic transform for original 3d lidar edge points **/
         Eigen::Matrix<T, 3, 3> R;
 
-        Eigen::AngleAxis<T> xAngle(Eigen::AngleAxis<T>(eulerAngle(0), Eigen::Matrix<T, 3, 1>::UnitX()));
-        Eigen::AngleAxis<T> yAngle(Eigen::AngleAxis<T>(eulerAngle(1), Eigen::Matrix<T, 3, 1>::UnitY()));
-        Eigen::AngleAxis<T> zAngle(Eigen::AngleAxis<T>(eulerAngle(2), Eigen::Matrix<T, 3, 1>::UnitZ()));
-        R = zAngle * yAngle * xAngle;
-
-        /** Construct rotation matrix using quaternion in Eigen convention (w, x, y, z) **/
-        // Eigen::Quaternion<T> q{_q[3], _q[0], _q[1], _q[2]};
-        // R = q.toRotationMatrix()
-
-        p_trans = R * p_ + t;
+        Eigen::AngleAxis<T> Rx(Eigen::AngleAxis<T>(r(0), Eigen::Matrix<T, 3, 1>::UnitX()));
+        Eigen::AngleAxis<T> Ry(Eigen::AngleAxis<T>(r(1), Eigen::Matrix<T, 3, 1>::UnitY()));
+        Eigen::AngleAxis<T> Rz(Eigen::AngleAxis<T>(r(2), Eigen::Matrix<T, 3, 1>::UnitZ()));
+        R = Rz * Ry * Rx;
+        lid_trans = R * lid_point_.cast<T>() + t;
 
         /** extrinsic transform for transformed 3d lidar edge points **/
-        Eigen::Matrix<T, 2, 1> S;
-        Eigen::Matrix<T, 2, 1> p_uv;
+        Eigen::Matrix<T, 2, 1> projection;
 
         /** r - theta representation: r = f(theta) in polynomial form **/
-        theta = acos(p_trans(2) / sqrt((p_trans(0) * p_trans(0)) + (p_trans(1) * p_trans(1)) + (p_trans(2) * p_trans(2))));
-        inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
-        // phi = atan2(p_trans(1), p_trans(0));
+        theta = acos(lid_trans(2) / sqrt((lid_trans(0) * lid_trans(0)) + (lid_trans(1) * lid_trans(1)) + (lid_trans(2) * lid_trans(2))));
+        inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        // phi = atan2(lid_trans(1), lid_trans(0));
         // inv_u = (inv_r * cos(phi) + u0);
         // inv_v = (inv_r * sin(phi) + v0);
 
         /** compute undistorted uv coordinate of lidar projection point and evaluate the value **/
-        r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
-        S = {-inv_r * p_trans(0) / r, -inv_r * p_trans(1) / r};
-        p_uv = S + uv_0;
-        kde_interpolator_.Evaluate(p_uv(0) * T(kde_scale_), p_uv(1) * T(kde_scale_), &val);
+        uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
+        projection = {-inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        kde_interpolator_.Evaluate(projection(0) * T(kde_scale_), projection(1) * T(kde_scale_), &val);
 
         /**
          * residual:
          * 1. diff. of kde image evaluation and lidar point projection(related to constant "ref_val_" and unified radius));
          * 2. polynomial correction: r_max = F(theta_max);
          *  **/
-//        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
-//        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val;
+        //        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val + T(1e-8) * abs(T(1071) - a_(0) - a_(1) * T(ref_theta) - a_(2) * T(pow(ref_theta, 2)) - a_(3) * T(pow(ref_theta, 3)) - a_(4) * T(pow(ref_theta, 4) - a_(5) * T(pow(ref_theta, 5))));
+        //        res = T(ref_val_) * (T(1.0) - inv_r * T(0.5 / img_size_[1])) - val;
         res = T(weight_) * (T(kde_val_) - val);
         cost[0] = res;
         cost[1] = res;
@@ -275,12 +263,12 @@ struct Calibration {
     }
 
     /** DO NOT remove the "&" of the interpolator! **/
-    Calibration(const Eigen::Vector3d point,
+    Calibration(const Eigen::Vector3d lid_point,
                 const double weight,
                 const double ref_val,
                 const double scale,
                 const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-            : point_(std::move(point)), kde_interpolator_(interpolator), weight_(weight), kde_val_(ref_val), kde_scale_(std::move(scale)) {}
+        : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(weight), kde_val_(ref_val), kde_scale_(std::move(scale)) {}
 
     /**
      * @brief
@@ -292,16 +280,16 @@ struct Calibration {
      * @param interpolator-bicubic interpolator for original fisheye image;
      * @return ** ceres::CostFunction*
      */
-    static ceres::CostFunction *Create(const Eigen::Vector3d &point,
+    static ceres::CostFunction *Create(const Eigen::Vector3d &lid_point,
                                        const double &weight,
                                        const double &kde_val,
                                        const double &kde_scale,
                                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator) {
-        return new ceres::AutoDiffCostFunction<Calibration, 2, num_q, num_p>(
-                new Calibration(point, weight, kde_val, kde_scale, interpolator));
+        return new ceres::AutoDiffCostFunction<Calibration, 2, kExtrinsics, kIntrinsics>(
+            new Calibration(lid_point, weight, kde_val, kde_scale, interpolator));
     }
 
-    const Eigen::Vector3d point_;
+    const Eigen::Vector3d lid_point_;
     const double weight_;
     const double kde_val_;
     const double kde_scale_;
@@ -313,14 +301,15 @@ struct Calibration {
  * @brief
  * custom callback to print something after every iteration (inner iteration is not included)
  */
-class OutputCallback : public ceres::IterationCallback {
+class OutputCallback : public ceres::IterationCallback
+{
 public:
     OutputCallback(double *params)
-            : params_(params) {}
+        : params_(params) {}
 
     ceres::CallbackReturnType operator()(
-            const ceres::IterationSummary& summary) override {
-        for (int i = 0; i < num_p + num_q; i++) {
+        const ceres::IterationSummary &summary) override {
+        for (int i = 0; i < kIntrinsics + kExtrinsics; i++) {
             const double params_out = params_[i];
             outfile << params_out << "\t";
         }
@@ -329,13 +318,13 @@ public:
     }
 
 private:
-    const double* params_;
+    const double *params_;
 };
 
 /**
  * @brief
  * Ceres-solver Optimization
- * @param cam camProcess
+ * @param cam FisheyeProcess
  * @param lid LidarProcess
  * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
  * @param distortion distortion matrix {c, d; e, 1}
@@ -352,21 +341,20 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
                                      vector<const char *> name,
                                      vector<double> lb,
                                      vector<double> ub,
-                                     int setConstant) {
-    const int num_params = params_init.size();
-    const int num_scenes = cam.num_scenes;
-    const double scale = 1.0;
+                                     int kDisabledBlock) {
+    const int kParams = params_init.size();
+    const int kScenes = cam.num_scenes;
+    // const double scale = 1.0;
+    const double scale = 2.0 / bandwidth;
 
-    double params[num_params];
+    double params[kParams];
     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
-    // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
 
     std::vector<ceres::Grid2D<double>> grids;
     std::vector<double> ref_vals;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
 
-    for (int idx = 0; idx < num_scenes; idx++)
-    {
+    for (int idx = 0; idx < kScenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         /********* Fisheye KDE *********/
@@ -374,15 +362,14 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
         // Data is a row-major array of kGridRows x kGridCols values of function
         // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
         // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
-        double *kde_data = new double[p_c.size()];
-        memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
-//        double *kde_data = p_c.data();
-        const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kFisheyeRows * scale, 0, cam.kFisheyeCols * scale);
+        double *kde_val = new double[p_c.size()];
+        memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
+        const ceres::Grid2D<double> kde_grid(kde_val, 0, cam.kFisheyeRows * scale, 0, cam.kFisheyeCols * scale);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
-    for (int idx = 0; idx < num_scenes; idx++) {
+    for (int idx = 0; idx < kScenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
@@ -391,52 +378,46 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
     const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators(interpolators);
 
     // Ceres Problem
-    // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
     ceres::Problem problem;
 
-    // problem.AddParameterBlock(params, 4, q_parameterization);
-    // problem.AddParameterBlock(params + 4, num_params - 4);
-    problem.AddParameterBlock(params, num_q);
-    problem.AddParameterBlock(params + num_q, num_params - num_q);
+    problem.AddParameterBlock(params, kExtrinsics);
+    problem.AddParameterBlock(params + kExtrinsics, kParams - kExtrinsics);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
-    for (int idx = 0; idx < num_scenes; idx++) {
+    for (int idx = 0; idx < kScenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         /** a scene weight could be added here **/
         for (int j = 0; j < lid.edge_cloud_vec[idx]->points.size(); ++j) {
             const double weight = lid.edge_cloud_vec[idx]->points[j].intensity;
-            Eigen::Vector3d p_l = {lid.edge_cloud_vec[idx]->points[j].x, lid.edge_cloud_vec[idx]->points[j].y, lid.edge_cloud_vec[idx]->points[j].z};
-            problem.AddResidualBlock(Calibration::Create(p_l, weight, ref_vals[idx], scale, img_interpolators[idx]),
+            Eigen::Vector3d lid_point = {lid.edge_cloud_vec[idx]->points[j].x, lid.edge_cloud_vec[idx]->points[j].y, lid.edge_cloud_vec[idx]->points[j].z};
+            problem.AddResidualBlock(Calibration::Create(lid_point, weight, ref_vals[idx], scale, img_interpolators[idx]),
                                      loss_function,
                                      params,
-                                     params + num_q);
+                                     params + kExtrinsics);
         }
     }
 
-    switch (setConstant) {
-        case 1:
-            problem.SetParameterBlockConstant(params);
-            break;
-        case 2:
-            problem.SetParameterBlockConstant(params + num_q);
-            break;
-        default:
-            break;
+    switch (kDisabledBlock) {
+    case 1:
+        problem.SetParameterBlockConstant(params);
+        break;
+    case 2:
+        problem.SetParameterBlockConstant(params + kExtrinsics);
+        break;
+    default:
+        break;
     }
 
-    for (int i = 0; i < num_params; ++i)
-    {
-        if (i < num_q && setConstant != 1)
-        {
+    for (int i = 0; i < kParams; ++i) {
+        if (i < kExtrinsics && kDisabledBlock != 1) {
             problem.SetParameterLowerBound(params, i, lb[i]);
             problem.SetParameterUpperBound(params, i, ub[i]);
         }
-        else if (i >= num_q && setConstant != 2)
-        {
-            problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
-            problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
+        else if (i >= kExtrinsics && kDisabledBlock != 2) {
+            problem.SetParameterLowerBound(params + kExtrinsics, i - kExtrinsics, lb[i]);
+            problem.SetParameterUpperBound(params + kExtrinsics, i - kExtrinsics, ub[i]);
         }
     }
 
@@ -449,10 +430,10 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
     options.use_nonmonotonic_steps = false;
 
     lid.SetSceneIdx(1);
-     string paramsOutPath = lid.scenes_files_path_vec[lid.scene_idx].output_folder_path + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
-     outfile.open(paramsOutPath);
-     OutputCallback callback(params);
-     options.callbacks.push_back(&callback);
+    string paramsOutPath = lid.scenes_files_path_vec[lid.scene_idx].output_folder_path + "/ParamsRecord_" + to_string(bandwidth) + ".txt";
+    outfile.open(paramsOutPath);
+    OutputCallback callback(params);
+    options.callbacks.push_back(&callback);
 
     ceres::Solver::Summary summary;
 
@@ -464,7 +445,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
 
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
-    for (int idx = 0; idx < num_scenes; idx++) {
+    for (int idx = 0; idx < kScenes; idx++) {
         cam.SetSceneIdx(idx);
         lid.SetSceneIdx(idx);
         vector<vector<double>> edge_fisheye_projection = lid.EdgeCloudProjectToFisheye(params_res);
@@ -474,7 +455,6 @@ std::vector<double> ceresMultiScenes(FisheyeProcess cam,
 
     return params_res;
 }
-
 
 // /**
 //  * @brief
