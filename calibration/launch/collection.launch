@@ -33,25 +33,25 @@
 	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
 		<param name="rotation_mode" type="int" value="3" /> 
 	</node>
-	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/godm/catkin_ws/data_pose1_60.bag --duration=10s"/>
+	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/isee/Software/catkin_ws/data_pose1_60.bag --duration=10s"/>
 
 
 	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
 		<param name="rotation_mode" type="int" value="4" /> 
 	</node>
-	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/godm/catkin_ws/data_pose1_40.bag --duration=10s"/>
+	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/isee/Software/catkin_ws/data_pose1_40.bag --duration=10s"/>
 
 
 	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
 		<param name="rotation_mode" type="int" value="5" /> 
 	</node>
-	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/godm/catkin_ws/data_pose1_20.bag --duration=10s"/>
+	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/isee/Software/catkin_ws/data_pose1_20.bag --duration=10s"/>
 
 
 	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
 		<param name="rotation_mode" type="int" value="6" /> 
 	</node>
-	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/godm/catkin_ws/data_pose1_0.bag --duration=10s"/>
+	<node pkg="rosbag" type="record" name="record" output="screen" args="/livox/lidar -o /home/isee/Software/catkin_ws/data_pose1_0.bag --duration=10s"/>
 
 </launch>
 
