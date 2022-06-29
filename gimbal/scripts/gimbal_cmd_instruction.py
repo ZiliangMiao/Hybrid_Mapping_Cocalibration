@@ -74,5 +74,4 @@ if __name__=="__main__":
         if (key == '\x03'):
             print("Process Terminates!")
             break
-
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
