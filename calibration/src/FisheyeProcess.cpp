@@ -35,9 +35,9 @@ using namespace mlpack::tree;
 using namespace mlpack::kernel;
 using namespace arma;
 
-FisheyeProcess::FisheyeProcess(string pkgPath) {
+FisheyeProcess::FisheyeProcess(string pkg_path) {
     cout << "----- Fisheye: ImageProcess -----" << endl;
-    this -> num_scenes = 5;
+    this -> num_scenes = 7;
     /** reserve the memory for vectors stated in LidarProcess.h **/
     this -> scenes_files_path_vec.reserve(this -> num_scenes);
     this -> edge_pixels_vec.reserve(this -> num_scenes);
@@ -45,11 +45,14 @@ FisheyeProcess::FisheyeProcess(string pkgPath) {
     this -> tags_map_vec.reserve(this -> num_scenes);
 
     /** push the data directory path into vector **/
-    this -> scenes_path_vec.push_back(pkgPath + "/data/runYangIn");
-    this -> scenes_path_vec.push_back(pkgPath + "/data/huiyuan2");
-    this -> scenes_path_vec.push_back(pkgPath + "/data/12");
-    this -> scenes_path_vec.push_back(pkgPath + "/data/conferenceF2-P1");
-    this -> scenes_path_vec.push_back(pkgPath + "/data/conferenceF2-P2");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-20");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-40");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-60");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/0");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/20");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/40");
+    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/60");
+
 
     for (int idx = 0; idx < num_scenes; ++idx) {
         struct SceneFilePath sc(scenes_path_vec[idx]);

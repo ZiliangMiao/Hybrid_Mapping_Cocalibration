@@ -21,8 +21,8 @@ const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
-const bool k3DViz = true;
-const bool kCreateDensePcd = false;
+const bool k3DViz = false;
+const bool kCreateDensePcd = true;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
