@@ -7,7 +7,6 @@
 #include <opencv2/opencv.hpp>
 // ros
 #include <ros/ros.h>
-#include <std_msgs/Header.h>
 #include <ros/package.h>
 // pcl
 #include <pcl/common/io.h>
@@ -18,12 +17,12 @@ using namespace std;
 using namespace cv;
 
 const bool kFisheyeFlatProcess = false;
-const bool kFisheyeEdgeProcess = true;
+const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = true;
-const bool kCeresOptimization = true;
+const bool kLidarEdgeProcess = false;
+const bool kCeresOptimization = false;
 const bool k3DViz = false;
-const bool kCreateDensePcd = false;
+const bool kCreateDensePcd = true;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {

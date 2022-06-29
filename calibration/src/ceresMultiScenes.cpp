@@ -118,47 +118,46 @@ void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector< vector<dou
     cam.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> _p) {
-
-    Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
-    Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
-    Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
+void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params)
+{
+    Eigen::Matrix<double, 3, 1> eulerAngle(params[0], params[1], params[2]);
+    Eigen::Matrix<double, 3, 1> t{params[3], params[4], params[5]};
+    Eigen::Matrix<double, 2, 1> uv_0{params[6], params[7]};
     Eigen::Matrix<double, 6, 1> a_;
-    switch (_p.size())
+    switch (params.size())
     {
         case 13:
-            a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
+            a_ << params[8], params[9], params[10], params[11], params[12], 0.0;
             break;
         case 12:
-            a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
+            a_ << params[8], params[9], 0.0, params[10], 0.0, params[11];
             break;
         default:
-            a_ << double(0), _p[8], double(0), _p[9], double(0), _p[10];
+            a_ << 0.0, params[8], 0.0, params[9], 0.0, params[10];
             break;
     }
 
     double phi, theta;
-    double inv_r, r;
+    double inv_uv_radius, uv_radius;
     double res, val;
 
     // extrinsic transform
     Eigen::Matrix<double, 3, 3> R;
-    Eigen::AngleAxisd xAngle(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
-    Eigen::AngleAxisd yAngle(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
-    Eigen::AngleAxisd zAngle(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
-    R = zAngle * yAngle * xAngle;
+    Eigen::AngleAxisd Rx(Eigen::AngleAxisd(eulerAngle(0), Eigen::Vector3d::UnitX()));
+    Eigen::AngleAxisd Ry(Eigen::AngleAxisd(eulerAngle(1), Eigen::Vector3d::UnitY()));
+    Eigen::AngleAxisd Rz(Eigen::AngleAxisd(eulerAngle(2), Eigen::Vector3d::UnitZ()));
+    R = Rz * Ry * Rx;
 
-    Eigen::Matrix<double, 3, 1> p_;
-    Eigen::Matrix<double, 3, 1> p_trans;
-    Eigen::Matrix<double, 2, 1> S;
-    Eigen::Matrix<double, 2, 1> p_uv;
+    Eigen::Matrix<double, 3, 1> lid_point;
+    Eigen::Matrix<double, 3, 1> lid_trans;
+    Eigen::Matrix<double, 2, 1> projection;
 
-    string lidDensePcdPath = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
-    string HdrImgPath = cam.scenes_files_path_vec[cam.scene_idx].fisheye_hdr_img_path;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr lidRaw(new pcl::PointCloud<pcl::PointXYZI>);
+    string lid_dense_pcd_path = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
+    string fisheye_hdr_img_path = cam.scenes_files_path_vec[lid.scene_idx].fisheye_hdr_img_path;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr lid_dense(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::io::loadPCDFile(lidDensePcdPath, *lidRaw);
-    cv::Mat image = cv::imread(HdrImgPath, cv::IMREAD_UNCHANGED);
+    pcl::io::loadPCDFile(lid_dense_pcd_path, *lid_dense);
+    cv::Mat image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     int pixelThresh = 10;
     int rows = image.rows;
     int cols = image.cols;
@@ -166,28 +165,40 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> _p) {
     pcl::PointXYZRGB pt;
     vector<double> ptLoc(3, 0);
     vector<vector<vector<double>>> dict(rows, vector<vector<double>>(cols, ptLoc));
-
-    cout << "---------------Coloring------------" << endl;
-    for(int i = 0; i < rows; i++){
-        for(int j = 0; j < cols; j++){
-            if(image.at<cv::Vec3b>(i, j)[0] > pixelThresh || image.at<cv::Vec3b>(i, j)[1] > pixelThresh || image.at<cv::Vec3b>(i, j)[2] > pixelThresh){
-                if(dict[i][j][0] != 0 && dict[i][j][1] != 0 && dict[i][j][2] != 0){
-                    pt.x = dict[i][j][0];
-                    pt.y = dict[i][j][1];
-                    pt.z = dict[i][j][2];
-                    pt.b = image.at<cv::Vec3b>(i, j)[0];
-                    pt.g = image.at<cv::Vec3b>(i, j)[1];
-                    pt.r = image.at<cv::Vec3b>(i, j)[2];
-                    showCloud -> points.push_back(pt);
-                }
+    cout << "---------------Save 2D and 3D txt file------------" << endl;
+    for (int i = 0; i < lid_dense->points.size(); i=i+10) {
+        if (lid_dense->points[i].x != 0 || lid_dense->points[i].y != 0 || lid_dense->points[i].z != 0) {
+            lid_point << lid_dense->points[i].x, lid_dense->points[i].y, lid_dense->points[i].z;
+            lid_trans = R * lid_point + t;
+            theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
+            inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+            uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
+            projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+            int u = int(projection(0));
+            int v = int(projection(1));
+            if ((0 <= u && u < rows && 0 <= v && v < cols) && (image.at<cv::Vec3b>(u, v)[0] > pixelThresh || image.at<cv::Vec3b>(u, v)[1] > pixelThresh || image.at<cv::Vec3b>(u, v)[2] > pixelThresh)) {
+                // dict[u][v][0] = lid_point(0);
+                // dict[u][v][1] = lid_point(1);
+                // dict[u][v][2] = lid_point(2);
+                pt.x = dict[u][v][0];
+                pt.y = dict[u][v][1];
+                pt.z = dict[u][v][2];
+                pt.b = image.at<cv::Vec3b>(u, v)[0];
+                pt.g = image.at<cv::Vec3b>(u, v)[1];
+                pt.r = image.at<cv::Vec3b>(u, v)[2];
+                showCloud->points.push_back(pt);
             }
         }
+        if (i % 1000000 == 0) {
+            cout << i << " / " << lid_dense->points.size() << " points written" << endl;
+        }
     }
+    cout << "---------------Coloring------------" << endl;
     pcl::visualization::CloudViewer viewer("Viewer");
     viewer.showCloud(showCloud);
 
-    while(!viewer.wasStopped()){
-
+    while (!viewer.wasStopped())
+    {
     }
     cv::waitKey();
 }
