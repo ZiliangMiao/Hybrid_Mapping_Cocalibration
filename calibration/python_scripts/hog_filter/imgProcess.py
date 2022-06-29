@@ -3,7 +3,7 @@ import cv2
 from matplotlib import pyplot as plt
 from skimage.feature import _hog, _hoghistogram
 
-data_path = "/home/isee/software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/data/conferenceF2-P2"
+data_path = "/home/halsey/software/catkin_ws/src/Fisheye-LiDAR-Fusion/calibration/data/sanjiao_p0"
 dir_cam = data_path + "/outputs/flatImage.bmp"
 dir_lidar = data_path + "/outputs/byIntensity/flatLidarImage.bmp"
 
@@ -204,14 +204,11 @@ def patch_image(image, mode=cv2.MORPH_OPEN, size=3, iter=1):
 
 def fill_hole(img, hole_color=0, bkg_color=255, size_threshold=200, size_lim=False):
 
-    # 复制 im_in 图像
     img_floodfill = img.copy()
 
-    # Mask 用于 floodFill，官方要求长宽+2
     h, w = img.shape[:2]
     mask = np.zeros((h + 2, w + 2), np.uint8)
 
-    # floodFill函数中的seedPoint对应像素必须是背景
     isbreak = False
     seedPoint = (1, 1)
     for i in range(img_floodfill.shape[0]):
@@ -223,23 +220,19 @@ def fill_hole(img, hole_color=0, bkg_color=255, size_threshold=200, size_lim=Fal
         if (isbreak):
             break
 
-    # 得到im_floodfill 255填充非孔洞值
     cv2.floodFill(img_floodfill, mask, seedPoint, bkg_color)
 
-    # 得到im_floodfill的逆im_floodfill_inv
     im_floodfill_inv = cv2.bitwise_not(img_floodfill)
 
     if size_lim:
         im_floodfill_inv_copy = im_floodfill_inv.copy()
 
-        # 函数findContours获取轮廓
         contours, hierarchy = cv2.findContours(im_floodfill_inv_copy, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
 
         for num in range(len(contours)):
             if (cv2.contourArea(contours[num]) >= size_threshold and hierarchy[0, num, 2] == -1):
                 cv2.fillConvexPoly(im_floodfill_inv, contours[num], hole_color)
 
-    # 把im_in、im_floodfill_inv这两幅图像结合起来得到前景
     return img | im_floodfill_inv
 
 def black_region_removal(img, pix_rows_bound):
@@ -291,7 +284,6 @@ if __name__ == "__main__":
     # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
     # edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=8, iter=2)
 
-    # 这个是填充区域的
     # edge_cam = fill_hole(img=edge_cam, hole_color=0, bkg_color=255)
     # edge_lidar = fill_hole(img=edge_lidar, hole_color=0, bkg_color=255)
 
@@ -313,8 +305,8 @@ if __name__ == "__main__":
 
     # ################################################################################################
     # # LiDAR # define the hyper-params of LiDAR
-    # orien_lid = 3 # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
-    # block_size_lid = 5  # 方块的大小，越大会统计更大范围内的方向分量
+    # orien_lid = 3 
+    # block_size_lid = 5  
     # var_proportion_lid = 0.10
     # num_bins_lid = 300
     # ################################################################################################
@@ -335,8 +327,8 @@ if __name__ == "__main__":
     # cv2.imwrite(data_path + "/edges/lidEdge.png", image_lidar)
     # ################################################################################################
     # # fisheye # define the hyper-params of the first hog filter
-    # orien_cam = 5  # orien越大，像素梯度方向分的更细，方向分量多和少的方差就会被拉大
-    # block_size_cam = 50  # 方块的大小，越大会统计更大范围内的方向分量
+    # orien_cam = 5  
+    # block_size_cam = 50  
     # var_proportion_cam = 0.20
     # num_bins_cam = 300
     # # define the params of second filter
@@ -346,7 +338,7 @@ if __name__ == "__main__":
     #
     # ################################################################################################
     # # variance filter (big blocks)
-    # img_cam = cv2.imread(data_path + "/edges/cannyOutputs/cam_3_contour.png", cv2.IMREAD_GRAYSCALE)  # cv2.IMREAD_COLOR为彩图
+    # img_cam = cv2.imread(data_path + "/edges/cannyOutputs/cam_3_contour.png", cv2.IMREAD_GRAYSCALE) 
     # img_cam_filtered, img_hog_cam = hog_filter(img_cam, orien_cam, block_size_cam, var_proportion_cam, num_bins_cam)
     # # extremum filter
     # # img_cam_filtered_ex = extremum_filter(img_cam, orien_cam, block_size_cam)

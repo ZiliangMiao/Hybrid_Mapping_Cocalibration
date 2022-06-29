@@ -21,7 +21,7 @@ const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = false;
+const bool kCeresOptimization = true;
 const bool k3DViz = true;
 const bool kCreateDensePcd = false;
 

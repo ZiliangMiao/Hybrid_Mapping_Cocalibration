@@ -19,7 +19,7 @@ string getDataPath(){
 }
 const string dataPath = getDataPath();
 
-main (int argc, char **argv){
+int main (int argc, char **argv){
     ros::init (argc, argv, "rvizPub");
     ros::NodeHandle nh;
 
