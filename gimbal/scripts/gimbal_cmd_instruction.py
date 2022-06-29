@@ -11,14 +11,19 @@ msg = """
 Welcome to ISEE RECONSTUCTION TORCH!                   |
 =========================                              |                                                  |
 Moving around:                                         |
-        w                                              |
+   q    w    e                                         |
    a    s    d        k                                |
-        x                                              |
+   z    x    c                                         |
+                                                       |
 a : horizontal 0 degree                                |
 d : horizontal 90 degrees                              |
-w : vertical 60 degrees                                |
+q : vertical 60 degrees                                |
+w : vertical 40 degrees                                |
+e : vertical 20 degrees                                |
 s : vertical 0 degree                                  |
-x : vertical -60 degrees                               |
+z : vertical -20 degrees                               |
+x : vertical -40 degrees                               |
+c : vertical -60 degrees                               |
 k : stop                                               |
                                                        |
 CTRL-C to quit                                         |
@@ -29,9 +34,13 @@ CTRL-C to quit                                         |
 control_mode_dictionary = {
         'a':1,
         'd':2,
-        'w':3,
-        's':4,
-        'x':5,
+        'q':3,
+        'w':4,
+        'e':5,
+        's':6,
+        'z':7,
+        'x':8,
+        'c':9,
         'k':0,
         }
 
@@ -51,23 +60,19 @@ if __name__=="__main__":
     rospy.init_node('gimbal_cmd_instruction')
     pub = rospy.Publisher('/cmd_instruction', Twist, queue_size=5)
     control_mode = 0
-    try:
-        print(msg)
-        while(1):
-            key = GetKey()
-            if key in control_mode_dictionary.keys():
-                control_mode = control_mode_dictionary[key]
-                print("control_mode = %d"  % control_mode)
-            # stop key
-            elif key == ' ' or key == 'k' :
-                control_mode = 0
-            elif (key == '\x03'):
-                break
+
+    print(msg)
+    while(1):
+        key = GetKey()
+        if key in control_mode_dictionary.keys():
+            control_mode = control_mode_dictionary[key]
+            print("control_mode = %d"  % control_mode)
             # create and publish "twist" msg, which contains the control mode
             twist = Twist()
             twist.linear.x = control_mode
             pub.publish(twist)
-    except:
-        print(msg)
+        if (key == '\x03'):
+            print("Process Terminates!")
+            break
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)

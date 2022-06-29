@@ -88,6 +88,15 @@ void Gimbal::SetRotationMode(int rotation_mode) {
     **/
 
     switch (rotation_mode) {
+        case 0: {
+            /** velocity -> 0 **/
+            data[3] = 0x00;
+            data[4] = 0x00;
+            data[5] = 0;
+            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff;
+            SendData(data, 7);
+            break;
+        }
         case 1: {
             /** 'a' - horizontal 0 **/
             data[3] = 0x4b;
@@ -107,7 +116,7 @@ void Gimbal::SetRotationMode(int rotation_mode) {
             break;
         }
         case 3: {
-            /** 'w' - vertical 60 **/
+            /** 'q' - vertical 60 **/
             data[3] = 0x4d;
             data[4] = ((short int)(60 * 100)) >> 8;					  //low 8 bit
             data[5] = ((short int)(60 * 100)) & 0x00ff;				  //high 8 bit
@@ -116,7 +125,25 @@ void Gimbal::SetRotationMode(int rotation_mode) {
             break;
         }
         case 4: {
-            /** 's' - vertical 0 **/
+            /** 'w' - vertical 40 **/
+            data[3] = 0x4d;
+            data[4] = ((short int)(40 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(40 * 100)) & 0x00ff;				  //high 8 bit
+            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
+            SendData(data, 7);
+            break;
+        }
+        case 5: {
+            /** 'e' - vertical 20 **/
+            data[3] = 0x4d;
+            data[4] = ((short int)(20 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(20 * 100)) & 0x00ff;				  //high 8 bit
+            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
+            SendData(data, 7);
+            break;
+        }
+        case 6: {
+            /** 's' - vertical 00 **/
             data[3] = 0x4d;
             data[4] = ((short int)(0 * 100)) >> 8;					  //low 8 bit
             data[5] = ((short int)(0 * 100)) & 0x00ff;				  //high 8 bit
@@ -124,21 +151,30 @@ void Gimbal::SetRotationMode(int rotation_mode) {
             SendData(data, 7);
             break;
         }
-        case 5: {
-            /** 'x' - vertical -60 **/
+        case 7: {
+            /** 'z' - vertical -20 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(-60 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(-60 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(-20 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-20 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
         }
-        case 0: {
-            /** velocity -> 0 **/
-            data[3] = 0x00;
-            data[4] = 0x00;
-            data[5] = 0;
-            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff;
+        case 8: {
+            /** 'x' - vertical -40 **/
+            data[3] = 0x4d;
+            data[4] = ((short int)(-40 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-40 * 100)) & 0x00ff;				  //high 8 bit
+            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
+            SendData(data, 7);
+            break;
+        }
+        case 9: {
+            /** 'c' - vertical -60 **/
+            data[3] = 0x4d;
+            data[4] = ((short int)(-60 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-60 * 100)) & 0x00ff;				  //high 8 bit
+            data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
         }
