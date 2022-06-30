@@ -22,7 +22,7 @@ const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool k3DViz = false;
-const bool kCreateDensePcd = false;
+const bool kCreateDensePcd = true;
 const bool kCreateFullViewPcd = false;
 
 /********* Directory Path of ROS Package *********/

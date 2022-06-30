@@ -23,6 +23,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/filter.h>
+#include <pcl/filters/conditional_removal.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
 
@@ -86,29 +87,29 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     int org_cloud_size = org_cloud -> points.size();
     cout << "size of original cloud:" << org_cloud_size << endl;
 
-    /***** PCL Pass Through Filter *****/
-    CloudPtr passthrough_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PassThrough<pcl::PointXYZI> x_passthrough_filter;
-    x_passthrough_filter.setFilterFieldName("x");
-    x_passthrough_filter.setFilterLimits(-1e-3, 1e-3);
-    x_passthrough_filter.setNegative(true);
-    x_passthrough_filter.setInputCloud(org_cloud);
-    x_passthrough_filter.filter(*passthrough_cloud);
-    pcl::PassThrough<pcl::PointXYZI> y_passthrough_filter;
-    y_passthrough_filter.setFilterFieldName("y");
-    y_passthrough_filter.setFilterLimits(-1e-3, 1e-3);
-    y_passthrough_filter.setNegative(true);
-    y_passthrough_filter.setInputCloud(passthrough_cloud);
-    y_passthrough_filter.filter(*passthrough_cloud);
+    /** condition filter **/
+    CloudPtr cond_filtered_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    pcl::ConditionOr<pcl::PointXYZI>::Ptr range_cond(new pcl::ConditionOr<pcl::PointXYZI>());
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("z", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("z", pcl::ComparisonOps::LT, -0.4)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("y", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("y", pcl::ComparisonOps::LT, -0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("x", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("x", pcl::ComparisonOps::LT, -0.3)));
+    pcl::ConditionalRemoval<pcl::PointXYZI> cond_filter;
+    cond_filter.setCondition(range_cond);
+    cond_filter.setInputCloud(org_cloud);
+    cond_filter.filter(*cond_filtered_cloud);
+
 
     /** check the pass through filtered point cloud size **/
-    int passthrough_cloud_size = passthrough_cloud -> points.size();
-    cout << "size of cloud after a pass through filter:" << passthrough_cloud_size << endl;
+    int cond_filtered_cloud_size = cond_filtered_cloud -> points.size();
+    cout << "size of cloud after a condition filter:" << cond_filtered_cloud_size << endl;
 
     /** radius outlier filter **/
     CloudPtr radius_outlier_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::RadiusOutlierRemoval<pcl::PointXYZI> radius_outlier_filter;
-    radius_outlier_filter.setInputCloud(passthrough_cloud);
+    radius_outlier_filter.setInputCloud(cond_filtered_cloud);
     radius_outlier_filter.setRadiusSearch(0.1);
     radius_outlier_filter.setMinNeighborsInRadius(5);
     radius_outlier_filter.setNegative(false);

@@ -22,7 +22,7 @@ public:
 
     /** const parameters - original data - images and point clouds **/
     const bool kProjByIntensity = true;
-    static const int kNumPcds = 500;
+    static const int kNumPcds = 14;
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
     const double kRadPerPix = (M_PI / 2) / 1000;

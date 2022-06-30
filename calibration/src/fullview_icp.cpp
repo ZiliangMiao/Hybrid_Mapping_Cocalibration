@@ -13,14 +13,12 @@
 #include <pcl/common/time.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/registration/ia_ransac.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/features/fpfh.h>
 
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 int main(int argc, char** argv) {
-    ros::init(argc, argv, "icp");
+    ros::init(argc, argv, "fullview_icp");
     ros::NodeHandle nh;
 
     PointCloudT::Ptr cloud_target_input(new PointCloudT);
@@ -32,20 +30,22 @@ int main(int argc, char** argv) {
 
     pcl::StopWatch timeer;
     std::string pkg_path = ros::package::getPath("calibration");
-    std::string pose_1_pcd_path = pkg_path + "/data/conferenceF2-P1/outputs/lidDense1.pcd";
-    std::string pose_2_pcd_path = pkg_path + "/data/conferenceF2-P2/outputs/lidDense1.pcd";
+
+    std::string pose_1_pcd_path = pkg_path + "/data/sanjiao_pose0/0/outputs/lidDense14.pcd";
+    std::string pose_2_pcd_path = pkg_path + "/data/sanjiao_pose0/20/outputs/lidDense14.pcd";
 
     /** file loading check **/
-    if (pcl::io::loadPCDFile<PointT>(pose_1_pcd_path, *cloud_source_input) == -1) {
+    if (pcl::io::loadPCDFile<PointT>(pose_1_pcd_path, *cloud_target_input) == -1) {
         PCL_ERROR("Couldn't read file1 \n");
         return (-1);
     }
-    std::cout << "Loaded " << cloud_source_input->size() << " data points from file1" << std::endl;
-    if (pcl::io::loadPCDFile<PointT>(pose_2_pcd_path, *cloud_target_input) == -1) {
+    std::cout << "Loaded " << cloud_target_input->size() << " data points from file1" << std::endl;
+
+    if (pcl::io::loadPCDFile<PointT>(pose_2_pcd_path, *cloud_source_input) == -1) {
         PCL_ERROR("Couldn't read file2 \n");
         return (-1);
     }
-    std::cout << "Loaded " << cloud_target_input->size() << " data points from file2" << std::endl;
+    std::cout << "Loaded " << cloud_source_input->size() << " data points from file2" << std::endl;
 
     /** invalid point filter **/
     std::vector<int> mapping_in;
@@ -53,99 +53,51 @@ int main(int argc, char** argv) {
     pcl::removeNaNFromPointCloud(*cloud_target_input, *cloud_target_input, mapping_in);
     pcl::removeNaNFromPointCloud(*cloud_source_input, *cloud_source_input, mapping_out);
 
-    /** pass through filter **/
-    pcl::PassThrough<PointT> z_passthrough_filter;
-    z_passthrough_filter.setFilterFieldName("z");
-    z_passthrough_filter.setFilterLimits(2.3, 5);
-    z_passthrough_filter.setNegative(true);
-    z_passthrough_filter.setInputCloud(cloud_source_input);
-    z_passthrough_filter.filter(*cloud_source_filtered);
-    z_passthrough_filter.setInputCloud(cloud_target_input);
-    z_passthrough_filter.filter(*cloud_target_filtered);
+    /** condition filter **/
+    pcl::ConditionOr<pcl::PointXYZ>::Ptr range_cond(new pcl::ConditionOr<pcl::PointXYZ>());
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("z", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("z", pcl::ComparisonOps::LT, -0.4)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("y", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("y", pcl::ComparisonOps::LT, -0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("x", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZ>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZ> ("x", pcl::ComparisonOps::LT, -0.3)));
+    pcl::ConditionalRemoval<pcl::PointXYZ> cond_filter;
+    cond_filter.setCondition(range_cond);
+    cond_filter.setInputCloud(cloud_source_input);
+    cond_filter.filter(*cloud_source_filtered);
+    cond_filter.setInputCloud(cloud_target_input);
+    cond_filter.filter(*cloud_target_filtered);
 
     /** radius outlier filter **/
-//    pcl::RadiusOutlierRemoval <PointT> outrem;
-//    outrem.setInputCloud(cloud_target_input);
-//    outrem.setRadiusSearch(0.04);
-//    outrem.secatltMinNeighborsInRadius(1);
-//    outrem.filter(*cloud_target_filtered);
-//    outrem.filter(*cloud_source_filtered);
+    pcl::RadiusOutlierRemoval <PointT> outlier_filter;
+    outlier_filter.setRadiusSearch(0.2);
+    outlier_filter.setMinNeighborsInRadius(20);
+    outlier_filter.setInputCloud(cloud_target_filtered);
+    outlier_filter.filter(*cloud_target_filtered);
+    outlier_filter.setInputCloud(cloud_source_filtered);
+    outlier_filter.filter(*cloud_source_filtered);
 
     /** initial rigid transformation **/
     Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
-    initial_trans.translation() << 0.6, 5.1, 0.0;
-    float rx = 0.0, ry = 0.0, rz = +1.45/(float)180;
+    int v_degree = 20;
+    initial_trans.translation() << 0.0, 0.15 * sin(v_degree/(float)180 * M_PI), 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
+    float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
+//    initial_trans.translation() << 0.0, 0.0, 0.0;
+//    float rx = 0.0, ry = 0.0, rz = 0.0;
     Eigen::Matrix3f R;
     R = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
         * Eigen::AngleAxisf(ry*M_PI,  Eigen::Vector3f::UnitY())
         * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
     initial_trans.rotate(R);
-    cout << "Initial Transformation Matrix: " << endl;
     cout << initial_trans.matrix() << endl;
+    Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
     pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans);
 
-    Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
-
-//    /** voxel down sampling filter **/
+    /** voxel down sampling filter **/
 //    pcl::VoxelGrid <PointT> vg;
 //    vg.setInputCloud(cloud_source_filtered);
 //    vg.setLeafSize(0.01f, 0.01f, 0.01f);
 //    vg.filter(*cloud_source_filtered);
-//
-//
-//    /** Normal Calculation **/
-//    pcl::NormalEstimation<pcl::PointXYZ,pcl::Normal> ne_src;
-//    ne_src.setInputCloud(cloud_source_filtered);
-//    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_src(new pcl::search::KdTree< pcl::PointXYZ>());
-//    ne_src.setSearchMethod(tree_src);
-//    pcl::PointCloud<pcl::Normal>::Ptr cloud_src_normals(new pcl::PointCloud< pcl::Normal>);
-//    ne_src.setRadiusSearch(0.02);
-//    ne_src.compute(*cloud_src_normals);
-//    pcl::NormalEstimation<pcl::PointXYZ,pcl::Normal> ne_tgt;
-//    ne_tgt.setInputCloud(cloud_target_filtered);
-//    pcl::search::KdTree< pcl::PointXYZ>::Ptr tree_tgt(new pcl::search::KdTree< pcl::PointXYZ>());
-//    ne_tgt.setSearchMethod(tree_tgt);
-//    pcl::PointCloud<pcl::Normal>::Ptr cloud_tgt_normals(new pcl::PointCloud< pcl::Normal>);
-//    ne_tgt.setRadiusSearch(0.02);
-//    ne_tgt.compute(*cloud_tgt_normals);
-//
-//
-//    /** FPFH Calculation **/
-//    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_src;
-//    fpfh_src.setInputCloud(cloud_source_filtered);
-//    fpfh_src.setInputNormals(cloud_src_normals);
-//    pcl::search::KdTree<PointT>::Ptr tree_src_fpfh (new pcl::search::KdTree<PointT>);
-//    fpfh_src.setSearchMethod(tree_src_fpfh);
-//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_src(new pcl::PointCloud<pcl::FPFHSignature33>());
-//    fpfh_src.setRadiusSearch(0.05);
-//    fpfh_src.compute(*fpfhs_src);
-//    std::cout << "compute *cloud_src fpfh" << endl;
-//
-//    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_tgt;
-//    fpfh_tgt.setInputCloud(cloud_target_filtered);
-//    fpfh_tgt.setInputNormals(cloud_tgt_normals);
-//    pcl::search::KdTree<PointT>::Ptr tree_tgt_fpfh (new pcl::search::KdTree<PointT>);
-//    fpfh_tgt.setSearchMethod(tree_tgt_fpfh);
-//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_tgt(new pcl::PointCloud<pcl::FPFHSignature33>());
-//    fpfh_tgt.setRadiusSearch(0.05);
-//    fpfh_tgt.compute(*fpfhs_tgt);
-//    std::cout<<"compute *cloud_tgt fpfh"<<endl;
-//
-//    /** SAC **/
-//    pcl::SampleConsensusInitialAlignment<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> scia;
-//    scia.setInputSource(cloud_source_filtered);
-//    scia.setInputTarget(cloud_target_filtered);
-//    scia.setSourceFeatures(fpfhs_src);
-//    scia.setTargetFeatures(fpfhs_tgt);
-//    //scia.setMinSampleDistance(1);
-//    //scia.setNumberOfSamples(2);
-//    //scia.setCorrespondenceRandomness(20);
-//    PointCloudT::Ptr sac_result (new PointCloudT);
-//    scia.align(*sac_result, initial_trans_mat);
-//    std::cout  <<"sac has converged:"<<scia.hasConverged()<<"  score: "<<scia.getFitnessScore()<<endl;
-//    Eigen::Matrix4f sac_trans_mat = scia.getFinalTransformation();
-//    cout << "SAC Transformation Matrix: " << endl;
-//    cout << sac_trans_mat << endl;
 
     timeer.reset();
 
@@ -174,9 +126,9 @@ int main(int argc, char** argv) {
     icp.setMaximumIterations(500);
     icp.setInputCloud(cloud_source_filtered); //设置输入点云
     icp.setInputTarget(cloud_target_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
-    icp.setMaxCorrespondenceDistance(0.01);
+    icp.setMaxCorrespondenceDistance(0.02);
     icp.setTransformationEpsilon(1e-10); // 两次变化矩阵之间的差值
-    icp.setEuclideanFitnessEpsilon(1e-15); // 均方误差
+    icp.setEuclideanFitnessEpsilon(0.01); // 均方误差
     icp.align(*cloud_icped, initial_trans_mat); //匹配后源点云
     if (icp.hasConverged()) {
         cout << "\nICP has converged, score is: " << icp.getFitnessScore() << endl;
