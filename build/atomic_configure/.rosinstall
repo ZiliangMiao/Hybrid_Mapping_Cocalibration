@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/build/devel/setup.sh

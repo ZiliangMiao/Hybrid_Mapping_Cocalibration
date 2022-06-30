@@ -1,0 +1,8 @@
+prefix=/home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/build/devel
+
+Name: calibration
+Description: Description of calibration
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: roscpp rosmsg rospy
