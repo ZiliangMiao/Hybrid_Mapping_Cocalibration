@@ -667,18 +667,18 @@ void LidarProcess::CreateDensePcd() {
     }
 }
 
-void LidarProcess::CreateDensePcd(string pcds_folder_path) {
+void LidarProcess::CreateDensePcd(string full_view_pcd_path) {
     /** PCL PointCloud pointer. Remember that the pointer need to be given a new space **/
     CloudPtr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     for(int i = 0; i < LidarProcess::num_scenes; i++) {
         CloudPtr input_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-        string file_name = LidarProcess::scenes_files_path_vec[i].cart_pcd_path;
+        string file_name = LidarProcess::scenes_files_path_vec[i].polar_pcd_path;
         if (pcl::io::loadPCDFile<pcl::PointXYZI>(file_name, *input_cloud) == -1) {
             PCL_ERROR("Pcd File Not Exist!");
             system("pause");
         }
         *output_cloud = *output_cloud + *input_cloud;
     }
-    pcl::io::savePCDFileBinary(pcds_folder_path + "/full_view" + ".pcd", *output_cloud);
+    pcl::io::savePCDFileBinary(full_view_pcd_path, *output_cloud);
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }

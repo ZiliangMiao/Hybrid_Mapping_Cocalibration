@@ -23,7 +23,7 @@ const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool k3DViz = false;
 const bool kCreateDensePcd = false;
-const bool kCreateFullViewPcd = true;
+const bool kCreateFullViewPcd = false;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
@@ -113,9 +113,18 @@ int main(int argc, char** argv) {
     }
     if (kCreateFullViewPcd) {
         /** generate full view pcds **/
-        string full_pcds_path = lidar_process.scenes_path_vec[3] + "/full_pcds";
-        cout << full_pcds_path << endl;
-        lidar_process.CreateDensePcd(full_pcds_path);
+        string full_view_pcd_path = lidar_process.scenes_path_vec[3] + "/full_pcds/full_view_polar.pcd";
+        cout << full_view_pcd_path << endl;
+        lidar_process.CreateDensePcd(full_view_pcd_path);
+
+        pcl::PointCloud<pcl::PointXYZI>::Ptr full_view(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::io::loadPCDFile(full_view_pcd_path, *full_view);
+        pcl::visualization::CloudViewer viewer("Viewer");
+        viewer.showCloud(full_view);
+        while (!viewer.wasStopped()) {
+
+        }
+        cv::waitKey();
     }
     if (kLidarFlatProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {

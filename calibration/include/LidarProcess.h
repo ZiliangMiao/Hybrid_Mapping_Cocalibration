@@ -94,7 +94,7 @@ public:
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();
-    void CreateDensePcd(string pcds_folder_path);
+    void CreateDensePcd(string full_view_pcd_path);
     void BagToPcd(string bag_file);
 
     /***** Edge Related *****/
