@@ -47,7 +47,7 @@ public:
 
     /***** Data of Multiple Scenes *****/
     int scene_idx = 0;
-    int num_scenes = 5;
+    int num_scenes = 7;
     vector<string> scenes_path_vec;
 
     /********* File Path of the Specific Scene *********/

@@ -8,6 +8,9 @@
 #include <ros/ros.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <sensor_msgs/PointCloud2.h>
 /** pcl **/
 #include <pcl/common/common.h>
 #include <pcl/io/pcd_io.h>
@@ -15,11 +18,14 @@
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/kdtree/kdtree_flann.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/common/transforms.h>
 #include <Eigen/Core>
+#include <pcl/registration/icp.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/filters/filter.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
+
 /** headings **/
 #include "LidarProcess.h"
 /** namespace **/
@@ -31,6 +37,13 @@ typedef pcl::PointCloud<pcl::PointXYZI>::Ptr CloudPtr;
 LidarProcess::LidarProcess(const string& pkg_path) {
     cout << "----- LiDAR: LidarProcess -----" << endl;
     this -> num_scenes = 7;
+    /** degree map **/
+    for (int i = 0; i < this -> num_scenes; ++i) {
+        int v_degree = -60 + (int)(120 / (this -> num_scenes - 1)) * i;
+        this -> degree_map[i] = v_degree;
+        this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/" + std::to_string(v_degree));
+    }
+
     /** reserve the memory for vectors stated in LidarProcess.h **/
     this -> scenes_files_path_vec.reserve(this -> num_scenes);
     this -> edge_pixels_vec.reserve(this -> num_scenes);
@@ -38,14 +51,14 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     this -> edge_pts_vec.reserve(this -> num_scenes);
     this -> tags_map_vec.reserve(this -> num_scenes);
 
-    /** push the data directory path into vector **/
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-20");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-40");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-60");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/0");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/20");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/40");
-    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/60");
+//    /** push the data directory path into vector **/
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-60");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-40");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-20");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/0");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/20");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/40");
+//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/60");
 
     for (int idx = 0; idx < num_scenes; ++idx) {
         struct SceneFilePath sc(scenes_path_vec[idx]);
@@ -104,6 +117,19 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     /** radius outlier filter cloud size check **/
     int radius_outlier_cloud_size = radius_outlier_cloud->points.size();
     cout << "radius outlier filtered cloud size:" << radius_outlier_cloud_size << endl;
+
+    /** initial rigid transformation **/
+    Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
+    int v_degree = this -> degree_map.at(this -> scene_idx);
+    initial_trans.translation() << 0.0, 0.15 * sin(v_degree/(float)180 * M_PI), 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
+    float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
+    Eigen::Matrix3f R;
+    R = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
+        * Eigen::AngleAxisf(ry*M_PI,  Eigen::Vector3f::UnitY())
+        * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
+    initial_trans.rotate(R);
+    cout << initial_trans.matrix() << endl;
+    pcl::transformPointCloud(*radius_outlier_cloud, *radius_outlier_cloud, initial_trans);
 
     /** new cloud **/
     CloudPtr polar_cloud(new pcl::PointCloud<pcl::PointXYZI>);
@@ -225,42 +251,46 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
 
                 /** hidden points filter **/
                 int hidden_pt_num = 0;
-                for (int i = 0; i < search_num; ++i) {
-                    float dis_former, dis;
-                    if (i == 0) {
-                        pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
-                        dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
-                    }
-                    if (i > 0 && i < (search_num - 1)) {
-                        pcl::PointXYZI pt_former = (*cart_cloud)[tags_map[u][v].pts_indices[i - 1]];
-                        pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
-                        dis_former = dis;
-                        dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
+                const bool kHiddenPtsFilter = false;
+                if (kHiddenPtsFilter) {
+                    for (int i = 0; i < search_num; ++i) {
+                        float dis_former, dis;
+                        if (i == 0) {
+                            pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
+                            dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
+                        }
+                        if (i > 0 && i < (search_num - 1)) {
+                            pcl::PointXYZI pt_former = (*cart_cloud)[tags_map[u][v].pts_indices[i - 1]];
+                            pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
+                            dis_former = dis;
+                            dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
 
-                        if (dis > dis_former) {
-                            float x_diff_former = pt.x - pt_former.x;
-                            float y_diff_former = pt.y - pt_former.y;
-                            float z_diff_former = pt.z - pt_former.z;
-                            float dis_diff_former = sqrt(x_diff_former * x_diff_former + y_diff_former * y_diff_former + z_diff_former * z_diff_former);
-                            if (dis_diff_former > 0.1 * dis) {
-                                /** Erase the hidden points **/
-                                auto intensity_iter = intensity_vec.begin() + i;
-                                intensity_vec.erase(intensity_iter);
-                                auto theta_iter = theta_vec.begin() + i;
-                                theta_vec.erase(theta_iter);
-                                auto phi_iter = phi_vec.begin() + i;
-                                phi_vec.erase(phi_iter);
-                                auto idx_iter = tags_map[u][v].pts_indices.begin() + i;
-                                tags_map[u][v].pts_indices.erase(idx_iter);
-                                tags_map[u][v].num_pts = tags_map[u][v].num_pts - 1;
-                                hidden_pt_num ++;
+                            if (dis > dis_former) {
+                                float x_diff_former = pt.x - pt_former.x;
+                                float y_diff_former = pt.y - pt_former.y;
+                                float z_diff_former = pt.z - pt_former.z;
+                                float dis_diff_former = sqrt(x_diff_former * x_diff_former + y_diff_former * y_diff_former + z_diff_former * z_diff_former);
+                                if (dis_diff_former > 0.1 * dis) {
+                                    /** Erase the hidden points **/
+                                    auto intensity_iter = intensity_vec.begin() + i;
+                                    intensity_vec.erase(intensity_iter);
+                                    auto theta_iter = theta_vec.begin() + i;
+                                    theta_vec.erase(theta_iter);
+                                    auto phi_iter = phi_vec.begin() + i;
+                                    phi_vec.erase(phi_iter);
+                                    auto idx_iter = tags_map[u][v].pts_indices.begin() + i;
+                                    tags_map[u][v].pts_indices.erase(idx_iter);
+                                    tags_map[u][v].num_pts = tags_map[u][v].num_pts - 1;
+                                    hidden_pt_num ++;
+                                }
                             }
                         }
                     }
                 }
+
                 /** check the size of vectors **/
                 ROS_ASSERT_MSG((theta_vec.size() == phi_vec.size()) && (phi_vec.size() == intensity_vec.size()) && (intensity_vec.size() == tags_map[u][v].pts_indices.size()) && (tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
-                if (hidden_pt_num != 0){
+                if (hidden_pt_num != 0) {
                     cout << "hidden points: " << hidden_pt_num << "/" << theta_vec.size() << endl;
                 }
                 if (tags_map[u][v].num_pts == 1) {
@@ -633,6 +663,22 @@ void LidarProcess::CreateDensePcd() {
         }
         string output_folder_path = this -> scenes_files_path_vec[this -> scene_idx].output_folder_path;
         pcl::io::savePCDFileBinary(output_folder_path + "/lidDense" + to_string(kNumPcds) + ".pcd", *output_cloud);
-        cout << "create dense file success" << endl;
+        cout << "Create Dense Point Cloud File Successfully!" << endl;
     }
+}
+
+void LidarProcess::CreateDensePcd(string pcds_folder_path) {
+    /** PCL PointCloud pointer. Remember that the pointer need to be given a new space **/
+    CloudPtr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    for(int i = 0; i < LidarProcess::num_scenes; i++) {
+        CloudPtr input_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+        string file_name = LidarProcess::scenes_files_path_vec[i].cart_pcd_path;
+        if (pcl::io::loadPCDFile<pcl::PointXYZI>(file_name, *input_cloud) == -1) {
+            PCL_ERROR("Pcd File Not Exist!");
+            system("pause");
+        }
+        *output_cloud = *output_cloud + *input_cloud;
+    }
+    pcl::io::savePCDFileBinary(pcds_folder_path + "/full_view" + ".pcd", *output_cloud);
+    cout << "Create Full View Point Cloud File Successfully!" << endl;
 }

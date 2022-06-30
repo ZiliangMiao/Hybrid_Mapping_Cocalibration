@@ -8,8 +8,7 @@ class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
     /** tags and maps **/
-    typedef struct Tags
-    {
+    typedef struct Tags {
         int label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
         int num_pts; /** number of points **/
         vector<int> pts_indices;
@@ -24,7 +23,7 @@ public:
     /** const parameters - original data - images and point clouds **/
     const bool kProjByIntensity = true;
     static const int kNumPcds = 500;
-    const int kFlatRows = int((double)110 / 90 * 1000) + 1;
+    const int kFlatRows = 2000;
     const int kFlatCols = 4000;
     const double kRadPerPix = (M_PI / 2) / 1000;
 
@@ -51,12 +50,11 @@ public:
 
     /***** Data of Multiple Scenes *****/
     int scene_idx = 0;
-    int num_scenes = 5;
+    int num_scenes = 7;
     vector<string> scenes_path_vec;
 
     /** File Path of the Specific Scene **/
-    struct SceneFilePath
-    {
+    struct SceneFilePath {
         SceneFilePath(const string& ScenePath) {
             this -> output_folder_path = ScenePath + "/outputs";
             this -> pcds_folder_path = ScenePath + "/pcds";
@@ -88,11 +86,15 @@ public:
     };
     vector<struct SceneFilePath> scenes_files_path_vec;
 
+    /** Degree Map **/
+    std::map<int, int> degree_map;
+
 public:
     LidarProcess(const string& pkg_path);
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();
+    void CreateDensePcd(string pcds_folder_path);
     void BagToPcd(string bag_file);
 
     /***** Edge Related *****/

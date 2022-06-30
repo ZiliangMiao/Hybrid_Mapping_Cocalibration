@@ -22,7 +22,8 @@ const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool k3DViz = false;
-const bool kCreateDensePcd = true;
+const bool kCreateDensePcd = false;
+const bool kCreateFullViewPcd = true;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
@@ -109,6 +110,12 @@ int main(int argc, char** argv) {
             lidar_process.SetSceneIdx(idx);
             lidar_process.CreateDensePcd();
         }
+    }
+    if (kCreateFullViewPcd) {
+        /** generate full view pcds **/
+        string full_pcds_path = lidar_process.scenes_path_vec[3] + "/full_pcds";
+        cout << full_pcds_path << endl;
+        lidar_process.CreateDensePcd(full_pcds_path);
     }
     if (kLidarFlatProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
