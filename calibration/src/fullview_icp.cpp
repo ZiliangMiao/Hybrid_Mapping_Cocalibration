@@ -70,8 +70,8 @@ int main(int argc, char** argv) {
 
     /** radius outlier filter **/
     pcl::RadiusOutlierRemoval <PointT> outlier_filter;
-    outlier_filter.setRadiusSearch(0.2);
-    outlier_filter.setMinNeighborsInRadius(20);
+    outlier_filter.setRadiusSearch(0.5);
+    outlier_filter.setMinNeighborsInRadius(30);
     outlier_filter.setInputCloud(cloud_target_filtered);
     outlier_filter.filter(*cloud_target_filtered);
     outlier_filter.setInputCloud(cloud_source_filtered);
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
     icp.setMaximumIterations(500);
     icp.setInputCloud(cloud_source_filtered); //设置输入点云
     icp.setInputTarget(cloud_target_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
-    icp.setMaxCorrespondenceDistance(0.02);
+    icp.setMaxCorrespondenceDistance(0.2);
     icp.setTransformationEpsilon(1e-10); // 两次变化矩阵之间的差值
     icp.setEuclideanFitnessEpsilon(0.01); // 均方误差
     icp.align(*cloud_icped, initial_trans_mat); //匹配后源点云
