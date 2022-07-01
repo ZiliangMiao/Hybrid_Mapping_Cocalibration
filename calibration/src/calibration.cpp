@@ -125,11 +125,11 @@ int main(int argc, char** argv) {
     }
     if (kCreateFullViewPcd) {
         /** generate full view pcds **/
-        string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/full_view.pcd";
-        cout << fullview_cloud_path << endl;
-        lidar_process.CreateDensePcd(fullview_cloud_path);
+        string fullview_target_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_target_cloud.pcd";
+        lidar_process.CreateDensePcd(fullview_target_cloud_path);
         /** pcl viewer visualization **/
         CloudPtr full_view(new CloudT);
+        string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
         pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);

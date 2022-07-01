@@ -798,12 +798,14 @@ void LidarProcess::CreateDensePcd() {
     }
 }
 
-void LidarProcess::CreateDensePcd(string fullview_cloud_path) {
+void LidarProcess::CreateDensePcd(string fullview_target_cloud_path) {
     /** load full view point cloud **/
-    CloudPtr fullview_cloud(new CloudT);
-    if (pcl::io::loadPCDFile<PointT>(fullview_cloud_path, *fullview_cloud) == -1) {
+    CloudPtr fullview_target_cloud(new CloudT);
+    if (pcl::io::loadPCDFile<PointT>(fullview_target_cloud_path, *fullview_target_cloud) == -1) {
         PCL_ERROR("Pcd File Not Exist!");
     }
+    cout << "Degree 0 Full View Dense Pcd Loaded!" << endl;
+    CloudPtr fullview_cloud(new CloudT);
 
     for(int i = 0; i < this -> num_scenes; i++) {
         if (i == (this -> num_scenes - 1)/2) {
@@ -827,10 +829,16 @@ void LidarProcess::CreateDensePcd(string fullview_cloud_path) {
         if (pcl::io::loadPCDFile<PointT>(input_cloud_path, *input_cloud) == -1) {
             PCL_ERROR("Pcd File Not Exist!");
         }
+        cout << "Degree " << this -> degree_map[i] << ": Dense Pcd Loaded!" << endl;
         pcl::transformPointCloud(*input_cloud, *input_cloud_trans, pose_trans_mat);
         /** point cloud addition **/
-        *fullview_cloud = *fullview_cloud + *input_cloud_trans;
+        int input_cloud_size = input_cloud_trans -> points.size();
+        for(int j = 0; j < input_cloud_size; j++) {
+            fullview_cloud -> points.push_back(input_cloud_trans -> points[j]);
+        }
+//        *fullview_cloud = *fullview_cloud + *input_cloud_trans;
     }
+    string fullview_cloud_path = this -> scenes_path_vec[(this->num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
     pcl::io::savePCDFileBinary(fullview_cloud_path, *fullview_cloud);
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }
