@@ -193,7 +193,6 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params, in
     cout << "---------------Coloring------------" << endl;
     pcl::visualization::CloudViewer viewer("Viewer");
     viewer.showCloud(showCloud);
-
     while (!viewer.wasStopped()) {
     }
     cv::waitKey();

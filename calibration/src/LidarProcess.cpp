@@ -33,14 +33,17 @@
 using namespace std;
 using namespace cv;
 using namespace Eigen;
-typedef pcl::PointCloud<pcl::PointXYZI>::Ptr CloudPtr;
+
+typedef pcl::PointXYZI PointT;
+typedef pcl::PointCloud<PointT> CloudT;
+typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 LidarProcess::LidarProcess(const string& pkg_path) {
     cout << "----- LiDAR: LidarProcess -----" << endl;
-    this -> num_scenes = 7;
+    this -> num_scenes = 5;
     /** degree map **/
     for (int i = 0; i < this -> num_scenes; ++i) {
-        int v_degree = -60 + (int)(120 / (this -> num_scenes - 1)) * i;
+        int v_degree = -40 + 20 * i;
         this -> degree_map[i] = v_degree;
         this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/" + std::to_string(v_degree));
     }
@@ -51,6 +54,7 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     this -> edge_cloud_vec.reserve(this -> num_scenes);
     this -> edge_pts_vec.reserve(this -> num_scenes);
     this -> tags_map_vec.reserve(this -> num_scenes);
+    this -> pose_trans_mat_vec.reserve(this -> num_scenes);
 
 //    /** push the data directory path into vector **/
 //    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-60");
@@ -68,6 +72,132 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     cout << endl;
 }
 
+
+void LidarProcess::ICP() {
+    const bool kIcpViz = false;
+    CloudPtr cloud_target_input(new CloudT);
+    CloudPtr cloud_source_input(new CloudT);
+    CloudPtr cloud_target_filtered(new CloudT); /** source point cloud **/
+    CloudPtr cloud_source_filtered(new CloudT); /** target point cloud **/
+    CloudPtr cloud_source_initial_trans(new CloudT); /** souce cloud with initial rigid transformation **/
+    CloudPtr cloud_icped(new CloudT); /** apply icp result to source point cloud **/
+
+    std::string pkg_path = ros::package::getPath("calibration");
+    std::string src_pcd_path = this -> scenes_files_path_vec[this -> scene_idx].icp_pcd_path;
+    std::string tgt_pcd_path = pkg_path + "/data/sanjiao_pose0/0/full_view/icp_target_cloud.pcd";
+
+    /** file loading check **/
+    if (pcl::io::loadPCDFile<PointT>(tgt_pcd_path,*cloud_target_input) == -1) {
+        PCL_ERROR("Could Not Load Target File!\n");
+    }
+    cout << "ICP: Loaded " << cloud_target_input->size() << " points from target file" << endl;
+    if (pcl::io::loadPCDFile<PointT>(src_pcd_path,*cloud_source_input) == -1) {
+        PCL_ERROR("Could Not Load Source File!\n");
+    }
+    cout << "ICP: Loaded " << cloud_source_input->size() << " data points from source file" << endl;
+
+    /** invalid point filter **/
+    std::vector<int> mapping_in;
+    std::vector<int> mapping_out;
+    pcl::removeNaNFromPointCloud(*cloud_target_input, *cloud_target_input, mapping_in);
+    pcl::removeNaNFromPointCloud(*cloud_source_input, *cloud_source_input, mapping_out);
+
+    /** condition filter **/
+    pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.4)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, -0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
+    pcl::ConditionalRemoval<PointT> cond_filter;
+    cond_filter.setCondition(range_cond);
+    cond_filter.setInputCloud(cloud_source_input);
+    cond_filter.filter(*cloud_source_filtered);
+    cond_filter.setInputCloud(cloud_target_input);
+    cond_filter.filter(*cloud_target_filtered);
+
+    /** radius outlier filter **/
+    pcl::RadiusOutlierRemoval <PointT> outlier_filter;
+    outlier_filter.setRadiusSearch(0.5);
+    outlier_filter.setMinNeighborsInRadius(30);
+    outlier_filter.setInputCloud(cloud_target_filtered);
+    outlier_filter.filter(*cloud_target_filtered);
+    outlier_filter.setInputCloud(cloud_source_filtered);
+    outlier_filter.filter(*cloud_source_filtered);
+
+    /** initial rigid transformation **/
+    Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
+    int v_degree = this -> degree_map.at(this -> scene_idx);
+    initial_trans.translation() << 0.0, 0.15 * sin(v_degree/(float)180 * M_PI), 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
+    float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
+
+    Eigen::Matrix3f rotation_mat;
+    rotation_mat = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
+        * Eigen::AngleAxisf(ry*M_PI, Eigen::Vector3f::UnitY())
+        * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
+    initial_trans.rotate(rotation_mat);
+    cout << initial_trans.matrix() << endl;
+    Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
+    pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans);
+
+    /** original icp **/
+    pcl::IterativeClosestPoint <PointT, PointT> icp;
+    icp.setMaximumIterations(500);
+    icp.setInputCloud(cloud_source_filtered);
+    icp.setInputTarget(cloud_target_filtered);
+    icp.setMaxCorrespondenceDistance(0.2);
+    icp.setTransformationEpsilon(1e-10);
+    icp.setEuclideanFitnessEpsilon(0.01);
+    icp.align(*cloud_icped, initial_trans_mat);
+    if (icp.hasConverged()) {
+        cout << "ICP Converged, Pose: " << this -> scene_idx << endl;
+        cout << "ICP Fitness Score: " << icp.getFitnessScore() << endl;
+        cout << "ICP Fitness Epsilon: " << icp.getEuclideanFitnessEpsilon() << endl;
+        cout << "ICP Transformation Matrix: \n" << icp.getFinalTransformation() << endl;
+        /** write mat to txt file **/
+        this -> pose_trans_mat_vec.push_back(icp.getFinalTransformation());
+        std::ofstream mat_out;
+        mat_out.open(this -> scenes_files_path_vec[this->scene_idx].pose_trans_mat_path);
+        mat_out << icp.getFinalTransformation() << endl;
+        mat_out.close();
+        /** write registered point cloud to pcd file **/
+        string registered_cloud_path = pkg_path + "/data/sanjiao_pose0/0/full_view" + "/registered_" + to_string(v_degree) + ".pcd";
+        pcl::io::savePCDFileBinary(registered_cloud_path, *cloud_icped);
+    }
+    else {
+        PCL_ERROR("ICP has not converged.\n");
+    }
+
+    /** visualization **/
+    if (kIcpViz) {
+        pcl::visualization::PCLVisualizer viewer("ICP demo");
+        int v1(0), v2(1); /** create two view point **/
+        viewer.createViewPort(0.0, 0.0, 0.5, 1.0, v1);
+        viewer.createViewPort(0.5, 0.0, 1.0, 1.0, v2);
+        float bckgr_gray_level = 0.0;  /** black **/
+        float txt_gray_lvl = 1.0 - bckgr_gray_level;
+
+        /** the color of original target cloud is white **/
+        pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_aim_color_h(cloud_target_filtered, (int)255 * txt_gray_lvl,
+                                                                                    (int)255 * txt_gray_lvl,
+                                                                                    (int)255 * txt_gray_lvl);
+        viewer.addPointCloud(cloud_target_filtered, cloud_aim_color_h, "cloud_aim_v1", v1);
+        viewer.addPointCloud(cloud_target_filtered, cloud_aim_color_h, "cloud_aim_v2", v2);
+
+        /** the color of original source cloud is green **/
+        pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_in_color_h(cloud_source_filtered, 20, 180, 20);
+        viewer.addPointCloud(cloud_source_initial_trans, cloud_in_color_h, "cloud_in_v1", v1);
+
+        /** the color of transformed source cloud with icp result is red **/
+        pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_icped_color_h(cloud_icped, 180, 20, 20);
+        viewer.addPointCloud(cloud_icped, cloud_icped_color_h, "cloud_icped_v2", v2);
+    }
+}
+
+
+
+
 std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "----- LiDAR: LidarToSphere -----" << endl;
     /** define the initial projection mode - by intensity or by depth **/
@@ -80,7 +210,7 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
 
     string dense_pcd_path = this -> scenes_files_path_vec[this -> scene_idx].dense_pcd_path;
     /** original cartesian point cloud **/
-    CloudPtr org_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    CloudPtr org_cloud(new CloudT);
     pcl::io::loadPCDFile(dense_pcd_path, *org_cloud);
 
     /** check the original point cloud size **/
@@ -88,15 +218,15 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "size of original cloud:" << org_cloud_size << endl;
 
     /** condition filter **/
-    CloudPtr cond_filtered_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::ConditionOr<pcl::PointXYZI>::Ptr range_cond(new pcl::ConditionOr<pcl::PointXYZI>());
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("z", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("z", pcl::ComparisonOps::LT, -0.4)));
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("y", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("y", pcl::ComparisonOps::LT, -0.3)));
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("x", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<pcl::PointXYZI>::ConstPtr(new pcl::FieldComparison<pcl::PointXYZI> ("x", pcl::ComparisonOps::LT, -0.3)));
-    pcl::ConditionalRemoval<pcl::PointXYZI> cond_filter;
+    CloudPtr cond_filtered_cloud(new CloudT);
+    pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.4)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, -0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.3)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
+    pcl::ConditionalRemoval<PointT> cond_filter;
     cond_filter.setCondition(range_cond);
     cond_filter.setInputCloud(org_cloud);
     cond_filter.filter(*cond_filtered_cloud);
@@ -107,8 +237,8 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "size of cloud after a condition filter:" << cond_filtered_cloud_size << endl;
 
     /** radius outlier filter **/
-    CloudPtr radius_outlier_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::RadiusOutlierRemoval<pcl::PointXYZI> radius_outlier_filter;
+    CloudPtr radius_outlier_cloud(new CloudT);
+    pcl::RadiusOutlierRemoval<PointT> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(cond_filtered_cloud);
     radius_outlier_filter.setRadiusSearch(0.1);
     radius_outlier_filter.setMinNeighborsInRadius(5);
@@ -133,8 +263,8 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     pcl::transformPointCloud(*radius_outlier_cloud, *radius_outlier_cloud, initial_trans);
 
     /** new cloud **/
-    CloudPtr polar_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PointXYZI polar_pt;
+    CloudPtr polar_cloud(new CloudT);
+    PointT polar_pt;
     for (int i = 0; i < radius_outlier_cloud_size; i++) {
         x = radius_outlier_cloud->points[i].x;
         y = radius_outlier_cloud->points[i].y;
@@ -183,7 +313,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
 
     /** construct kdtrees and load the point clouds **/
     /** caution: the point cloud need to be setted before the loop **/
-    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
+    pcl::KdTreeFLANN<PointT> kdtree;
     kdtree.setInputCloud(polar_cloud);
 
     /** define the invalid search parameters **/
@@ -209,7 +339,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
             float phi_center = (phi_ub + phi_lb) / 2;
 
             /** assign the theta and phi center to the search_center **/
-            pcl::PointXYZI search_center;
+            PointT search_center;
             search_center.x = theta_center;
             search_center.y = phi_center;
             search_center.z = 0;
@@ -257,12 +387,12 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                     for (int i = 0; i < search_num; ++i) {
                         float dis_former, dis;
                         if (i == 0) {
-                            pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
+                            PointT pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
                             dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
                         }
                         if (i > 0 && i < (search_num - 1)) {
-                            pcl::PointXYZI pt_former = (*cart_cloud)[tags_map[u][v].pts_indices[i - 1]];
-                            pcl::PointXYZI pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
+                            PointT pt_former = (*cart_cloud)[tags_map[u][v].pts_indices[i - 1]];
+                            PointT pt = (*cart_cloud)[tags_map[u][v].pts_indices[i]];
                             dis_former = dis;
                             dis = sqrt(pt.x * pt.x + pt.y * pt.y + pt.z * pt.z);
 
@@ -438,7 +568,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     EdgePixels edge_pixels = this -> edge_pixels_vec[this -> scene_idx];
     TagsMap tags_map = this -> tags_map_vec[this -> scene_idx];
     EdgePts edge_pts;
-    IntensityCloudPtr edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    CloudPtr edge_cloud (new CloudT);
     for (auto & edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
@@ -453,7 +583,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             float x = 0, y = 0, z = 0;
             for (int j = 0; j < num_pts; ++j) {
                 int idx = tags_map[u][v].pts_indices[j];
-                pcl::PointXYZI pt = (*cart_cloud)[idx];
+                PointT pt = (*cart_cloud)[idx];
                 x = x + pt.x;
                 y = y + pt.y;
                 z = z + pt.z;
@@ -468,7 +598,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             edge_pts.push_back(coordinates);
 
             /** store the spatial coordinates into vector **/
-            pcl::PointXYZI pt;
+            PointT pt;
             pt.x = x;
             pt.y = y;
             pt.z = z;
@@ -526,8 +656,8 @@ void LidarProcess::ReadEdge() {
     this -> edge_pts_vec.push_back(edge_pts);
 
     /** construct pcl point cloud **/
-    pcl::PointXYZI pt;
-    IntensityCloudPtr edge_cloud (new pcl::PointCloud<pcl::PointXYZI>);
+    PointT pt;
+    CloudPtr edge_cloud (new CloudT);
     for (auto & edge_pt : edge_pts) {
         pt.x = edge_pt[0];
         pt.y = edge_pt[1];
@@ -622,7 +752,7 @@ void LidarProcess::BagToPcd(string bag_file) {
     rosbag::View view(bag, rosbag::TopicQuery(topics));
     rosbag::View::iterator iterator = view.begin();
     pcl::PCLPointCloud2 pcl_pc2;
-    CloudPtr intensityCloud(new pcl::PointCloud<pcl::PointXYZI>);
+    CloudPtr intensityCloud(new CloudT);
     for (int i = 0; iterator != view.end(); iterator++, i++) {
         auto m = *iterator;
         sensor_msgs::PointCloud2::ConstPtr input = m.instantiate<sensor_msgs::PointCloud2>();
@@ -643,8 +773,8 @@ void LidarProcess::CreateDensePcd() {
     const int kPcdsGroupSize = file_name_vec.size() / LidarProcess::kNumPcds;
 
     /** PCL PointCloud pointer. Remember that the pointer need to be given a new space **/
-    CloudPtr input_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    CloudPtr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    CloudPtr input_cloud(new CloudT);
+    CloudPtr output_cloud(new CloudT);
     int output_idx = 0;
     int kFileNameLength = kNumPcds * kPcdsGroupSize;
     auto name_iter = file_name_vec.begin();
@@ -668,18 +798,39 @@ void LidarProcess::CreateDensePcd() {
     }
 }
 
-void LidarProcess::CreateDensePcd(string full_view_pcd_path) {
-    /** PCL PointCloud pointer. Remember that the pointer need to be given a new space **/
-    CloudPtr output_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    for(int i = 0; i < LidarProcess::num_scenes; i++) {
-        CloudPtr input_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-        string file_name = LidarProcess::scenes_files_path_vec[i].polar_pcd_path;
-        if (pcl::io::loadPCDFile<pcl::PointXYZI>(file_name, *input_cloud) == -1) {
-            PCL_ERROR("Pcd File Not Exist!");
-            system("pause");
-        }
-        *output_cloud = *output_cloud + *input_cloud;
+void LidarProcess::CreateDensePcd(string fullview_cloud_path) {
+    /** load full view point cloud **/
+    CloudPtr fullview_cloud(new CloudT);
+    if (pcl::io::loadPCDFile<PointT>(fullview_cloud_path, *fullview_cloud) == -1) {
+        PCL_ERROR("Pcd File Not Exist!");
     }
-    pcl::io::savePCDFileBinary(full_view_pcd_path, *output_cloud);
+
+    for(int i = 0; i < this -> num_scenes; i++) {
+        if (i == (this -> num_scenes - 1)/2) {
+            continue;
+        }
+        /** load icp pose transform matrix **/
+        string pose_trans_mat_path = this -> scenes_files_path_vec[i].pose_trans_mat_path;
+        std::ifstream mat_in;
+        mat_in.open(pose_trans_mat_path);
+        Eigen::Matrix4f pose_trans_mat;
+        for (int j = 0; j < 4; j++) {
+            for (int k = 0; k < 4; k++) {
+                mat_in >> pose_trans_mat(j, k);
+            }
+        }
+        mat_in.close();
+        /** transform point cloud **/
+        CloudPtr input_cloud(new CloudT);
+        CloudPtr input_cloud_trans(new CloudT);
+        string input_cloud_path = this -> scenes_files_path_vec[i].dense_pcd_path;
+        if (pcl::io::loadPCDFile<PointT>(input_cloud_path, *input_cloud) == -1) {
+            PCL_ERROR("Pcd File Not Exist!");
+        }
+        pcl::transformPointCloud(*input_cloud, *input_cloud_trans, pose_trans_mat);
+        /** point cloud addition **/
+        *fullview_cloud = *fullview_cloud + *input_cloud_trans;
+    }
+    pcl::io::savePCDFileBinary(fullview_cloud_path, *fullview_cloud);
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }

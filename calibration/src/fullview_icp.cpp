@@ -31,8 +31,8 @@ int main(int argc, char** argv) {
     pcl::StopWatch timeer;
     std::string pkg_path = ros::package::getPath("calibration");
 
-    std::string pose_1_pcd_path = pkg_path + "/data/sanjiao_pose0/0/outputs/lidDense14.pcd";
-    std::string pose_2_pcd_path = pkg_path + "/data/sanjiao_pose0/20/outputs/lidDense14.pcd";
+    std::string pose_1_pcd_path = pkg_path + "/data/sanjiao_pose0/0/full_view/icp_target_cloud.pcd";
+    std::string pose_2_pcd_path = pkg_path + "/data/sanjiao_pose0/40/outputs/icp_cloud.pcd";
 
     /** file loading check **/
     if (pcl::io::loadPCDFile<PointT>(pose_1_pcd_path, *cloud_target_input) == -1) {
@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 
     /** initial rigid transformation **/
     Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
-    int v_degree = 20;
+    int v_degree = 40;
     initial_trans.translation() << 0.0, 0.15 * sin(v_degree/(float)180 * M_PI), 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
     float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
 //    initial_trans.translation() << 0.0, 0.0, 0.0;

@@ -16,21 +16,25 @@
 using namespace std;
 using namespace cv;
 
+typedef pcl::PointXYZI PointT;
+typedef pcl::PointCloud<PointT> CloudT;
+typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
+
 const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool k3DViz = false;
-const bool kCreateDensePcd = true;
-const bool kCreateFullViewPcd = false;
+const bool kCreateDensePcd = false;
+const bool kInitialIcp = false;
+const bool kCreateFullViewPcd = true;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
-    std::string pkg_path = ros::package::getPath("calibration");
+    string pkg_path = ros::package::getPath("calibration");
     return pkg_path;
 }
-string pkg_path = GetPkgPath();
 
 bool checkFolder(string folder_path){
     if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
@@ -39,7 +43,7 @@ bool checkFolder(string folder_path){
             cout << "Successfully create file folder!" << endl;
         }
     }
-    return 1;
+    return true;
 }
 
 int main(int argc, char** argv) {
@@ -103,7 +107,6 @@ int main(int argc, char** argv) {
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     LidarProcess lidar_process(pkg_path);
     lidar_process.SetExtrinsic(params_calib);
-    ROS_ASSERT_MSG(lidar_process.num_scenes == fisheye_process.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
@@ -111,14 +114,23 @@ int main(int argc, char** argv) {
             lidar_process.CreateDensePcd();
         }
     }
+    if (kInitialIcp) {
+        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
+            if (idx == (lidar_process.num_scenes - 1)/2) {
+                continue;
+            }
+            lidar_process.SetSceneIdx(idx);
+            lidar_process.ICP();
+        }
+    }
     if (kCreateFullViewPcd) {
         /** generate full view pcds **/
-        string full_view_pcd_path = lidar_process.scenes_path_vec[3] + "/full_pcds/full_view_polar.pcd";
-        cout << full_view_pcd_path << endl;
-        lidar_process.CreateDensePcd(full_view_pcd_path);
-
-        pcl::PointCloud<pcl::PointXYZI>::Ptr full_view(new pcl::PointCloud<pcl::PointXYZI>);
-        pcl::io::loadPCDFile(full_view_pcd_path, *full_view);
+        string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/full_view.pcd";
+        cout << fullview_cloud_path << endl;
+        lidar_process.CreateDensePcd(fullview_cloud_path);
+        /** pcl viewer visualization **/
+        CloudPtr full_view(new CloudT);
+        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);
         while (!viewer.wasStopped()) {
@@ -129,9 +141,9 @@ int main(int argc, char** argv) {
     if (kLidarFlatProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
             lidar_process.SetSceneIdx(idx);
-            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
-            IntensityCloudPtr lidCartesianCloud;
-            IntensityCloudPtr lidPolarCloud;
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
         }
@@ -139,9 +151,9 @@ int main(int argc, char** argv) {
     else if (kLidarEdgeProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
             lidar_process.SetSceneIdx(idx);
-            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
-            IntensityCloudPtr lidCartesianCloud;
-            IntensityCloudPtr lidPolarCloud;
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
             lidar_process.EdgeToPixel();
