@@ -56,7 +56,7 @@ public:
 
     /***** Data of Multiple Scenes *****/
     int scene_idx = 0;
-    int num_scenes = 5;
+    int num_scenes;
     vector<string> scenes_path_vec;
 
     /** File Path of the Specific Scene **/
@@ -104,8 +104,8 @@ public:
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();
-    void CreateDensePcd(string full_view_pcd_path);
     void ICP();
+    void CreateFullviewPcd();
     void BagToPcd(string bag_file);
 
     /***** Edge Related *****/

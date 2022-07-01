@@ -40,12 +40,12 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 LidarProcess::LidarProcess(const string& pkg_path) {
     cout << "----- LiDAR: LidarProcess -----" << endl;
-    this -> num_scenes = 5;
+    this -> num_scenes = 3;
     /** degree map **/
     for (int i = 0; i < this -> num_scenes; ++i) {
-        int v_degree = -40 + 20 * i;
+        int v_degree = -40 + 40 * i;
         this -> degree_map[i] = v_degree;
-        this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/" + std::to_string(v_degree));
+        this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/" + to_string(v_degree));
     }
 
     /** reserve the memory for vectors stated in LidarProcess.h **/
@@ -55,15 +55,6 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     this -> edge_pts_vec.reserve(this -> num_scenes);
     this -> tags_map_vec.reserve(this -> num_scenes);
     this -> pose_trans_mat_vec.reserve(this -> num_scenes);
-
-//    /** push the data directory path into vector **/
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-60");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-40");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/-20");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/0");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/20");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/40");
-//    this -> scenes_path_vec.push_back(pkg_path + "/data/sanjiao_pose0/60");
 
     for (int idx = 0; idx < num_scenes; ++idx) {
         struct SceneFilePath sc(scenes_path_vec[idx]);
@@ -798,7 +789,19 @@ void LidarProcess::CreateDensePcd() {
     }
 }
 
-void LidarProcess::CreateDensePcd(string fullview_target_cloud_path) {
+void LidarProcess::CreateFullviewPcd() {
+    const bool kDesneFullview = false;
+    /** target and fullview cloud path **/
+    string fullview_target_cloud_path, fullview_cloud_path;
+    if (kDesneFullview) {
+        fullview_target_cloud_path = this -> scenes_path_vec[(this -> num_scenes-1)/2] + "/full_view/fullview_target_dense_cloud.pcd";
+        fullview_cloud_path = this -> scenes_path_vec[(this->num_scenes-1)/2] + "/full_view/fullview_dense_cloud.pcd";
+    }
+    else {
+        fullview_target_cloud_path = this -> scenes_path_vec[(this -> num_scenes-1)/2] + "/full_view/fullview_target_cloud.pcd";
+        fullview_cloud_path = this -> scenes_path_vec[(this->num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
+    }
+
     /** load full view point cloud **/
     CloudPtr fullview_target_cloud(new CloudT);
     if (pcl::io::loadPCDFile<PointT>(fullview_target_cloud_path, *fullview_target_cloud) == -1) {
@@ -825,20 +828,25 @@ void LidarProcess::CreateDensePcd(string fullview_target_cloud_path) {
         /** transform point cloud **/
         CloudPtr input_cloud(new CloudT);
         CloudPtr input_cloud_trans(new CloudT);
-        string input_cloud_path = this -> scenes_files_path_vec[i].dense_pcd_path;
+        string input_cloud_path;
+        if (kDesneFullview) {
+            input_cloud_path = this -> scenes_files_path_vec[i].dense_pcd_path;
+        }
+        else {
+            input_cloud_path = this -> scenes_files_path_vec[i].icp_pcd_path;
+        }
         if (pcl::io::loadPCDFile<PointT>(input_cloud_path, *input_cloud) == -1) {
             PCL_ERROR("Pcd File Not Exist!");
         }
         cout << "Degree " << this -> degree_map[i] << ": Dense Pcd Loaded!" << endl;
         pcl::transformPointCloud(*input_cloud, *input_cloud_trans, pose_trans_mat);
         /** point cloud addition **/
-        int input_cloud_size = input_cloud_trans -> points.size();
-        for(int j = 0; j < input_cloud_size; j++) {
-            fullview_cloud -> points.push_back(input_cloud_trans -> points[j]);
-        }
-//        *fullview_cloud = *fullview_cloud + *input_cloud_trans;
+//        int input_cloud_size = input_cloud_trans -> points.size();
+//        for(int j = 0; j < input_cloud_size; j++) {
+//            fullview_cloud -> points.push_back(input_cloud_trans -> points[j]);
+//        }
+        *fullview_cloud = *fullview_cloud + *input_cloud_trans;
     }
-    string fullview_cloud_path = this -> scenes_path_vec[(this->num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
     pcl::io::savePCDFileBinary(fullview_cloud_path, *fullview_cloud);
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }

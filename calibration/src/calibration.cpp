@@ -25,10 +25,10 @@ const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
-const bool k3DViz = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
+const bool kCreateFullViewPcd = false;
+const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
 string GetPkgPath() {
@@ -125,8 +125,7 @@ int main(int argc, char** argv) {
     }
     if (kCreateFullViewPcd) {
         /** generate full view pcds **/
-        string fullview_target_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_target_cloud.pcd";
-        lidar_process.CreateDensePcd(fullview_target_cloud_path);
+        lidar_process.CreateFullviewPcd();
         /** pcl viewer visualization **/
         CloudPtr full_view(new CloudT);
         string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
@@ -243,12 +242,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (k3DViz) {
-        lidar_process.SetSceneIdx(1);
-        fisheye_process.SetSceneIdx(1);
-        vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        int step = 5;
-        fusionViz3D(fisheye_process, lidar_process, test_params, 5);
+    if (kReconstruction) {
+        int target_pose_idx = 1; /** degree 0 **/
+        lidar_process.SetSceneIdx(target_pose_idx);
+        fisheye_process.SetSceneIdx(target_pose_idx);
+        vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        fusionViz3D(fisheye_process, lidar_process, calib_params);
     }
     return 0;
 }

@@ -21,6 +21,7 @@
 #include <pcl/common/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include <pcl/common/transforms.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 // headings
@@ -117,26 +118,25 @@ void fusionViz(FisheyeProcess cam, string edge_proj_txt_path, vector<vector<doub
     cam.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params, int step) {
+void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     Eigen::Vector3d r(params[0], params[1], params[2]);
     Eigen::Vector3d t{params[3], params[4], params[5]};
     Eigen::Vector2d uv_0{params[6], params[7]};
     Eigen::Matrix<double, 6, 1> a_;
     switch (params.size()) {
-    case 13:
-        a_ << params[8], params[9], params[10], params[11], params[12], 0.0;
-        break;
-    case 12:
-        a_ << params[8], params[9], 0.0, params[10], 0.0, params[11];
-        break;
-    default:
-        a_ << 0.0, params[8], 0.0, params[9], 0.0, params[10];
-        break;
+        case 13:
+            a_ << params[8], params[9], params[10], params[11], params[12], 0.0;
+            break;
+        case 12:
+            a_ << params[8], params[9], 0.0, params[10], 0.0, params[11];
+            break;
+        default:
+            a_ << 0.0, params[8], 0.0, params[9], 0.0, params[10];
+            break;
     }
 
-    double phi, theta;
+    double theta;
     double inv_uv_radius, uv_radius;
-    double res, val;
 
     // extrinsic transform
     Eigen::Matrix<double, 3, 3> R;
@@ -149,53 +149,154 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params, in
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string lid_dense_pcd_path = lid.scenes_files_path_vec[lid.scene_idx].dense_pcd_path;
-    string fisheye_hdr_img_path = cam.scenes_files_path_vec[lid.scene_idx].fisheye_hdr_img_path;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr lid_dense(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr showCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::io::loadPCDFile(lid_dense_pcd_path, *lid_dense);
-    cv::Mat raw_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
-    int pixelThresh = 10;
-    int rows = raw_image.rows;
-    int cols = raw_image.cols;
+    string fullview_cloud_path = lid.scenes_path_vec[(lid.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
+    string fisheye_hdr_img_path = cam.scenes_files_path_vec[(cam.num_scenes-1)/2].fisheye_hdr_img_path;
 
-    pcl::PointXYZRGB pt;
-    cout << "---------------Generating RGBXYZ Pointcloud------------" << endl;
-    for (int i = 0; i < lid_dense->points.size(); i=i+step) {
-        if (lid_dense->points[i].x != 0 || lid_dense->points[i].y != 0 || lid_dense->points[i].z != 0) {
-            lid_point << lid_dense->points[i].x, lid_dense->points[i].y, lid_dense->points[i].z;
-            lid_trans = R * lid_point + t;
-            theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
-            inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
-            uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-            projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
-            int u = int(projection(0));
-            int v = int(projection(1));
-            if ((0 <= u && u < rows && 0 <= v && v < cols) && (raw_image.at<cv::Vec3b>(u, v)[0] > pixelThresh || raw_image.at<cv::Vec3b>(u, v)[1] > pixelThresh || raw_image.at<cv::Vec3b>(u, v)[2] > pixelThresh)) {
-                pt.x = lid_point(0);
-                pt.y = lid_point(1);
-                pt.z = lid_point(2);
-                pt.b = raw_image.at<cv::Vec3b>(u, v)[0];
-                pt.g = raw_image.at<cv::Vec3b>(u, v)[1];
-                pt.r = raw_image.at<cv::Vec3b>(u, v)[2];
-                showCloud->points.push_back(pt);
+    CloudPtr fullview_cloud(new CloudT);
+    RGBCloudPtr upward_cloud(new RGBCloudT);
+    RGBCloudPtr downward_cloud(new RGBCloudT);
+    RGBCloudPtr fullview_rgb_cloud(new RGBCloudT);
+
+    pcl::io::loadPCDFile(fullview_cloud_path, *fullview_cloud);
+    cv::Mat raw_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+
+    RGBPointT pt;
+    cout << "--------------- Generating RGBXYZ Pointcloud ---------------" << endl;
+    for (auto & point : fullview_cloud->points) {
+        if (point.x == 0 && point.y == 0 && point.z == 0) {
+            continue;
+        }
+        lid_point << point.x, point.y, point.z;
+        lid_trans = R * lid_point + t;
+        theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
+        inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        int u = floor(projection(0));
+        int v = floor(projection(1));
+        double fisheye_radius = sqrt(pow((u - uv_0(0)), 2) + pow((v - uv_0(1)), 2));
+        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
+            pt.x = lid_point(0);
+            pt.y = lid_point(1);
+            pt.z = lid_point(2);
+            pt.b = raw_image.at<cv::Vec3b>(u, v)[0];
+            pt.g = raw_image.at<cv::Vec3b>(u, v)[1];
+            pt.r = raw_image.at<cv::Vec3b>(u, v)[2];
+            /** push the point back into one of the three point clouds **/
+            /** 1200 1026 330 1070 **/
+            if (fisheye_radius < 330) {
+                upward_cloud -> points.push_back(pt);
+            }
+            else if (fisheye_radius > 1070) {
+                downward_cloud -> points.push_back(pt);
+            }
+            else {
+                fullview_rgb_cloud -> points.push_back(pt);
             }
         }
-    
-        if ((i * 10) % lid_dense->points.size() == 0) {
-            if(i == 0){
-                std::cout << endl;
+        else {
+            if (fisheye_radius < 330) {
+                upward_cloud -> points.push_back(pt);
             }
-            std::cout << "\33[1A" << i << "/" << lid_dense->points.size() << " points loaded" << endl;
-            fflush(stdout);
+            else if (fisheye_radius > 1070) {
+                downward_cloud -> points.push_back(pt);
+            }
         }
     }
-    cout << "---------------Coloring------------" << endl;
-    pcl::visualization::CloudViewer viewer("Viewer");
-    viewer.showCloud(showCloud);
+
+    /** upward and downward cloud recolor **/
+    /** load icp pose transform matrix **/
+    string pose_trans_upward_mat_path = lid.scenes_files_path_vec[2].pose_trans_mat_path;
+    std::ifstream mat_upward;
+    mat_upward.open(pose_trans_upward_mat_path);
+    Eigen::Matrix4f pose_trans_upward_mat;
+    for (int j = 0; j < 4; j++) {
+        for (int k = 0; k < 4; k++) {
+            mat_upward >> pose_trans_upward_mat(j, k);
+        }
+    }
+    mat_upward.close();
+    Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
+
+    string pose_trans_downward_mat_path = lid.scenes_files_path_vec[0].pose_trans_mat_path;
+    std::ifstream mat_downward;
+    mat_downward.open(pose_trans_downward_mat_path);
+    Eigen::Matrix4f pose_trans_downward_mat;
+    for (int j = 0; j < 4; j++) {
+        for (int k = 0; k < 4; k++) {
+            mat_downward >> pose_trans_downward_mat(j, k);
+        }
+    }
+    mat_downward.close();
+    Eigen::Matrix4f pose_trans_downward_mat_inv = pose_trans_downward_mat.inverse();
+
+    /** inverse transformation to upward pose **/
+    pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat_inv);
+    /** upward cloud recolor **/
+    for (auto & point : upward_cloud->points) {
+        if (point.x == 0 && point.y == 0 && point.z == 0) {
+            continue;
+        }
+        lid_point << point.x, point.y, point.z;
+        lid_trans = R * lid_point + t;
+        theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
+        inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        int u = floor(projection(0));
+        int v = floor(projection(1));
+        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
+            /** to be done **/
+            point.b = 0;
+            point.g = 255;
+            point.r = 0;
+        }
+    }
+    /** transformation to target pose **/
+    pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat);
+
+    /** inverse transformation to downward pose **/
+    pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_downward_mat_inv);
+    /** upward cloud recolor **/
+    for (auto & point : downward_cloud->points) {
+        if (point.x == 0 && point.y == 0 && point.z == 0) {
+            continue;
+        }
+        lid_point << point.x, point.y, point.z;
+        lid_trans = R * lid_point + t;
+        theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
+        inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+        uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        int u = floor(projection(0));
+        int v = floor(projection(1));
+        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
+            /** to be done **/
+            point.b = 0;
+            point.g = 0;
+            point.r = 255;
+        }
+    }
+    /** transformation to target pose **/
+    pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_downward_mat);
+    cout << fullview_cloud -> points.size() << " " << fullview_rgb_cloud -> points.size() << " " << upward_cloud -> points.size() << " " << downward_cloud -> points.size() << endl;
+
+    /***** Visualization *****/
+    pcl::visualization::PCLVisualizer viewer("Reconstruction");
+    int v1(0); /** create two view point **/
+    viewer.createViewPort(0.0, 0.0, 1.0, 1.0, v1);
+    float bckgr_gray_level = 150;  /** black **/
+
+    viewer.addPointCloud(fullview_rgb_cloud, "fullview_rgb_cloud", v1);
+    viewer.addPointCloud(upward_cloud, "upward_cloud", v1);
+    viewer.addPointCloud(downward_cloud, "downward_cloud", v1);
+    viewer.setBackgroundColor(bckgr_gray_level, bckgr_gray_level, bckgr_gray_level, v1);
+    viewer.setCameraPosition(-3.68332, 2.94092, 5.71266, 0.289847, 0.921947, -0.256907, 0);
+    viewer.setSize(1280, 1024);  /** viewer size **/
+
     while (!viewer.wasStopped()) {
+        viewer.spinOnce();
     }
-    cv::waitKey();
 }
 
 struct Calibration {
