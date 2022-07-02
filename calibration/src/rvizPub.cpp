@@ -27,7 +27,7 @@ int main (int argc, char **argv) {
     // ros::Publisher fltPub = nh.advertise<sensor_msgs::PointCloud2> ("rvizFltTopic", 1);
     pcl::PointCloud<pcl::PointXYZI> orgCloud;
     // pcl::PointCloud<pcl::PointXYZI> fltCloud;
-    pcl::io::loadPCDFile (dataPath + "/full_pcds/full_view.pcd", orgCloud);
+    pcl::io::loadPCDFile (dataPath + "/full_view/fullview_target_dense_cloud.pcd", orgCloud);
     sensor_msgs::PointCloud2 orgMsg;
     // sensor_msgs::PointCloud2 fltMsg;
     pcl::toROSMsg(orgCloud, orgMsg);

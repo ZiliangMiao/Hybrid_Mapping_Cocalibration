@@ -1,9 +1,12 @@
 #include <string>
 #include <vector>
 #include <pcl/common/common.h>
-using namespace std;
 
-typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr RGBCloudPtr;
+using namespace std;
+typedef pcl::PointXYZRGB RGBPointT;
+typedef pcl::PointCloud<RGBPointT> RGBCloudT;
+typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
+
 class FisheyeProcess{
 public:
     /** original data - images **/
@@ -47,7 +50,7 @@ public:
 
     /***** Data of Multiple Scenes *****/
     int scene_idx = 0;
-    int num_scenes;
+    int num_scenes = 3;
     vector<string> scenes_path_vec;
 
     /********* File Path of the Specific Scene *********/

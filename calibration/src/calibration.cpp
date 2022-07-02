@@ -29,15 +29,19 @@ using namespace cv;
 //            cout << param_test_1 << endl;
 //        }
 //    }
+typedef pcl::PointXYZI PointT;
+typedef pcl::PointCloud<PointT> CloudT;
+typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = true;
 const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = true;
-const bool kCeresOptimization = true;
-const bool k3DViz = true;
+const bool kLidarEdgeProcess = false;
+const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
+const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = false;
+const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
 string pkg_path = ros::package::getPath("calibration");
@@ -49,7 +53,7 @@ bool checkFolder(string folder_path){
             cout << "Successfully create file folder!" << endl;
         }
     }
-    return 1;
+    return true;
 }
 
 int main(int argc, char** argv) {
@@ -98,8 +102,6 @@ int main(int argc, char** argv) {
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     LidarProcess lidar_process(pkg_path);
     lidar_process.SetExtrinsic(params_calib);
-
-    ROS_ASSERT_MSG(lidar_process.num_scenes == fisheye_process.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
@@ -107,14 +109,22 @@ int main(int argc, char** argv) {
             lidar_process.CreateDensePcd();
         }
     }
+    if (kInitialIcp) {
+        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
+            if (idx == (lidar_process.num_scenes - 1)/2) {
+                continue;
+            }
+            lidar_process.SetSceneIdx(idx);
+            lidar_process.ICP();
+        }
+    }
     if (kCreateFullViewPcd) {
         /** generate full view pcds **/
-        string full_view_pcd_path = lidar_process.scenes_path_vec[3] + "/full_pcds/full_view_polar.pcd";
-        cout << full_view_pcd_path << endl;
-        lidar_process.CreateDensePcd(full_view_pcd_path);
-
-        pcl::PointCloud<pcl::PointXYZI>::Ptr full_view(new pcl::PointCloud<pcl::PointXYZI>);
-        pcl::io::loadPCDFile(full_view_pcd_path, *full_view);
+        lidar_process.CreateFullviewPcd();
+        /** pcl viewer visualization **/
+        CloudPtr full_view(new CloudT);
+        string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
+        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);
         while (!viewer.wasStopped()) {
@@ -125,9 +135,9 @@ int main(int argc, char** argv) {
     if (kLidarFlatProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
             lidar_process.SetSceneIdx(idx);
-            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
-            IntensityCloudPtr lidCartesianCloud;
-            IntensityCloudPtr lidPolarCloud;
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
         }
@@ -135,9 +145,9 @@ int main(int argc, char** argv) {
     else if (kLidarEdgeProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
             lidar_process.SetSceneIdx(idx);
-            std::tuple<IntensityCloudPtr, IntensityCloudPtr> lidResult = lidar_process.LidarToSphere();
-            IntensityCloudPtr lidCartesianCloud;
-            IntensityCloudPtr lidPolarCloud;
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
             lidar_process.EdgeToPixel();
@@ -225,11 +235,12 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (k3DViz) {
-        lidar_process.SetSceneIdx(0);
-        fisheye_process.SetSceneIdx(0);
-        vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        fusionViz3D(fisheye_process, lidar_process, test_params);
+    if (kReconstruction) {
+        int target_pose_idx = 1; /** degree 0 **/
+        lidar_process.SetSceneIdx(target_pose_idx);
+        fisheye_process.SetSceneIdx(target_pose_idx);
+        vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        fusionViz3D(fisheye_process, lidar_process, calib_params);
     }
     return 0;
 }
