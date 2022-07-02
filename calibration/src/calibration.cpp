@@ -16,20 +16,31 @@
 using namespace std;
 using namespace cv;
 
-const bool kFisheyeFlatProcess = true;
+//    ros::param::get("~param_test", param_test_1);
+//    ros::NodeHandle nh("~");
+//    nh.getParam("param_test", param_test_1);
+//    /** get the parameters from ros parameters server **/
+//    bool param_get1 = ros::param::get("param_test", param_test_1);
+//    bool param_get = nh.getParam("param_test", param_test_1);
+//    /** set the value of parameter to ros parameters server **/
+//    ros::param::set("param_test", 520.00);
+//    if (param_get) {
+//        for (int i = 0; i < 10; ++i) {
+//            cout << param_test_1 << endl;
+//        }
+//    }
+
+const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = true;
 const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = false;
-const bool k3DViz = false;
-const bool kCreateDensePcd = true;
+const bool kLidarEdgeProcess = true;
+const bool kCeresOptimization = true;
+const bool k3DViz = true;
+const bool kCreateDensePcd = false;
+const bool kCreateFullViewPcd = false;
 
 /********* Directory Path of ROS Package *********/
-string GetPkgPath() {
-    std::string pkg_path = ros::package::getPath("calibration");
-    return pkg_path;
-}
-string pkg_path = GetPkgPath();
+string pkg_path = ros::package::getPath("calibration");
 
 bool checkFolder(string folder_path){
     if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
@@ -45,24 +56,9 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
 
-    string pkg_path = GetPkgPath();
     if(!checkFolder(pkg_path)){
         return -1;
     }
-
-//    ros::param::get("~param_test", param_test_1);
-//    ros::NodeHandle nh("~");
-//    nh.getParam("param_test", param_test_1);
-//    /** get the parameters from ros parameters server **/
-//    bool param_get1 = ros::param::get("param_test", param_test_1);
-//    bool param_get = nh.getParam("param_test", param_test_1);
-//    /** set the value of parameter to ros parameters server **/
-//    ros::param::set("param_test", 520.00);
-//    if (param_get) {
-//        for (int i = 0; i < 10; ++i) {
-//            cout << param_test_1 << endl;
-//        }
-//    }
 
     /** fisheye intrinsics calibrated by chessboard **/
     vector<double> params_calib = {
@@ -102,6 +98,7 @@ int main(int argc, char** argv) {
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     LidarProcess lidar_process(pkg_path);
     lidar_process.SetExtrinsic(params_calib);
+
     ROS_ASSERT_MSG(lidar_process.num_scenes == fisheye_process.num_scenes, "num_scenes in FisheyeProcess and LidarProcess is not equal!");
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
@@ -109,6 +106,21 @@ int main(int argc, char** argv) {
             lidar_process.SetSceneIdx(idx);
             lidar_process.CreateDensePcd();
         }
+    }
+    if (kCreateFullViewPcd) {
+        /** generate full view pcds **/
+        string full_view_pcd_path = lidar_process.scenes_path_vec[3] + "/full_pcds/full_view_polar.pcd";
+        cout << full_view_pcd_path << endl;
+        lidar_process.CreateDensePcd(full_view_pcd_path);
+
+        pcl::PointCloud<pcl::PointXYZI>::Ptr full_view(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::io::loadPCDFile(full_view_pcd_path, *full_view);
+        pcl::visualization::CloudViewer viewer("Viewer");
+        viewer.showCloud(full_view);
+        while (!viewer.wasStopped()) {
+
+        }
+        cv::waitKey();
     }
     if (kLidarFlatProcess) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
@@ -143,7 +155,7 @@ int main(int argc, char** argv) {
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> params_init = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
@@ -189,9 +201,7 @@ int main(int argc, char** argv) {
             fisheye_process.SetSceneIdx(idx);
             lidar_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye_process.ReadEdge();
-            vector<vector<double>> edge_fisheye_projection = lidar_process.EdgeCloudProjectToFisheye(params_init);
-            cout << "Edge Trans Txt Path:" << lidar_process.scenes_files_path_vec[idx].edge_fisheye_projection_path << endl;
-            fusionViz(fisheye_process, lidar_process.scenes_files_path_vec[idx].edge_fisheye_projection_path, edge_fisheye_projection, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            fusionViz(fisheye_process, lidar_process, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
 
         for (int i = 0; i < bw.size(); i++) {
@@ -216,11 +226,10 @@ int main(int argc, char** argv) {
     }
 
     if (k3DViz) {
-        lidar_process.SetSceneIdx(1);
-        fisheye_process.SetSceneIdx(1);
+        lidar_process.SetSceneIdx(0);
+        fisheye_process.SetSceneIdx(0);
         vector<double> test_params = {-0.0131396, 0.0179037, 0.116701, 0.01, 0.00374594, 0.118988, 1021.0, 1199.0, 2.79921, 606.544, 48.3143, -54.8969, 17.7703};
-        int step = 5;
-        fusionViz3D(fisheye_process, lidar_process, test_params, 5);
+        fusionViz3D(fisheye_process, lidar_process, test_params);
     }
     return 0;
 }

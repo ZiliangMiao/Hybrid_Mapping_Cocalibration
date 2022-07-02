@@ -1,5 +1,4 @@
 <launch>
-    <node name="calibration" pkg="calibration" type="calibration" output="screen"> 
-        <param name="param_test" type="double" value="11.11" /> 
-    </node>
+  <node name="calibration" pkg="calibration" type="calibration" output="screen">
+  </node>
 </launch>

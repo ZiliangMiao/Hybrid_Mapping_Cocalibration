@@ -1,8 +1,9 @@
+from matplotlib import scale
 import numpy as np
 import matplotlib.pyplot as plt
 
 # data_path = "/home/halsey/Software/catkin_ws/src/Fisheye-LiDAR-Fusion/data_process/python_scripts/kde_viz/"
-data_path = "/home/halsey/Software/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/conferenceF2-P1/outputs/"
+data_path = "/home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/sanjiao_pose0/0/outputs/"
 
 ########################################################################################################################
 # load files #
@@ -11,7 +12,9 @@ def load_data(sample_shape, mode):
     # input_data = np.loadtxt(data_path + "outputs/" + mode + "EdgePix.txt", delimiter="\t")
     # _i = np.loadtxt(data_path + mode + "KDE.txt", delimiter="\t")
     if mode == "cam":
-        _cam = np.loadtxt(data_path + "camKDE.txt", delimiter="\t")[:, 2].reshape(sample_shape)
+        _cam = np.loadtxt(data_path + "camKDE.txt", delimiter="\t")[:, 2]
+        auto_scale = int(np.sqrt(sample_shape[0] * sample_shape[1] / np.size(_cam)))
+        _cam = _cam.reshape((sample_shape[0] * auto_scale, sample_shape[1] * auto_scale))
         # _cam = np.loadtxt(data_path + mode + "Trans.txt", delimiter="\t")[:, 2].reshape(sample_shape)
         return np.flip(_cam, axis=0)
     else:

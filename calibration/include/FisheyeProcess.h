@@ -47,7 +47,7 @@ public:
 
     /***** Data of Multiple Scenes *****/
     int scene_idx = 0;
-    int num_scenes = 5;
+    int num_scenes;
     vector<string> scenes_path_vec;
 
     /********* File Path of the Specific Scene *********/
@@ -57,7 +57,7 @@ public:
             this -> output_folder_path = ScenePath + "/outputs";
             this -> fusion_result_folder_path = ScenePath + "/results";
             this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";
-            this -> edge_img_path = ScenePath + "/edges/camEdge.png";
+            this -> edge_img_path = ScenePath + "/edges/cam_edge.png";
             this -> flat_img_path = this -> output_folder_path + "/flatImage.bmp";
             this -> edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
             this -> kde_samples_path = this -> output_folder_path + "/camKDE.txt";
@@ -79,7 +79,7 @@ public:
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
-    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat image);
+    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image);
     void SphereToPlane(RGBCloudPtr sphere_polar_cloud);
     void SphereToPlane(RGBCloudPtr sphere_polar_cloud, double bandwidth);
 
