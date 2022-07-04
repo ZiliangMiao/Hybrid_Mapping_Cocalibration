@@ -40,8 +40,8 @@ const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
-const bool kReconstruction = false;
+const bool kCreateFullViewPcd = false;
+const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
 string pkg_path = ros::package::getPath("calibration");
