@@ -134,6 +134,7 @@ int main(int argc, char** argv) {
         cv::waitKey();
     }
     if (kLidarFlatProcess) {
+        lidar_process.SetSceneIdx(0);
         std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
         CloudPtr lidCartesianCloud;
         CloudPtr lidPolarCloud;
@@ -141,6 +142,7 @@ int main(int argc, char** argv) {
         lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
     }
     else if (kLidarEdgeProcess) {
+        lidar_process.SetSceneIdx(0);
         std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
         CloudPtr lidCartesianCloud;
         CloudPtr lidPolarCloud;

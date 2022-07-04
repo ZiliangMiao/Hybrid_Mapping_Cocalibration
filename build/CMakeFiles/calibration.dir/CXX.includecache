@@ -77,6 +77,8 @@ pcl/io/pcd_io.h
 -
 pcl/visualization/cloud_viewer.h
 -
+pcl/common/transforms.h
+-
 Eigen/Core
 -
 Eigen/Dense
@@ -1938,6 +1940,30 @@ boost/shared_ptr.hpp
 pcl/pcl_macros.h
 -
 
+/usr/include/pcl-1.8/pcl/cloud_iterator.h
+pcl/point_cloud.h
+-
+pcl/PointIndices.h
+-
+pcl/correspondence.h
+-
+pcl/impl/cloud_iterator.hpp
+-
+
+/usr/include/pcl-1.8/pcl/common/centroid.h
+pcl/point_cloud.h
+-
+pcl/point_traits.h
+-
+pcl/PointIndices.h
+-
+pcl/cloud_iterator.h
+-
+pcl/common/impl/accumulators.hpp
+-
+pcl/common/impl/centroid.hpp
+-
+
 /usr/include/pcl-1.8/pcl/common/colors.h
 pcl/pcl_macros.h
 -
@@ -1982,6 +2008,28 @@ Eigen/Eigenvalues
 pcl/common/impl/eigen.hpp
 -
 
+/usr/include/pcl-1.8/pcl/common/impl/accumulators.hpp
+map
+-
+boost/mpl/filter_view.hpp
+-
+boost/fusion/include/mpl.hpp
+-
+boost/fusion/include/for_each.hpp
+-
+boost/fusion/include/as_vector.hpp
+-
+pcl/point_types.h
+-
+
+/usr/include/pcl-1.8/pcl/common/impl/centroid.hpp
+pcl/common/centroid.h
+-
+pcl/conversions.h
+-
+boost/mpl/size.hpp
+-
+
 /usr/include/pcl-1.8/pcl/common/impl/common.hpp
 pcl/point_types.h
 -
@@ -2010,6 +2058,8 @@ pcl/common/copy_point.h
 pcl/point_types.h
 -
 
+/usr/include/pcl-1.8/pcl/common/impl/transforms.hpp
+
 /usr/include/pcl-1.8/pcl/common/io.h
 string
 -
@@ -2028,6 +2078,20 @@ pcl/common/impl/io.hpp
 
 /usr/include/pcl-1.8/pcl/common/point_tests.h
 Eigen/src/StlSupport/details.h
+-
+
+/usr/include/pcl-1.8/pcl/common/transforms.h
+pcl/point_cloud.h
+-
+pcl/point_types.h
+-
+pcl/common/centroid.h
+-
+pcl/common/eigen.h
+-
+pcl/PointIndices.h
+-
+pcl/common/impl/transforms.hpp
 -
 
 /usr/include/pcl-1.8/pcl/console/print.h
@@ -2108,6 +2172,10 @@ pcl/common/eigen.h
 pcl/point_cloud.h
 -
 pcl/ModelCoefficients.h
+-
+
+/usr/include/pcl-1.8/pcl/impl/cloud_iterator.hpp
+pcl/cloud_iterator.h
 -
 
 /usr/include/pcl-1.8/pcl/impl/pcl_base.hpp

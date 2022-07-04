@@ -290,23 +290,30 @@ CMakeFiles/calibration.dir/src/calibration.cpp.o
  /usr/include/pcl-1.8/pcl/PolygonMesh.h
  /usr/include/pcl-1.8/pcl/TextureMesh.h
  /usr/include/pcl-1.8/pcl/Vertices.h
+ /usr/include/pcl-1.8/pcl/cloud_iterator.h
+ /usr/include/pcl-1.8/pcl/common/centroid.h
  /usr/include/pcl-1.8/pcl/common/colors.h
  /usr/include/pcl-1.8/pcl/common/common.h
  /usr/include/pcl-1.8/pcl/common/concatenate.h
  /usr/include/pcl-1.8/pcl/common/copy_point.h
  /usr/include/pcl-1.8/pcl/common/eigen.h
+ /usr/include/pcl-1.8/pcl/common/impl/accumulators.hpp
+ /usr/include/pcl-1.8/pcl/common/impl/centroid.hpp
  /usr/include/pcl-1.8/pcl/common/impl/common.hpp
  /usr/include/pcl-1.8/pcl/common/impl/copy_point.hpp
  /usr/include/pcl-1.8/pcl/common/impl/eigen.hpp
  /usr/include/pcl-1.8/pcl/common/impl/io.hpp
+ /usr/include/pcl-1.8/pcl/common/impl/transforms.hpp
  /usr/include/pcl-1.8/pcl/common/io.h
  /usr/include/pcl-1.8/pcl/common/point_tests.h
+ /usr/include/pcl-1.8/pcl/common/transforms.h
  /usr/include/pcl-1.8/pcl/console/print.h
  /usr/include/pcl-1.8/pcl/conversions.h
  /usr/include/pcl-1.8/pcl/correspondence.h
  /usr/include/pcl-1.8/pcl/exceptions.h
  /usr/include/pcl-1.8/pcl/for_each_type.h
  /usr/include/pcl-1.8/pcl/geometry/planar_polygon.h
+ /usr/include/pcl-1.8/pcl/impl/cloud_iterator.hpp
  /usr/include/pcl-1.8/pcl/impl/pcl_base.hpp
  /usr/include/pcl-1.8/pcl/impl/point_types.hpp
  /usr/include/pcl-1.8/pcl/io/boost.h
