@@ -12,7 +12,7 @@ public:
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 4;
+    int num_spots = 1;
     int num_views = 3;
     int full_view_idx = (num_views - 1) / 2;
     vector<vector<string>> scenes_path_vec;

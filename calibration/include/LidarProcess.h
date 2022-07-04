@@ -13,10 +13,12 @@ public:
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 4;
+    int num_spots = 1;
     int num_views = 3;
     int full_view_idx = (num_views - 1) / 2;
     string fullview_rec_folder_path;
+    string fullview_dense_cloud_path;
+    string fullview_sparse_cloud_path;
     vector<vector<string>> scenes_path_vec;
 
     /** const parameters - original data - images and point clouds **/
@@ -68,19 +70,18 @@ public:
     struct PoseFilePath {
         PoseFilePath()= default;
         PoseFilePath(string& ScenePath) {
-            this->output_folder_path = ScenePath + "/outputs";
+            this->output_folder_path = ScenePath + "/outputs/lidar_outputs";
             this->dense_pcds_folder_path = ScenePath + "/dense_pcds";
             this->icp_pcds_folder_path = ScenePath + "/icp_pcds";
             this->edge_img_path = ScenePath + "/edges/lidEdge.png";
             this->result_folder_path = ScenePath + "/results";
-            this->proj_folder_path = this->output_folder_path + "/byIntensity";
             this->dense_pcd_path = this->output_folder_path + "/lidDense" + to_string(kNumRecPcds) + ".pcd";
             this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
             this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
-            this->flat_img_path = this->proj_folder_path + "/flatLidarImage.bmp";
-            this->polar_pcd_path = this->proj_folder_path + "/lidPolar.pcd";
-            this->cart_pcd_path = this->proj_folder_path + "/lidCartesian.pcd";
-            this->tags_map_path = this->proj_folder_path + "/tags_map.txt";
+            this->flat_img_path = this->output_folder_path + "/flatLidarImage.bmp";
+            this->polar_pcd_path = this->output_folder_path + "/lidPolar.pcd";
+            this->cart_pcd_path = this->output_folder_path + "/lidCartesian.pcd";
+            this->tags_map_path = this->output_folder_path + "/tags_map.txt";
             this->edge_pts_coordinates_path = this->output_folder_path + "/lid3dOut.txt";
             this->edge_fisheye_projection_path = this->output_folder_path + "/lidTrans.txt";
             this->params_record_path = this->output_folder_path + "/ParamsRecord.txt";
@@ -90,7 +91,6 @@ public:
         string icp_pcds_folder_path;
         string edge_img_path;
         string result_folder_path;
-        string proj_folder_path;
         string dense_pcd_path;
         string icp_pcd_path;
         string pose_trans_mat_path;

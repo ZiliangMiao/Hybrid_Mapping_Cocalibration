@@ -158,8 +158,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string fullview_cloud_path = lid.scenes_path_vec[lid.spot_idx][lid.full_view_idx] +
-                                 "/full_view/fullview_cloud.pcd";
+    string fullview_cloud_path = lid.fullview_sparse_cloud_path;
     string fisheye_hdr_img_path = cam.scenes_files_path_vec[cam.spot_idx][cam.full_view_idx].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
@@ -182,7 +181,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-        projection = {-inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
         

@@ -33,7 +33,7 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
@@ -78,29 +78,25 @@ int main(int argc, char** argv) {
     if (kFisheyeFlatProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
             fisheye_process.SetSpotIdx(i); /** spot idx **/
-            for (int j = 0; j < fisheye_process.num_views; ++j) {
-                fisheye_process.SetViewIdx(j); /** view idx **/
-                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_polar_cloud;
-                RGBCloudPtr fisheye_pixel_cloud;
-                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-                fisheye_process.SphereToPlane(fisheye_polar_cloud);
-            }
+            fisheye_process.SetViewIdx(fisheye_process.full_view_idx); /** view idx **/
+            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+            RGBCloudPtr fisheye_polar_cloud;
+            RGBCloudPtr fisheye_pixel_cloud;
+            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+            fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
     }
     else if (kFisheyeEdgeProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
             fisheye_process.SetSpotIdx(i); /** spot idx **/
-            for (int j = 0; j < fisheye_process.num_views; ++j) {
-                fisheye_process.SetViewIdx(j); /** view idx **/
-                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_polar_cloud;
-                RGBCloudPtr fisheye_pixel_cloud;
-                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-                fisheye_process.SphereToPlane(fisheye_polar_cloud);
-                fisheye_process.EdgeToPixel();
-                fisheye_process.PixLookUp(fisheye_pixel_cloud);
-            }
+            fisheye_process.SetViewIdx(fisheye_process.full_view_idx); /** view idx **/
+            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+            RGBCloudPtr fisheye_polar_cloud;
+            RGBCloudPtr fisheye_pixel_cloud;
+            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+            fisheye_process.SphereToPlane(fisheye_polar_cloud);
+            fisheye_process.EdgeToPixel();
+            fisheye_process.PixLookUp(fisheye_pixel_cloud);
         }
     }
 
@@ -119,33 +115,35 @@ int main(int argc, char** argv) {
         }
     }
     if (kInitialIcp) {
-        lidar_process.SetSpotIdx(0);
-        for (int i = 0; i < lidar_process.num_views; ++i) {
-            if (i == (lidar_process.num_views-1)/2) {
-                continue;
+        for (int i = 0; i < lidar_process.num_spots; ++i) {
+            lidar_process.SetSpotIdx(i);
+            for (int j = 0; j < lidar_process.num_views; ++j) {
+                if (j == lidar_process.full_view_idx) {
+                    continue;
+                }
+                lidar_process.SetViewIdx(j);
+                lidar_process.ICP();
             }
-            lidar_process.SetViewIdx(i);
-            lidar_process.ICP();
         }
     }
     if (kInitialIcp && kCreateFullViewPcd) {
         /** generate full view pcds **/
         lidar_process.CreateFullviewPcd();
         /** pcl viewer visualization **/
-        CloudPtr full_view(new CloudT);
-        string fullview_cloud_path = lidar_process.fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
-        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
-        pcl::visualization::CloudViewer viewer("Viewer");
-        viewer.showCloud(full_view);
-        while (!viewer.wasStopped()) {
-
-        }
-        cv::waitKey();
+//        CloudPtr full_view(new CloudT);
+//        string fullview_cloud_path = lidar_process.fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
+//        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
+//        pcl::visualization::CloudViewer viewer("Viewer");
+//        viewer.showCloud(full_view);
+//        while (!viewer.wasStopped()) {
+//
+//        }
+//        cv::waitKey();
     }
     if (kLidarFlatProcess) {
-        // check
-        for (int idx = 0; idx < lidar_process.num_views; idx++) {
-            lidar_process.SetViewIdx(idx);
+        for (int i = 0; i < lidar_process.num_spots; ++i) {
+            lidar_process.SetSpotIdx(i);
+            lidar_process.SetViewIdx(lidar_process.full_view_idx);
             std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
             CloudPtr lidCartesianCloud;
             CloudPtr lidPolarCloud;
