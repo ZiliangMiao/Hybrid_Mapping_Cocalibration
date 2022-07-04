@@ -10,6 +10,7 @@ if __name__ == "__main__":
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
 
     for spot in range(spot_range):
+        skip = False
         if (len(sys.argv) > 1):
                 data_path = root_path + "/data/" + sys.argv[1] + "/" + str(spot) + "/0"
         else:
@@ -26,8 +27,9 @@ if __name__ == "__main__":
                 if not filename.__contains__("grab_0.bmp"):
                     img_list.append(cv2.imread(data_path + filename))
                 else:
-                    break
-
+                    skip = True
+        if skip:
+            continue
         # Merge exposures to HDR image
         # merge_debevec = cv2.createMergeDebevec()
         # hdr_debevec = merge_debevec.process(img_list, times=exposure_times.copy())
