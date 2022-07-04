@@ -840,11 +840,11 @@ void LidarProcess::CreateFullviewPcd() {
     /** target and fullview cloud path **/
     string fullview_target_cloud_path, fullview_cloud_path;
     if (kDenseFullview) {
-        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][(this->num_views-1)/2].dense_pcd_path;
+        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][this->full_view_idx].dense_pcd_path;
         fullview_cloud_path = this->fullview_rec_folder_path + "/fullview_dense_cloud.pcd";
     }
     else {
-        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][(this->num_views-1)/2].icp_pcd_path;
+        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][this->full_view_idx].icp_pcd_path;
         fullview_cloud_path = this->fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
     }
 
@@ -856,7 +856,7 @@ void LidarProcess::CreateFullviewPcd() {
     cout << "Degree 0 Full View Dense Pcd Loaded!" << endl;
 
     for(int i = 0; i < this->num_views; i++) {
-        if (i == (this->num_views - 1) / 2) {
+        if (i == this->full_view_idx) {
             continue;
         }
         /** load icp pose transform matrix **/
