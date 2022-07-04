@@ -167,7 +167,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     RGBCloudPtr fullview_rgb_cloud(new RGBCloudT);
 
     pcl::io::loadPCDFile(fullview_cloud_path, *fullview_cloud);
-    cv::Mat raw_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+    cv::Mat raw_image = cam.ReadFisheyeImage();
 
     RGBPointT pt;
     int u_max = 0, v_max = 0, u_min = 3000, v_min = 3000;
