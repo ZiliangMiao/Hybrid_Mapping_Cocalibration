@@ -40,8 +40,8 @@ const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
-const bool kReconstruction = true;
+const bool kCreateFullViewPcd = true;
+const bool kReconstruction = false;
 
 /********* Directory Path of ROS Package *********/
 string pkg_path = ros::package::getPath("calibration");
@@ -105,17 +105,21 @@ int main(int argc, char** argv) {
     lidar_process.SetExtrinsic(params_calib);
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
-        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
-            lidar_process.SetSceneIdx(idx);
-            lidar_process.CreateDensePcd();
+        for (int i = 0; i < lidar_process.num_spots; ++i) {
+            lidar_process.SetSpotIdx(i);
+            for (int j = 0; j < lidar_process.num_views; ++j) {
+                lidar_process.SetViewIdx(j);
+                lidar_process.CreateDensePcd();
+            }
         }
     }
     if (kInitialIcp) {
-        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
-            if (idx == 0) {
+        lidar_process.SetSpotIdx(0);
+        for (int i = 0; i < lidar_process.num_views; ++i) {
+            if (i == (lidar_process.num_views-1)/2) {
                 continue;
             }
-            lidar_process.SetSceneIdx(idx);
+            lidar_process.SetViewIdx(i);
             lidar_process.ICP();
         }
     }
@@ -124,7 +128,7 @@ int main(int argc, char** argv) {
         lidar_process.CreateFullviewPcd();
         /** pcl viewer visualization **/
         CloudPtr full_view(new CloudT);
-        string fullview_cloud_path = lidar_process.scenes_path_vec[0] + "/full_view/fullview_cloud.pcd";
+        string fullview_cloud_path = lidar_process.fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
         pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);
@@ -134,22 +138,28 @@ int main(int argc, char** argv) {
         cv::waitKey();
     }
     if (kLidarFlatProcess) {
-        lidar_process.SetSceneIdx(0);
-        std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
-        CloudPtr lidCartesianCloud;
-        CloudPtr lidPolarCloud;
-        std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-        lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+        // check
+        for (int idx = 0; idx < lidar_process.num_views; idx++) {
+            lidar_process.SetViewIdx(idx);
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
+            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+        }
     }
     else if (kLidarEdgeProcess) {
-        lidar_process.SetSceneIdx(0);
-        std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
-        CloudPtr lidCartesianCloud;
-        CloudPtr lidPolarCloud;
-        std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-        lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-        lidar_process.EdgeToPixel();
-        lidar_process.PixLookUp(lidCartesianCloud);
+        for (int i = 0; i < lidar_process.num_spots; ++i) {
+            lidar_process.SetSpotIdx(i);
+            lidar_process.SetViewIdx((lidar_process.num_views-1)/2);
+            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+            CloudPtr lidCartesianCloud;
+            CloudPtr lidPolarCloud;
+            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+            lidar_process.EdgeToPixel();
+            lidar_process.PixLookUp(lidCartesianCloud);
+        }
     }
    
     cout << endl;
@@ -203,12 +213,11 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        // for (int idx = 0; idx < kScenes; idx++) {
-        for (int idx = 0; idx < 1; idx++) {
-            lidar_process.SetSceneIdx(idx);
+        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+            lidar_process.SetViewIdx(idx);
             fisheye_process.SetSceneIdx(idx);
-            lidar_process.ReadEdge(); 
-            fisheye_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+            lidar_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+            fisheye_process.ReadEdge();
             fusionViz(fisheye_process, lidar_process, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
         for (int i = 0; i < bw.size(); i++) {
@@ -233,10 +242,11 @@ int main(int argc, char** argv) {
     }
 
     if (kReconstruction) {
-        int target_pose_idx = 0; /** degree 0 **/
-        lidar_process.SetSceneIdx(target_pose_idx);
-        fisheye_process.SetSceneIdx(target_pose_idx);
-        vector<double> calib_params = {0.0, 0.0, -M_PI/2, -0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        // check
+        int target_view_idx = 1; /** degree 0 **/
+        lidar_process.SetViewIdx(target_view_idx);
+        fisheye_process.SetSceneIdx(target_view_idx);
+        vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         fusionViz3D(fisheye_process, lidar_process, calib_params);
     }
     return 0;

@@ -14,7 +14,7 @@ public:
     const int kFisheyeCols = 2448;
     const int kFlatRows = int((double)110 / 90 * 1000) + 1;
     const int kFlatCols = 4000;
-    const float kRadPerPix = (M_PI / 2) / 1000;
+    const float kRadPerPix = (M_PI * 2) / 4000;
 
     /** coordinates of edge pixels in flat images **/
     typedef vector<vector<int>> EdgePixels;
