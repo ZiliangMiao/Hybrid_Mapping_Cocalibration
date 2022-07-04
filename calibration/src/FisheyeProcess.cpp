@@ -141,7 +141,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
                 /** spherical coordinates **/
                 /** caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi **/
-                phi = atan2(y, x) + M_PI; // note that atan2 is defined as Y/X
+                phi = atan2(y, x); // note that atan2 is defined as Y/X
                 theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
                 ROS_ASSERT_MSG((theta != 0), "Theta equals to zero! Scene Index: %d", this -> num_scenes);
 
@@ -217,8 +217,8 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr sphereCloudPolar, double bandwidt
         float theta_center = (theta_ub + theta_lb) / 2;
         for (int v = 0; v < flat_cols; ++v) {
             // upper bound and lower bound of the current phi unit
-            float phi_lb = v * radPerPix;
-            float phi_ub = (v + 1) * radPerPix;
+            float phi_lb = -M_PI +v * radPerPix;
+            float phi_ub = -M_PI +(v + 1) * radPerPix;
             float phi_center = (phi_ub + phi_lb) / 2;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB searchPoint;
