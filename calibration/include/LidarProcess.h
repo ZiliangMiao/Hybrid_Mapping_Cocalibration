@@ -27,7 +27,7 @@ public:
 
     /** tags and maps **/
     typedef struct Tags {
-        int label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
+        int label; /** label = 0->empty pixel; label = 1->normal pixel **/
         int num_pts; /** number of points **/
         vector<int> pts_indices;
         float mean;
@@ -73,19 +73,19 @@ public:
             this->output_folder_path = ScenePath + "/outputs";
             this->dense_pcds_folder_path = ScenePath + "/dense_pcds";
             this->icp_pcds_folder_path = ScenePath + "/icp_pcds";
-            this -> edge_img_path = ScenePath + "/edges/lidEdge.png";
-            this -> result_folder_path = ScenePath + "/results";
-            this -> proj_folder_path = this -> output_folder_path + "/byIntensity";
-            this -> dense_pcd_path = this -> output_folder_path + "/lidDense" + to_string(kNumRecPcds) + ".pcd";
-            this -> icp_pcd_path = this -> output_folder_path + "/icp_cloud.pcd";
-            this -> pose_trans_mat_path = this -> output_folder_path + "/pose_trans_mat.txt";
-            this -> flat_img_path = this -> proj_folder_path + "/flatLidarImage.bmp";
-            this -> polar_pcd_path = this -> proj_folder_path + "/lidPolar.pcd";
-            this -> cart_pcd_path = this -> proj_folder_path + "/lidCartesian.pcd";
-            this -> tags_map_path = this -> proj_folder_path + "/tags_map.txt";
-            this -> edge_pts_coordinates_path = this -> output_folder_path + "/lid3dOut.txt";
-            this -> edge_fisheye_projection_path = this -> output_folder_path + "/lidTrans.txt";
-            this -> params_record_path = this -> output_folder_path + "/ParamsRecord.txt";
+            this->edge_img_path = ScenePath + "/edges/lidEdge.png";
+            this->result_folder_path = ScenePath + "/results";
+            this->proj_folder_path = this->output_folder_path + "/byIntensity";
+            this->dense_pcd_path = this->output_folder_path + "/lidDense" + to_string(kNumRecPcds) + ".pcd";
+            this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
+            this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
+            this->flat_img_path = this->proj_folder_path + "/flatLidarImage.bmp";
+            this->polar_pcd_path = this->proj_folder_path + "/lidPolar.pcd";
+            this->cart_pcd_path = this->proj_folder_path + "/lidCartesian.pcd";
+            this->tags_map_path = this->proj_folder_path + "/tags_map.txt";
+            this->edge_pts_coordinates_path = this->output_folder_path + "/lid3dOut.txt";
+            this->edge_fisheye_projection_path = this->output_folder_path + "/lidTrans.txt";
+            this->params_record_path = this->output_folder_path + "/ParamsRecord.txt";
         }
         string output_folder_path;
         string dense_pcds_folder_path;
@@ -131,19 +131,19 @@ public:
 
     /***** Get and Set Methods *****/
     void SetExtrinsic(vector<double> _p) {
-        this -> extrinsic.rx = _p[0];
-        this -> extrinsic.ry = _p[1];
-        this -> extrinsic.rz = _p[2];
-        this -> extrinsic.tx = _p[3];
-        this -> extrinsic.ty = _p[4];
-        this -> extrinsic.tz = _p[5];
+        this->extrinsic.rx = _p[0];
+        this->extrinsic.ry = _p[1];
+        this->extrinsic.rz = _p[2];
+        this->extrinsic.tx = _p[3];
+        this->extrinsic.ty = _p[4];
+        this->extrinsic.tz = _p[5];
     }
 
     void SetSpotIdx(int spot_idx) {
-        this -> spot_idx = spot_idx;
+        this->spot_idx = spot_idx;
     }
 
     void SetViewIdx(int view_idx) {
-        this -> view_idx = view_idx;
+        this->view_idx = view_idx;
     }
 };
