@@ -33,14 +33,14 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = true;
-const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = false;
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
+const bool kLidarFlatProcess = true;
+const bool kLidarEdgeProcess = true;
+const bool kCeresOptimization = true;
+const bool kCreateDensePcd = true;
+const bool kInitialIcp = true;
+const bool kCreateFullViewPcd = true;
 const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
@@ -86,7 +86,8 @@ int main(int argc, char** argv) {
         }
     }
     else if (kFisheyeEdgeProcess) {
-        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+        // for (int idx = 0; idx < kScenes; idx++) {
+        for (int idx = 0; idx < 1; idx++) {
             fisheye_process.SetSceneIdx(idx);
             std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
             RGBCloudPtr fisheye_polar_cloud;
@@ -111,19 +112,19 @@ int main(int argc, char** argv) {
     }
     if (kInitialIcp) {
         for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
-            if (idx == (lidar_process.num_scenes - 1)/2) {
+            if (idx == 0) {
                 continue;
             }
             lidar_process.SetSceneIdx(idx);
             lidar_process.ICP();
         }
     }
-    if (kCreateFullViewPcd) {
+    if (kInitialIcp && kCreateFullViewPcd) {
         /** generate full view pcds **/
         lidar_process.CreateFullviewPcd();
         /** pcl viewer visualization **/
         CloudPtr full_view(new CloudT);
-        string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
+        string fullview_cloud_path = lidar_process.scenes_path_vec[0] + "/full_view/fullview_cloud.pcd";
         pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);
@@ -133,26 +134,20 @@ int main(int argc, char** argv) {
         cv::waitKey();
     }
     if (kLidarFlatProcess) {
-        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
-            lidar_process.SetSceneIdx(idx);
-            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
-            CloudPtr lidCartesianCloud;
-            CloudPtr lidPolarCloud;
-            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-        }
+        std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+        CloudPtr lidCartesianCloud;
+        CloudPtr lidPolarCloud;
+        std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+        lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
     }
     else if (kLidarEdgeProcess) {
-        for (int idx = 0; idx < lidar_process.num_scenes; idx++) {
-            lidar_process.SetSceneIdx(idx);
-            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
-            CloudPtr lidCartesianCloud;
-            CloudPtr lidPolarCloud;
-            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-            lidar_process.EdgeToPixel();
-            lidar_process.PixLookUp(lidCartesianCloud);
-        }
+        std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+        CloudPtr lidCartesianCloud;
+        CloudPtr lidPolarCloud;
+        std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+        lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+        lidar_process.EdgeToPixel();
+        lidar_process.PixLookUp(lidCartesianCloud);
     }
    
     cout << endl;
@@ -165,7 +160,7 @@ int main(int argc, char** argv) {
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        vector<double> params_init = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> params_init = {0.0, 0.0, -M_PI/2, -0.25, 0.0, -0.05, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
@@ -206,14 +201,14 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
+        // for (int idx = 0; idx < kScenes; idx++) {
+        for (int idx = 0; idx < 1; idx++) {
             lidar_process.SetSceneIdx(idx);
             fisheye_process.SetSceneIdx(idx);
-            lidar_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
-            fisheye_process.ReadEdge();
+            lidar_process.ReadEdge(); 
+            fisheye_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fusionViz(fisheye_process, lidar_process, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
-
         for (int i = 0; i < bw.size(); i++) {
             double bandwidth = bw[i];
             cout << "Round " << i << endl;
@@ -236,10 +231,10 @@ int main(int argc, char** argv) {
     }
 
     if (kReconstruction) {
-        int target_pose_idx = 1; /** degree 0 **/
+        int target_pose_idx = 0; /** degree 0 **/
         lidar_process.SetSceneIdx(target_pose_idx);
         fisheye_process.SetSceneIdx(target_pose_idx);
-        vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> calib_params = {0.0, 0.0, -M_PI/2, -0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         fusionViz3D(fisheye_process, lidar_process, calib_params);
     }
     return 0;

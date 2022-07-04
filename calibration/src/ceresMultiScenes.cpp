@@ -88,22 +88,22 @@ void getPoly(FisheyeProcess cam, vector<double> params){
     // ceres::BiCubicInterpolator<ceres::Grid1D<double>> poly_interpolator();
 }
 
-void fusionViz(FisheyeProcess &cam, LidarProcess &lid, vector<double> params, double bandwidth) {
+void fusionViz(FisheyeProcess &fisheye_process, LidarProcess &lidar_process, vector<double> params, double bandwidth) {
     
-    cv::Mat raw_image = cam.ReadFisheyeImage();
+    cv::Mat raw_image = fisheye_process.ReadFisheyeImage();
     cv::Mat lidarRGB = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
     cv::Mat merge_image = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
-    string edge_proj_txt_path = lid.scenes_files_path_vec[lid.scene_idx].edge_fisheye_projection_path;
+    string edge_proj_txt_path = lidar_process.scenes_files_path_vec[lidar_process.scene_idx].edge_fisheye_projection_path;
     outfile.open(edge_proj_txt_path, ios::out);
 
-    vector<vector<double>> edge_lid_projection = lid.EdgeCloudProjectToFisheye(params);
+    vector<vector<double>> edge_lid_projection = lidar_process.EdgeCloudProjectToFisheye(params);
     for (int i = 0; i < edge_lid_projection[0].size(); i++) {
         double theta = edge_lid_projection[0][i];
         double phi = edge_lid_projection[1][i];
-        int u = std::clamp(lidarRGB.rows - 1 - theta, (double)0.0, (double)(lidarRGB.rows - 1));
+        int u = std::clamp(theta, (double)0.0, (double)(lidarRGB.rows - 1));
         int v = std::clamp(phi, (double)0.0, (double)(lidarRGB.cols - 1));
         int b = 0;
         int g = 0;
@@ -120,14 +120,14 @@ void fusionViz(FisheyeProcess &cam, LidarProcess &lid, vector<double> params, do
 
     /***** need to be modified *****/
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
-        cam.FisheyeImageToSphere(merge_image);
+        fisheye_process.FisheyeImageToSphere(merge_image);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    cam.SphereToPlane(camOrgPolarCloud, bandwidth);
+    fisheye_process.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
+void fusionViz3D(FisheyeProcess fisheye_process, LidarProcess lidar_process, vector<double> params) {
     Eigen::Vector3d r(params[0], params[1], params[2]);
     Eigen::Vector3d t{params[3], params[4], params[5]};
     Eigen::Vector2d uv_0{params[6], params[7]};
@@ -158,8 +158,8 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string fullview_cloud_path = lid.scenes_path_vec[(lid.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
-    string fisheye_hdr_img_path = cam.scenes_files_path_vec[(cam.num_scenes-1)/2].fisheye_hdr_img_path;
+    string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
+    string fisheye_hdr_img_path = fisheye_process.scenes_files_path_vec[(fisheye_process.num_scenes-1)/2].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
@@ -170,6 +170,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     cv::Mat raw_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
 
     RGBPointT pt;
+    int u_max = 0, v_max = 0, u_min = 3000, v_min = 3000;
     cout << "--------------- Generating RGBXYZ Pointcloud ---------------" << endl;
     for (auto &point : fullview_cloud->points) {
         if (point.x == 0 && point.y == 0 && point.z == 0) {
@@ -180,23 +181,27 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        projection = {-inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
-        double fisheye_radius = sqrt(pow((u - uv_0(0)), 2) + pow((v - uv_0(1)), 2));
+        
         if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
-            pt.x = lid_point(0);
-            pt.y = lid_point(1);
-            pt.z = lid_point(2);
+            pt.x = point.x;
+            pt.y = point.y;
+            pt.z = point.z;
             pt.b = raw_image.at<cv::Vec3b>(u, v)[0];
             pt.g = raw_image.at<cv::Vec3b>(u, v)[1];
             pt.r = raw_image.at<cv::Vec3b>(u, v)[2];
+            if (u > u_max){ u_max = u;}
+            if (v > v_max){ v_max = v;}
+            if (u < u_min){ u_min = u;}
+            if (v < v_min){ v_min = v;}
             /** push the point back into one of the three point clouds **/
             /** 1200 1026 330 1070 **/
-            if (fisheye_radius < 330) {
+            if (inv_uv_radius < 330) {
                 upward_cloud -> points.push_back(pt);
             }
-            else if (fisheye_radius > 1070) {
+            else if (inv_uv_radius > 1070) {
                 downward_cloud -> points.push_back(pt);
             }
             else {
@@ -204,18 +209,21 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
             }
         }
         else {
-            if (fisheye_radius < 330) {
+            if (inv_uv_radius < 330) {
                 upward_cloud -> points.push_back(pt);
             }
-            else if (fisheye_radius > 1070) {
+            else if (inv_uv_radius > 1070) {
                 downward_cloud -> points.push_back(pt);
             }
         }
     }
+    cout << raw_image.rows << " " << raw_image.cols << endl;
+    cout << u_min << " " << v_min << " " << u_max << " " << v_max << " " << endl;
 
     /** upward and downward cloud recolor **/
     /** load icp pose transform matrix **/
-    string pose_trans_upward_mat_path = lid.scenes_files_path_vec[2].pose_trans_mat_path;
+
+    string pose_trans_upward_mat_path = lidar_process.scenes_files_path_vec[2].pose_trans_mat_path;
     std::ifstream mat_upward;
     mat_upward.open(pose_trans_upward_mat_path);
     Eigen::Matrix4f pose_trans_upward_mat;
@@ -227,7 +235,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     mat_upward.close();
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
-    string pose_trans_downward_mat_path = lid.scenes_files_path_vec[0].pose_trans_mat_path;
+    string pose_trans_downward_mat_path = lidar_process.scenes_files_path_vec[0].pose_trans_mat_path;
     std::ifstream mat_downward;
     mat_downward.open(pose_trans_downward_mat_path);
     Eigen::Matrix4f pose_trans_downward_mat;
@@ -242,16 +250,15 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     /** inverse transformation to upward pose **/
     pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat_inv);
     /** upward cloud recolor **/
-    for (auto & point : upward_cloud->points) {
+    for (auto &point : upward_cloud->points) {
         if (point.x == 0 && point.y == 0 && point.z == 0) {
             continue;
         }
-        lid_point << point.x, point.y, point.z;
-        lid_trans = R * lid_point + t;
+        lid_trans << point.x, point.y, point.z;
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
         if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
@@ -267,16 +274,18 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     /** inverse transformation to downward pose **/
     pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_downward_mat_inv);
     /** upward cloud recolor **/
-    for (auto & point : downward_cloud->points) {
+    for (auto &point : downward_cloud->points) {
         if (point.x == 0 && point.y == 0 && point.z == 0) {
             continue;
         }
-        lid_point << point.x, point.y, point.z;
-        lid_trans = R * lid_point + t;
+        point.b = 255;
+        point.g = 0;
+        point.r = 0;
+        lid_trans << point.x, point.y, point.z;
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
         if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
@@ -299,6 +308,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     viewer.addPointCloud(fullview_rgb_cloud, "fullview_rgb_cloud", v1);
     viewer.addPointCloud(upward_cloud, "upward_cloud", v1);
     viewer.addPointCloud(downward_cloud, "downward_cloud", v1);
+    viewer.addCoordinateSystem();
     viewer.setBackgroundColor(bckgr_gray_level, bckgr_gray_level, bckgr_gray_level, v1);
     viewer.setCameraPosition(-3.68332, 2.94092, 5.71266, 0.289847, 0.921947, -0.256907, 0);
     viewer.setSize(1280, 1024);  /** viewer size **/
@@ -349,7 +359,7 @@ struct Calibration {
         theta = acos(lid_trans(2) / sqrt((lid_trans(0) * lid_trans(0)) + (lid_trans(1) * lid_trans(1)) + (lid_trans(2) * lid_trans(2))));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
         uv_radius = sqrt(lid_trans(1) * lid_trans(1) + lid_trans(0) * lid_trans(0));
-        projection = {-inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), -inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
+        projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         kde_interpolator_.Evaluate(projection(0) * T(kde_scale_), projection(1) * T(kde_scale_), &val);
 
         res = T(weight_) * (T(kde_val_) - val);
@@ -430,8 +440,8 @@ private:
  * @param ub upper bounds of the parameters
  * @return ** std::vector<double>
  */
-std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
-                                     LidarProcess &lid,
+std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye_process,
+                                     LidarProcess &lidar_process,
                                      double bandwidth,
                                      vector<double> params_init,
                                      vector<const char *> name,
@@ -439,10 +449,10 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
                                      vector<double> ub,
                                      int kDisabledBlock) {
     const int kParams = params_init.size();
-    const int kScenes = cam.num_scenes;
+    const int kScenes = fisheye_process.num_scenes;
     // const double scale = 1.0;
     // const double scale = 2.0 / bandwidth;
-    const double scale = pow(0.5, (log(bandwidth) / log(4)));
+    const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
     double params[kParams];
     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
 
@@ -452,24 +462,24 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
     std::vector<double> ref_vals;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
 
-    for (int idx = 0; idx < kScenes; idx++) {
-        cam.SetSceneIdx(idx);
-        lid.SetSceneIdx(idx);
+    // for (int idx = 0; idx < kScenes; idx++) {
+    for (int idx = 0; idx < 1; idx++) {
+        fisheye_process.SetSceneIdx(idx);
+        lidar_process.SetSceneIdx(idx);
         
-        vector<double> p_c = cam.Kde(bandwidth, scale, false);
-        // Data is a row-major array of kGridRows x kGridCols values of function
-        // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
-        // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
+        vector<double> p_c = fisheye_process.Kde(bandwidth, scale, false);
+
         double *kde_val = new double[p_c.size()];
         memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
-        const ceres::Grid2D<double> kde_grid(kde_val, 0, cam.kFisheyeRows * scale, 0, cam.kFisheyeCols * scale);
+        const ceres::Grid2D<double> kde_grid(kde_val, 0, fisheye_process.kFisheyeRows * scale, 0, fisheye_process.kFisheyeCols * scale);
         grids.push_back(kde_grid);
         ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
-    for (int idx = 0; idx < kScenes; idx++) {
-        cam.SetSceneIdx(idx);
-        lid.SetSceneIdx(idx);
+    // for (int idx = 0; idx < kScenes; idx++) {
+    for (int idx = 0; idx < 1; idx++) {
+        fisheye_process.SetSceneIdx(idx);
+        lidar_process.SetSceneIdx(idx);
         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
         interpolators.push_back(kde_interpolator);
     }
@@ -482,14 +492,15 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
     problem.AddParameterBlock(params + kExtrinsics, kParams - kExtrinsics);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
-    Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
-    for (int idx = 0; idx < kScenes; idx++) {
-        cam.SetSceneIdx(idx);
-        lid.SetSceneIdx(idx);
+    Eigen::Vector2d img_size = {fisheye_process.kFisheyeRows, fisheye_process.kFisheyeCols};
+    // for (int idx = 0; idx < kScenes; idx++) {
+    for (int idx = 0; idx < 1; idx++) {
+        fisheye_process.SetSceneIdx(idx);
+        lidar_process.SetSceneIdx(idx);
         /** a scene weight could be added here **/
-        for (int j = 0; j < lid.edge_cloud_vec[idx]->points.size(); ++j) {
-            const double weight = lid.edge_cloud_vec[idx]->points[j].intensity;
-            Eigen::Vector3d lid_point = {lid.edge_cloud_vec[idx]->points[j].x, lid.edge_cloud_vec[idx]->points[j].y, lid.edge_cloud_vec[idx]->points[j].z};
+        for (int j = 0; j < lidar_process.edge_cloud_vec[idx]->points.size(); ++j) {
+            const double weight = lidar_process.edge_cloud_vec[idx]->points[j].intensity;
+            Eigen::Vector3d lid_point = {lidar_process.edge_cloud_vec[idx]->points[j].x, lidar_process.edge_cloud_vec[idx]->points[j].y, lidar_process.edge_cloud_vec[idx]->points[j].z};
             problem.AddResidualBlock(Calibration::Create(lid_point, weight, ref_vals[idx], scale, img_interpolators[idx]),
                                      loss_function,
                                      params,
@@ -548,116 +559,12 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
 
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
 
-    for (int idx = 0; idx < kScenes; idx++) {
-        cam.SetSceneIdx(idx);
-        lid.SetSceneIdx(idx); 
-        fusionViz(cam, lid, params_res, bandwidth);
+    // for (int idx = 0; idx < kScenes; idx++) {
+    for (int idx = 0; idx < 1; idx++) {
+        fisheye_process.SetSceneIdx(idx);
+        lidar_process.SetSceneIdx(idx); 
+        fusionViz(fisheye_process, lidar_process, params_res, bandwidth);
     }
 
     return params_res;
 }
-
-// /**
-//  * @brief
-//  * Ceres-solver Optimization
-//  * @param cam camProcess
-//  * @param lid LidarProcess
-//  * @param bandwidth bandwidth for kde estimation(Gaussian kernel)
-//  * @param distortion distortion matrix {c, d; e, 1}
-//  * @param params_init initial parameters
-//  * @param name name of parameters
-//  * @param lb lower bounds of the parameters
-//  * @param ub upper bounds of the parameters
-//  * @return ** std::vector<double>
-//  */
-// std::vector<double> ceresAutoDiff(FisheyeProcess cam,
-//                                   LidarProcess lid,
-//                                   double bandwidth,
-//                                   const Eigen::Matrix2d distortion,
-//                                   vector<double> params_init,
-//                                   vector<const char *> name,
-//                                   vector<double> lb,
-//                                   vector<double> ub)
-// {
-//     std::vector<double> p_c = cam.Kde(bandwidth, 1.0, false);
-//     const double ref_val = *max_element(p_c.begin(), p_c.end()) / (0.125 * bandwidth);
-//     const int num_params = params_init.size();
-
-//     // initQuaternion(0.0, -0.01, M_PI, param_init);
-
-//     double params[num_params];
-//     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
-//     Eigen::Matrix2d inv_distortion = distortion.inverse();
-//     // std::copy(std::begin(params_init), std::end(params_init), std::begin(params));
-
-//     // Data is a row-major array of kGridRows x kGridCols values of function
-//     // f(x, y) on the grid, with x in {-kGridColsHalf, ..., +kGridColsHalf},
-//     // and y in {-kGridRowsHalf, ..., +kGridRowsHalf}
-//     double *kde_data = new double[p_c.size()];
-//     memcpy(kde_data, &p_c[0], p_c.size() * sizeof(double));
-
-//     // unable to set coordinate to 2D grid for corresponding interpolator;
-//     // use post-processing to scale the grid instead.
-//     const ceres::Grid2D<double> kde_grid(kde_data, 0, cam.kdeRows, 0, cam.kdeCols);
-//     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
-
-//     // Ceres Problem
-//     // ceres::LocalParameterization * q_parameterization = new ceres::EigenQuaternionParameterization();
-//     ceres::Problem problem;
-
-//     // problem.AddParameterBlock(params, 4, q_parameterization);
-//     // problem.AddParameterBlock(params + 4, num_params - 4);
-//     problem.AddParameterBlock(params, num_q);
-//     problem.AddParameterBlock(params + num_q, num_params - num_q);
-//     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
-
-//     Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
-//     for (int i = 0; i < lid.IntensityCloudPtr -> points.size(); ++i)
-//     {
-//         // Eigen::Vector3d p_l_tmp = p_l.row(i);
-//         Eigen::Vector3d p_l_tmp = {lid.IntensityCloudPtr -> points[i].x, lid.IntensityCloudPtr -> points[i].y, lid.IntensityCloudPtr -> points[i].z};
-//         problem.AddResidualBlock(Calibration::Create(p_l_tmp, img_size, ref_val, kde_interpolator, inv_distortion),
-//                                  loss_function,
-//                                  params,
-//                                  params + num_q);
-//     }
-
-//     for (int i = 0; i < num_params; ++i)
-//     {
-//         if (i < num_q)
-//         {
-//             problem.SetParameterLowerBound(params, i, lb[i]);
-//             problem.SetParameterUpperBound(params, i, ub[i]);
-//         }
-//         else
-//         {
-//             problem.SetParameterLowerBound(params + num_q, i - num_q, lb[i]);
-//             problem.SetParameterUpperBound(params + num_q, i - num_q, ub[i]);
-//         }
-//     }
-
-//     ceres::Solver::Options options;
-//     options.linear_solver_type = ceres::DENSE_SCHUR;
-//     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-//     options.minimizer_progress_to_stdout = true;
-//     options.num_threads = 12;
-//     options.function_tolerance = 1e-7;
-//     options.use_nonmonotonic_steps = true;
-
-//     // OutputCallback callback(params);
-//     // options.callbacks.push_back(&callback);
-
-//     ceres::Solver::Summary summary;
-
-//     ceres::Solve(options, &problem, &summary);
-
-//     std::cout << summary.FullReport() << "\n";
-//     customOutput(name, params, params_init);
-//     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
-
-//     vector<vector<double>> lidProjection = lid.edgeVizTransform(params_res, distortion);
-//     string lidEdgeTransTxtPath = lid.scenes_files_path_vec[lid.scene_idx].edge_fisheye_projection_path;
-//     fusionViz(cam, lidEdgeTransTxtPath, lidProjection, bandwidth);
-
-//     return params_res;
-// }

@@ -227,7 +227,7 @@ def check_folder():
 if __name__ == "__main__":
 
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-    gimbal_angles = [0]
+    gimbal_angles = [-40, 0, 40]
     #gimbal_angles = [0, 20, 40, 60, -60, -40, -20]
     print("Current root path: \n" + root_path)
 
@@ -253,37 +253,34 @@ if __name__ == "__main__":
 
         # -------- fisheye camera --------
 
-        if(angle == 0):
-            edge_cam = cv2.imread(dir_cam_original)
-            edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
+        # if(angle == 0):
+        edge_cam = cv2.imread(dir_cam_original)
+        edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
 
-            blur_img = cv2.GaussianBlur(edge_cam, (0, 0), 5)
-            edge_cam = cv2.addWeighted(edge_cam, 1.2, blur_img, 0.2, 0)
+        edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1.5, sigmaY=1.5, ksize=(5, 5))
+        cv2.imwrite(dir_cam_filtered, edge_cam)
 
-            # edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1.5, sigmaY=1.5, ksize=(5, 5))
-            cv2.imwrite(dir_cam_filtered, edge_cam)
+        # remove the black region
+        # edge_cam = black_region_removal(edge_cam, pix_rows_bound=435)
 
-            # remove the black region
-            # edge_cam = black_region_removal(edge_cam, pix_rows_bound=435)
+        edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
+        mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
+        edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
+        cv2.imwrite(dir_cam_canny, edge_cam)
 
-            edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
-            mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
-            edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
-            cv2.imwrite(dir_cam_canny, edge_cam)
-
-            # contour filter
-            cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-            cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-            edge_cam = np.zeros(edge_cam.shape, np.uint8)
-            cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-            cv2.imwrite(dir_cam_output, edge_cam)
+        # contour filter
+        cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+        edge_cam = np.zeros(edge_cam.shape, np.uint8)
+        cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
+        cv2.imwrite(dir_cam_output, edge_cam)
 
         # -------- Lidar --------
 
         edge_lid = cv2.imread(dir_lid_original)
         edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
         # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
-        edge_lid = nlmeans(edge_lid, h_u=20, h_l=10)
+        edge_lid = nlmeans(edge_lid, h_u=40, h_l=20)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 
         # mask to remove the upper and lower bound noise
