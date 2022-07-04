@@ -304,6 +304,8 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
             theta_min = theta;
         }
     }
+    cout << "max theta of the fullview cloud: " << theta_max
+         << " min theta of the fullview cloud: " << theta_min;
     cout << "polar cloud size:" << polar_cloud->points.size() << endl;
 
     /** save to pcd files and create tuple return **/
