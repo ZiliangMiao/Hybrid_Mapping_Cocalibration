@@ -9,6 +9,13 @@ typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
 
 class FisheyeProcess{
 public:
+    /** essential params **/
+    int spot_idx = 0;
+    int view_idx = 0;
+    int num_spots = 4;
+    int num_views = 3;
+    vector<vector<string>> scenes_path_vec;
+
     /** original data - images **/
     const int kFisheyeRows = 2048;
     const int kFisheyeCols = 2448;
@@ -18,21 +25,20 @@ public:
 
     /** coordinates of edge pixels in flat images **/
     typedef vector<vector<int>> EdgePixels;
-    vector<EdgePixels> edge_pixels_vec;
+    vector<vector<EdgePixels>> edge_pixels_vec;
 
     /** coordinates of edge pixels in fisheye images **/
     typedef vector<vector<double>> EdgeFisheyePixels;
-    vector<EdgeFisheyePixels> edge_fisheye_pixels_vec;
+    vector<vector<EdgeFisheyePixels>> edge_fisheye_pixels_vec;
 
     /** tagsmap container **/
-    typedef struct Tags
-    {
+    typedef struct Tags {
         int label; /** label = 0 -> empty pixel; label = 1 -> normal pixel **/
         int num_pts; /** number of points **/
         vector<int> pts_indices;
     }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
     typedef vector<vector<Tags>> TagsMap;
-    vector<TagsMap> tags_map_vec; /** container of tagsMaps of each scene **/
+    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each scene **/
 
     /***** Intrinsic Parameters *****/
     struct Intrinsic {
@@ -48,15 +54,10 @@ public:
         double v0 = 1200.975472;
     } intrinsic;
 
-    /***** Data of Multiple Scenes *****/
-    int scene_idx = 0;
-    int num_scenes = 3;
-    vector<string> scenes_path_vec;
-
     /********* File Path of the Specific Scene *********/
-    struct SceneFilePath
-    {
-        SceneFilePath(const string& ScenePath) {
+    struct PoseFilePath {
+        PoseFilePath () = default;
+        PoseFilePath (const string& ScenePath) {
             this -> output_folder_path = ScenePath + "/outputs";
             this -> fusion_result_folder_path = ScenePath + "/results";
             this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";
@@ -75,7 +76,10 @@ public:
         string edge_fisheye_pixels_path;
         string kde_samples_path;
     };
-    vector<struct SceneFilePath> scenes_files_path_vec;
+    vector<vector<struct PoseFilePath>> scenes_files_path_vec;
+
+    /** Degree Map **/
+    std::map<int, int> degree_map;
 
 public:
     FisheyeProcess(string pkgPath);
@@ -107,7 +111,12 @@ public:
         this->intrinsic.u0 = parameters[13];
         this->intrinsic.v0 = parameters[14];
     }
-    void SetSceneIdx(int scene_idx) {
-        this -> scene_idx = scene_idx;
+
+    void SetSpotIdx(int spot_idx) {
+        this->spot_idx = spot_idx;
+    }
+
+    void SetViewIdx(int view_idx) {
+        this->view_idx = view_idx;
     }
 };
