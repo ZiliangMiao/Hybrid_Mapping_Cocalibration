@@ -40,7 +40,6 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 LidarProcess::LidarProcess(const string& pkg_path) {
     cout << "----- LiDAR: LidarProcess -----" << endl;
-
     /** create objects, initialization **/
     PoseFilePath pose_file_path_temp;
     string scenes_path_temp;

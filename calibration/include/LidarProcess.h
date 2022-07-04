@@ -17,6 +17,7 @@ public:
     int num_views = 3;
     int full_view_idx = (num_views - 1) / 2;
     string fullview_rec_folder_path;
+    vector<vector<string>> scenes_path_vec;
 
     /** const parameters - original data - images and point clouds **/
     const bool kProjByIntensity = true;
@@ -62,10 +63,6 @@ public:
         double ty = 0;
         double tz = 0;
     } extrinsic;
-
-    /***** Data of Multiple Scenes *****/
-
-    vector<vector<string>> scenes_path_vec;
 
     /** File Path of the Specific Scene **/
     struct PoseFilePath {

@@ -76,26 +76,31 @@ int main(int argc, char** argv) {
     fisheye_process.SetIntrinsic(params_calib);
 
     if (kFisheyeFlatProcess) {
-        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
-            fisheye_process.SetSceneIdx(idx);
-            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
-            RGBCloudPtr fisheye_polar_cloud;
-            RGBCloudPtr fisheye_pixel_cloud;
-            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-            fisheye_process.SphereToPlane(fisheye_polar_cloud);
+        for (int i = 0; i < fisheye_process.num_spots; ++i) {
+            fisheye_process.SetSpotIdx(i); /** spot idx **/
+            for (int j = 0; j < fisheye_process.num_views; ++j) {
+                fisheye_process.SetViewIdx(j); /** view idx **/
+                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+                RGBCloudPtr fisheye_polar_cloud;
+                RGBCloudPtr fisheye_pixel_cloud;
+                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+                fisheye_process.SphereToPlane(fisheye_polar_cloud);
+            }
         }
     }
     else if (kFisheyeEdgeProcess) {
-        // for (int idx = 0; idx < kScenes; idx++) {
-        for (int idx = 0; idx < 1; idx++) {
-            fisheye_process.SetSceneIdx(idx);
-            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
-            RGBCloudPtr fisheye_polar_cloud;
-            RGBCloudPtr fisheye_pixel_cloud;
-            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-            fisheye_process.SphereToPlane(fisheye_polar_cloud);
-            fisheye_process.EdgeToPixel();
-            fisheye_process.PixLookUp(fisheye_pixel_cloud);
+        for (int i = 0; i < fisheye_process.num_spots; ++i) {
+            fisheye_process.SetSpotIdx(i); /** spot idx **/
+            for (int j = 0; j < fisheye_process.num_views; ++j) {
+                fisheye_process.SetViewIdx(j); /** view idx **/
+                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye_process.FisheyeImageToSphere();
+                RGBCloudPtr fisheye_polar_cloud;
+                RGBCloudPtr fisheye_pixel_cloud;
+                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+                fisheye_process.SphereToPlane(fisheye_polar_cloud);
+                fisheye_process.EdgeToPixel();
+                fisheye_process.PixLookUp(fisheye_pixel_cloud);
+            }
         }
     }
 
@@ -213,9 +218,11 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        for (int idx = 0; idx < fisheye_process.num_scenes; idx++) {
-            lidar_process.SetViewIdx(idx);
-            fisheye_process.SetSceneIdx(idx);
+        fisheye_process.SetSpotIdx(0);
+        lidar_process.SetSpotIdx(0);
+        for (int i = 0; i < fisheye_process.num_views; i++) {
+            lidar_process.SetViewIdx(i);
+            fisheye_process.SetViewIdx(i);
             lidar_process.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye_process.ReadEdge();
             fusionViz(fisheye_process, lidar_process, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
@@ -244,8 +251,10 @@ int main(int argc, char** argv) {
     if (kReconstruction) {
         // check
         int target_view_idx = 1; /** degree 0 **/
+        fisheye_process.SetSpotIdx(0);
+        lidar_process.SetSpotIdx(0);
         lidar_process.SetViewIdx(target_view_idx);
-        fisheye_process.SetSceneIdx(target_view_idx);
+        fisheye_process.SetViewIdx(target_view_idx);
         vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         fusionViz3D(fisheye_process, lidar_process, calib_params);
     }

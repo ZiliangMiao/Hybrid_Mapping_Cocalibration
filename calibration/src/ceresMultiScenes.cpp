@@ -160,7 +160,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
 
     string fullview_cloud_path = lid.scenes_path_vec[lid.spot_idx][lid.full_view_idx] +
                                  "/full_view/fullview_cloud.pcd";
-    string fisheye_hdr_img_path = cam.scenes_files_path_vec[cam.full_view_idx].fisheye_hdr_img_path;
+    string fisheye_hdr_img_path = cam.scenes_files_path_vec[cam.spot_idx][cam.full_view_idx].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
@@ -447,7 +447,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
                                      vector<double> ub,
                                      int kDisabledBlock) {
     const int kParams = params_init.size();
-    const int kViews = cam.num_scenes;
+    const int kViews = cam.num_views;
     // const double scale = 1.0;
     // const double scale = 2.0 / bandwidth;
     const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
@@ -461,9 +461,10 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
 
     lid.SetSpotIdx(0);
+    cam.SetSpotIdx(0);
     for (int idx = 0; idx < kViews; idx++) {
-        cam.SetSceneIdx(idx);
         lid.SetViewIdx(idx);
+        cam.SetViewIdx(idx);
         /********* Fisheye KDE *********/
         vector<double> p_c = cam.Kde(bandwidth, scale, false);
         double *kde_val = new double[p_c.size()];
@@ -474,9 +475,10 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
     }
     const std::vector<ceres::Grid2D<double>> img_grids(grids);
     lid.SetSpotIdx(0);
+    cam.SetSpotIdx(0);
     for (int idx = 0; idx < kViews; idx++) {
-        cam.SetSceneIdx(idx);
         lid.SetViewIdx(idx);
+        cam.SetViewIdx(idx);
         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
         interpolators.push_back(kde_interpolator);
     }
@@ -491,20 +493,21 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
 
     Eigen::Vector2d img_size = {cam.kFisheyeRows, cam.kFisheyeCols};
     lid.SetSpotIdx(0);
+    cam.SetSpotIdx(0);
     for (int idx = 0; idx < kViews; idx++) {
-        cam.SetSceneIdx(idx);
         lid.SetViewIdx(idx);
+        cam.SetViewIdx(idx);
         /** a scene weight could be added here **/
         for (int j = 0; j < lid.edge_cloud_vec[lid.spot_idx][idx]->points.size(); ++j) {
             const double weight = lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].intensity;
-            Eigen::Vector3d lid_point = {lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].x, lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].y, lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].z};
-            problem.AddResidualBlock(Calibration::Create(lid_point, weight, ref_vals[idx], scale, img_interpolators[idx]),
-                                     loss_function,
-                                     params,
-                                     params + kExtrinsics);
+            Eigen::Vector3d lid_point = {lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].x,
+                                         lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].y,
+                                         lid.edge_cloud_vec[lid.spot_idx][idx]->points[j].z};
+            problem.AddResidualBlock(Calibration::Create(lid_point, weight, ref_vals[idx],
+                                                         scale, img_interpolators[idx]),
+                                     loss_function, params, params + kExtrinsics);
         }
     }
-
     switch (kDisabledBlock) {
     case 1:
         problem.SetParameterBlockConstant(params);
@@ -557,8 +560,8 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
 
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
     lid.SetSpotIdx(0);
+    cam.SetSpotIdx(0);
     for (int idx = 0; idx < kViews; idx++) {
-        cam.SetSceneIdx(idx);
         lid.SetViewIdx(idx);
         fusionViz(cam, lid, params_res, bandwidth);
     }
