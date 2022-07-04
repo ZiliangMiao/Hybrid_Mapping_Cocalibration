@@ -16,6 +16,8 @@ public:
     int num_spots = 4;
     int num_views = 3;
     string fullview_rec_folder_path;
+    string fullview_dense_cloud_path;
+    string fullview_sparse_cloud_path;
     vector<vector<string>> scenes_path_vec;
 
     /** const parameters - original data - images and point clouds **/

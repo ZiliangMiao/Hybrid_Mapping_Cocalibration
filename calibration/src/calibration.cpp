@@ -22,12 +22,12 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
-const bool kLidarFlatProcess = false;
+const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
+const bool kCreateFullViewPcd = false;
 const bool kReconstruction = false;
 
 /********* Directory Path of ROS Package *********/
@@ -137,25 +137,24 @@ int main(int argc, char** argv) {
         /** generate full view pcds **/
         lidar_process.CreateFullviewPcd();
         /** pcl viewer visualization **/
-        CloudPtr full_view(new CloudT);
-        string fullview_cloud_path = lidar_process.fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
-        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
-        pcl::visualization::CloudViewer viewer("Viewer");
-        viewer.showCloud(full_view);
-        while (!viewer.wasStopped()) {
-
-        }
-        cv::waitKey();
+//        CloudPtr full_view(new CloudT);
+//        string fullview_cloud_path = lidar_process.fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
+//        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
+//        pcl::visualization::CloudViewer viewer("Viewer");
+//        viewer.showCloud(full_view);
+//        while (!viewer.wasStopped()) {
+//
+//        }
+//        cv::waitKey();
     }
     if (kLidarFlatProcess) {
-        for (int idx = 0; idx < lidar_process.num_views; idx++) {
-            lidar_process.SetViewIdx(idx);
-            std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
-            CloudPtr lidCartesianCloud;
-            CloudPtr lidPolarCloud;
-            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-        }
+        lidar_process.SetSpotIdx(0);
+        lidar_process.SetViewIdx((lidar_process.num_views-1)/2);
+        std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
+        CloudPtr lidCartesianCloud;
+        CloudPtr lidPolarCloud;
+        std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
+        lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
     }
     else if (kLidarEdgeProcess) {
         for (int i = 0; i < lidar_process.num_spots; ++i) {
