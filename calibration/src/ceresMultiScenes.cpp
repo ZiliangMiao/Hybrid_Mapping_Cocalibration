@@ -158,8 +158,8 @@ void fusionViz3D(FisheyeProcess fisheye_process, LidarProcess lidar_process, vec
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string fullview_cloud_path = lidar_process.scenes_path_vec[(lidar_process.num_scenes-1)/2] + "/full_view/fullview_cloud.pcd";
-    string fisheye_hdr_img_path = fisheye_process.scenes_files_path_vec[(fisheye_process.num_scenes-1)/2].fisheye_hdr_img_path;
+    string fullview_cloud_path = lidar_process.scenes_path_vec[0] + "/full_view/fullview_cloud.pcd";
+    string fisheye_hdr_img_path = fisheye_process.scenes_files_path_vec[0].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
@@ -209,12 +209,10 @@ void fusionViz3D(FisheyeProcess fisheye_process, LidarProcess lidar_process, vec
             }
         }
         else {
-            if (inv_uv_radius < 330) {
-                upward_cloud -> points.push_back(pt);
-            }
-            else if (inv_uv_radius > 1070) {
-                downward_cloud -> points.push_back(pt);
-            }
+            pt.x = point.x;
+            pt.y = point.y;
+            pt.z = point.z;
+            downward_cloud -> points.push_back(pt);
         }
     }
     cout << raw_image.rows << " " << raw_image.cols << endl;
@@ -235,7 +233,7 @@ void fusionViz3D(FisheyeProcess fisheye_process, LidarProcess lidar_process, vec
     mat_upward.close();
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
-    string pose_trans_downward_mat_path = lidar_process.scenes_files_path_vec[0].pose_trans_mat_path;
+    string pose_trans_downward_mat_path = lidar_process.scenes_files_path_vec[1].pose_trans_mat_path;
     std::ifstream mat_downward;
     mat_downward.open(pose_trans_downward_mat_path);
     Eigen::Matrix4f pose_trans_downward_mat;
