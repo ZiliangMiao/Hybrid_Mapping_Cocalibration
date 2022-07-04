@@ -33,7 +33,7 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-const bool kFisheyeFlatProcess = true;
+const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
@@ -253,7 +253,7 @@ int main(int argc, char** argv) {
         lidar_process.SetSpotIdx(0);
         lidar_process.SetViewIdx(target_view_idx);
         fisheye_process.SetViewIdx(target_view_idx);
-        vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> calib_params = {0.0, 0.0, -M_PI/2, -0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
         fusionViz3D(fisheye_process, lidar_process, calib_params);
     }
     return 0;

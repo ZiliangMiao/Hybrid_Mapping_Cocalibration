@@ -225,17 +225,17 @@ def check_folder():
             os.mkdir(dir)
 
 if __name__ == "__main__":
+    spot_range = 4
+    default_name = "floor5"
 
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-    gimbal_angles = [-40, 0, 40]
-    #gimbal_angles = [0, 20, 40, 60, -60, -40, -20]
     print("Current root path: \n" + root_path)
 
-    for angle in gimbal_angles:
+    for spot in range(spot_range):
         if (len(sys.argv) > 1):
-            data_path = root_path + "/data/" + sys.argv[1] + "/" + str(angle) 
+            data_path = root_path + "/data/" + sys.argv[1] + "/" + str(spot) + "/0"
         else:
-            data_path = root_path + "/data/sanjiao_pose0/" + str(angle)
+            data_path = root_path + "/data/" + default_name + "/" + str(spot) + "/0"
 
         dir_cam_original = data_path + "/outputs/flatImage.bmp"
         dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
@@ -244,7 +244,7 @@ if __name__ == "__main__":
         dir_cam_output = data_path + "/edges/cam_edge.png"
 
         dir_lid_original = data_path + "/outputs/byIntensity/flatLidarImage.bmp"
-        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask" + str(angle) + ".png"
+        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask" + str(spot) + ".png"
         dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
         dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
         dir_lid_output = data_path + "/edges/lid_edge.png"
