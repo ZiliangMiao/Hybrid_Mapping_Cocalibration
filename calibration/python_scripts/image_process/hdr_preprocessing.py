@@ -12,9 +12,9 @@ if __name__ == "__main__":
     for spot in range(spot_range):
         skip = False
         if (len(sys.argv) > 1):
-                data_path = root_path + "/data/" + sys.argv[1] + "/" + str(spot) + "/0"
+                data_path = root_path + "/data/" + sys.argv[1] + "/spot" + str(spot) + "/0/images"
         else:
-            data_path = root_path + "/data/" + default_name + "/" + str(spot) + "/0"
+            data_path = root_path + "/data/" + default_name + "/spot" + str(spot) + "/0/images"
         # Loading exposure images into a list
         exposure_times = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 
             1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 

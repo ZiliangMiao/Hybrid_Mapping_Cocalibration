@@ -225,16 +225,20 @@ def check_folder():
             os.mkdir(dir)
 
 if __name__ == "__main__":
-    spot_range = 4
-    for spot in range(spot_range):
-        if not (len(sys.argv) > 3):
-            print("failed")
-            break
-        root_path = sys.argv[3]
-        default_name = sys.argv[1]
-        mode = sys.argv[2]  
-        print("Current root path: \n" + root_path)
-        data_path = root_path + "/data/" + default_name + "/" + str(spot) + "/0"
+    
+    kArgs = 4
+    if not (len(sys.argv) >= kArgs):
+        print("Edge extraction failed.")
+    root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
+    dataset_path = sys.argv[1]
+    mode = sys.argv[2]
+    kSpots = sys.argv[3]
+    print("Current root path: \n" + root_path)
+    print("kSpots: \n" + kSpots)
+
+    for spot in range(int(kSpots)):
+        
+        data_path = dataset_path + "/spot" + str(spot) + "/0"
 
         dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
         dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
@@ -243,7 +247,7 @@ if __name__ == "__main__":
         dir_cam_output = data_path + "/edges/cam_edge.png"
 
         dir_lid_original = data_path + "/outputs/lidar_outputs/flatLidarImage.bmp"
-        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask" + str(spot) + ".png"
+        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask.png"
         dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
         dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
         dir_lid_output = data_path + "/edges/lid_edge.png"
@@ -318,7 +322,9 @@ if __name__ == "__main__":
 
     # cv2.imwrite(dir_lid_output, edge_lid)
     # cv2.imwrite(dir_cam_output, edge_cam)
-    print("image_process completed.")
+
+    if (len(sys.argv) >= kArgs):
+        print("Edge extraction completed.")
 
     # ################################################################################################
     # # LiDAR # define the hyper-params of LiDAR

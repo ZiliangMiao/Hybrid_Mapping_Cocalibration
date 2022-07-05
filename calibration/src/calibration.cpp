@@ -35,10 +35,10 @@ typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 const bool kFisheyeFlatProcess = true;
-const bool kFisheyeEdgeProcess = false;
+const bool kFisheyeEdgeProcess = true;
 const bool kLidarFlatProcess = true;
-const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = false;
+const bool kLidarEdgeProcess = true;
+const bool kCeresOptimization = true;
 const bool kCreateDensePcd = true;
 const bool kInitialIcp = true;
 const bool kCreateFullViewPcd = true;
@@ -46,7 +46,7 @@ const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
 string pkg_path = ros::package::getPath("calibration");
-string dataset = "sanjiao";
+string dataset = pkg_path + "/data/sanjiao";
 
 bool checkFolder(string folder_path){
     if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
@@ -87,9 +87,9 @@ int main(int argc, char** argv) {
             std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
             fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
-        fisheye_process.EdgeExtraction(pkg_path, dataset, 0);
+        fisheye_process.EdgeExtraction(pkg_path, dataset);
     }
-    else if (kFisheyeEdgeProcess) {
+    if (kFisheyeEdgeProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
             fisheye_process.SetSpotIdx(i); /** spot idx **/
             fisheye_process.SetViewIdx(fisheye_process.full_view_idx); /** view idx **/
@@ -152,13 +152,13 @@ int main(int argc, char** argv) {
             CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-            fisheye_process.EdgeExtraction(pkg_path, dataset, 1);
+            lidar_process.EdgeExtraction(pkg_path, dataset);
         }
     }
-    else if (kLidarEdgeProcess) {
+    if (kLidarEdgeProcess) {
         for (int i = 0; i < lidar_process.num_spots; ++i) {
             lidar_process.SetSpotIdx(i);
-            lidar_process.SetViewIdx((lidar_process.num_views-1)/2);
+            lidar_process.SetViewIdx(lidar_process.full_view_idx);
             std::tuple<CloudPtr, CloudPtr> lidResult = lidar_process.LidarToSphere();
             CloudPtr lidCartesianCloud;
             CloudPtr lidPolarCloud;

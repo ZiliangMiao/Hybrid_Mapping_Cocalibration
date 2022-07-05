@@ -878,46 +878,13 @@ void LidarProcess::CreateFullviewPcd() {
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }
 
-int LidarProcess::EdgeExtraction(string pkg_path, string dataset, int mode)
+void LidarProcess::EdgeExtraction(string &pkg_path, string &dataset_path)
 {
-    /** Initialization **/
-
-	Py_Initialize();
-
-	if (!Py_IsInitialized()) 
-	{
-		return -1;
-	}
-
-    int argc = 3;
-    char arg0[pkg_path.size()];
-    char arg1[dataset.size()];
-    char arg2[8];
-    strcpy(arg0, pkg_path.data());
-    strcpy(arg1, dataset.data());
-    strcpy(arg2, "lidar  ");
-    
-    char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
-    string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
-
-	/** Import sys **/
-	PyRun_SimpleString("import sys");
-	
-	/** The C API for Python 2 expects char ** as the second argument,
-     *  while the C API for Python 3 expects wchar_t **argv as the second argument.
-     * **/ 
-    wchar_t ** argm = (wchar_t **)(argv); 
-    PySys_SetArgv(argc, argm); 
-	
-	/** Execute python script **/ 
-    string command = "execfile('" + script_path + "')";
-	if (PyRun_SimpleString(command.c_str()) == NULL)
-	{
-		return -1;
-	}
-	
-	Py_Finalize();
-    delete []argv;
-
-	return 0;
+    std::string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
+    std::string path = pkg_path + "/";
+    std::string kSpots = to_string(this->num_spots);
+    std::string cmd_str = "python3 " 
+        + script_path + " " + dataset_path + " " + "fisheye" + " " + kSpots;
+    cout << cmd_str << endl;
+    system(cmd_str.c_str());
 }
