@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
         if (kOneSpot == -1) {
             for (int i = 0; i < fisheye.num_spots; ++i) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
-                fisheye.SetViewIdx((fisheye.num_views - 1) / 2); /** view idx **/
+                fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
                 std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
                 RGBCloudPtr fisheye_polar_cloud;
                 RGBCloudPtr fisheye_pixel_cloud;
@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
         }
         else {
             fisheye.SetSpotIdx(kOneSpot); /** spot idx **/
-            fisheye.SetViewIdx((fisheye.num_views - 1) / 2); /** view idx **/
+            fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
             std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
             RGBCloudPtr fisheye_polar_cloud;
             RGBCloudPtr fisheye_pixel_cloud;
@@ -188,7 +188,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < lidar.num_spots; ++i) {
                 lidar.SetSpotIdx(i);
                 for (int j = 0; j < lidar.num_views; ++j) {
-                    if (j == (lidar.num_views - 1) / 2) {
+                    if (j == lidar.fullview_idx) {
                         continue;
                     }
                     lidar.SetViewIdx(j);
@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
         else {
             lidar.SetSpotIdx(kOneSpot);
             for (int j = 0; j < lidar.num_views; ++j) {
-                if (j == (lidar.num_views - 1) / 2) {
+                if (j == lidar.fullview_idx) {
                     continue;
                 }
                 lidar.SetViewIdx(j);
@@ -239,7 +239,7 @@ int main(int argc, char** argv) {
         if (kOneSpot == -1) {
             for (int i = 0; i < lidar.num_spots; ++i) {
                 lidar.SetSpotIdx(i);
-                lidar.SetViewIdx((lidar.num_views - 1) / 2);
+                lidar.SetViewIdx(lidar.fullview_idx);
                 std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
                 CloudPtr lidCartesianCloud;
                 CloudPtr lidPolarCloud;
@@ -249,7 +249,7 @@ int main(int argc, char** argv) {
         }
         else {
             lidar.SetSpotIdx(kOneSpot);
-            lidar.SetViewIdx((lidar.num_views - 1) / 2);
+            lidar.SetViewIdx(lidar.fullview_idx);
             std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
             CloudPtr lidCartesianCloud;
             CloudPtr lidPolarCloud;
@@ -262,7 +262,7 @@ int main(int argc, char** argv) {
         if (kOneSpot == -1) {
             for (int i = 0; i < lidar.num_spots; ++i) {
                 lidar.SetSpotIdx(i);
-                lidar.SetViewIdx((lidar.num_views - 1) / 2);
+                lidar.SetViewIdx(lidar.fullview_idx);
                 std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
                 CloudPtr lidCartesianCloud;
                 CloudPtr lidPolarCloud;
@@ -275,7 +275,7 @@ int main(int argc, char** argv) {
         }
         else {
             lidar.SetSpotIdx(kOneSpot);
-            lidar.SetViewIdx((lidar.num_views - 1) / 2);
+            lidar.SetViewIdx(lidar.fullview_idx);
             std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
             CloudPtr lidCartesianCloud;
             CloudPtr lidPolarCloud;
@@ -340,8 +340,8 @@ int main(int argc, char** argv) {
         /********* Initial Visualization *********/
         fisheye.SetSpotIdx(0);
         lidar.SetSpotIdx(0);
-        fisheye.SetViewIdx((fisheye.num_views - 1) / 2);
-        lidar.SetViewIdx((lidar.num_views - 1) / 2);
+        fisheye.SetViewIdx(fisheye.fullview_idx);
+        lidar.SetViewIdx(lidar.fullview_idx);
         lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
         fisheye.ReadEdge();
         

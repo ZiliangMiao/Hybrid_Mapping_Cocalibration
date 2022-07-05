@@ -93,7 +93,7 @@ public:
 public:
     FisheyeProcess();
     /** Fisheye Pre-Processing **/
-    cv::Mat ReadFisheyeImage();
+    cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline);
     void SphereToPlane(RGBCloudPtr sphere_polar_cloud);

@@ -111,9 +111,8 @@ void FisheyeProcess::ReadEdge() {
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] =  edge_fisheye_pixels;
 }
 
-cv::Mat FisheyeProcess::ReadFisheyeImage() {
+cv::Mat FisheyeProcess::ReadFisheyeImage(string fisheye_hdr_img_path) {
     cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << endl;
-    string fisheye_hdr_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     cv::Mat fisheye_hdr_filped_image;
     cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
@@ -127,7 +126,8 @@ cv::Mat FisheyeProcess::ReadFisheyeImage() {
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     cout << "----- Fisheye: FisheyeImageToSphere2 -----" << " Spot Index: " << this->spot_idx << endl;
     /** read the original fisheye image and check the image size **/
-    cv::Mat image = ReadFisheyeImage();
+    string fisheye_hdr_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
+    cv::Mat image = ReadFisheyeImage(fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     tk::spline spline;
     result = FisheyeImageToSphere(image, false, spline);

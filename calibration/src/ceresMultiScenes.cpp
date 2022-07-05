@@ -98,8 +98,8 @@ tk::spline getPoly(vector<double> params){
 }
 
 void fusionViz(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double> params, double bandwidth) {
-    
-    cv::Mat raw_image = fisheye.ReadFisheyeImage();
+    string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.view_idx].fisheye_hdr_img_path;
+    cv::Mat raw_image = fisheye.ReadFisheyeImage(fisheye_hdr_img_path);
     cv::Mat lidarRGB = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
     cv::Mat merge_image = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
 
@@ -176,14 +176,14 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
         fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_sparse_cloud_path;
     }
 
-    string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.fullview_idx].fisheye_hdr_img_path;
-
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
     RGBCloudPtr downward_cloud(new RGBCloudT);
     RGBCloudPtr fullview_rgb_cloud(new RGBCloudT);
     pcl::io::loadPCDFile(fullview_cloud_path, *fullview_cloud);
-    cv::Mat raw_image = fisheye.ReadFisheyeImage();
+
+    string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.fullview_idx].fisheye_hdr_img_path;
+    cv::Mat target_view_img = fisheye.ReadFisheyeImage(fisheye_hdr_img_path);
 
     RGBPointT pt;
     int u_max = 0, v_max = 0, u_min = 3000, v_min = 3000;
@@ -234,8 +234,8 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
     cout << u_min << " " << v_min << " " << u_max << " " << v_max << " " << endl;
 
     /** load upward view icp pose transform matrix **/
-    int upward_view_idx = lid.fullview_idx + 1;
-    string pose_trans_upward_mat_path = lid.poses_files_path_vec[lid.spot_idx][upward_view_idx].pose_trans_mat_path;
+    int upward_view_idx = lidar.fullview_idx + 1;
+    string pose_trans_upward_mat_path = lidar.poses_files_path_vec[lidar.spot_idx][upward_view_idx].pose_trans_mat_path;
     std::ifstream mat_upward;
     mat_upward.open(pose_trans_upward_mat_path);
     Eigen::Matrix4f pose_trans_upward_mat;
@@ -245,17 +245,17 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
         }
     }
     mat_upward.close();
-    cout << "Upward View: " << " Spot Index: " << lid.spot_idx << " View Index: " << upward_view_idx << "\n"
+    cout << "Upward View: " << " Spot Index: " << lidar.spot_idx << " View Index: " << upward_view_idx << "\n"
          << "ICP Trans Mat:" << "\n " << pose_trans_upward_mat << endl;
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
     /** load upward view fisheye image **/
-    string upward_fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][upward_view_idx].fisheye_hdr_img_path;
-    cv::Mat upward_view_img = cv::imread(upward_fisheye_hdr_img_path, cv::IMREAD_UNCHANGED); /** flip **/
+    string upward_fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][upward_view_idx].fisheye_hdr_img_path;
+    cv::Mat upward_view_img = fisheye.ReadFisheyeImage(upward_fisheye_hdr_img_path);
 
     /** load downward view icp pose transform matrix **/
-    int downward_view_idx = lid.fullview_idx - 1;
-    string pose_trans_downward_mat_path = lid.poses_files_path_vec[lid.spot_idx][downward_view_idx].pose_trans_mat_path;
+    int downward_view_idx = lidar.fullview_idx - 1;
+    string pose_trans_downward_mat_path = lidar.poses_files_path_vec[lidar.spot_idx][downward_view_idx].pose_trans_mat_path;
     std::ifstream mat_downward;
     mat_downward.open(pose_trans_downward_mat_path);
     Eigen::Matrix4f pose_trans_downward_mat;
@@ -265,13 +265,13 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
         }
     }
     mat_downward.close();
-    cout << "Downward View: " << " Spot Index: " << lid.spot_idx << " View Index: " << downward_view_idx << "\n"
+    cout << "Downward View: " << " Spot Index: " << lidar.spot_idx << " View Index: " << downward_view_idx << "\n"
          << "ICP Trans Mat:" << "\n " << pose_trans_downward_mat << endl;
     Eigen::Matrix4f pose_trans_downward_mat_inv = pose_trans_downward_mat.inverse();
 
     /** load downward view fisheye image **/
-    string downward_fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][downward_view_idx].fisheye_hdr_img_path;
-    cv::Mat downward_view_img = cv::imread(downward_fisheye_hdr_img_path, cv::IMREAD_UNCHANGED); /** flip **/
+    string downward_fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][downward_view_idx].fisheye_hdr_img_path;
+    cv::Mat downward_view_img = fisheye.ReadFisheyeImage(downward_fisheye_hdr_img_path);
 
     /** upward and downward cloud recolor **/
     /** inverse transformation to upward view **/
