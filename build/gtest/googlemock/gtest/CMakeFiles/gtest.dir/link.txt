@@ -1,1 +1,0 @@
-/usr/bin/g++ -fPIC  -std=c++17  -g   -shared -Wl,-soname,libgtest.so -o libgtest.so CMakeFiles/gtest.dir/src/gtest-all.cc.o  -L/home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/build/gtest/googlemock/gtest/src -Wl,-rpath,/home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/build/gtest/googlemock/gtest/src -lpthread 

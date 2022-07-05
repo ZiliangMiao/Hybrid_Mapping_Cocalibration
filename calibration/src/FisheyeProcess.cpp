@@ -469,45 +469,45 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     return img;
 }
 
-int EdgeExtraction(string dataset, int mode)
-{
-    /** Initialization **/
+// int EdgeExtraction(string dataset, int mode)
+// {
+//     /** Initialization **/
 
-	Py_Initialize();
+// 	Py_Initialize();
 
-	if (!Py_IsInitialized())
-	{
-		return -1;
-	}
+// 	if (!Py_IsInitialized())
+// 	{
+// 		return -1;
+// 	}
 
-    int argc = 0;
-    char arg0[16];
-    char arg1[16];
-    if (mode == 0){strcpy(arg1, "fisheye");}
-    else{strcpy(arg1, "lidar");}
-    strcpy(arg0, dataset.c_str());
-    char **argv = new char *[argc+1]{arg0, arg1} ;
-    string script_path = "../python_scripts/image_process/edge_extraction.py";
+//     int argc = 0;
+//     char arg0[16];
+//     char arg1[16];
+//     if (mode == 0){strcpy(arg1, "fisheye");}
+//     else{strcpy(arg1, "lidar");}
+//     strcpy(arg0, dataset.c_str());
+//     char **argv = new char *[argc+1]{arg0, arg1} ;
+//     string script_path = "../python_scripts/image_process/edge_extraction.py";
 
-	/** Import sys **/
-	PyRun_SimpleString("import sys");
+// 	/** Import sys **/
+// 	PyRun_SimpleString("import sys");
 	
-	/** The C API for Python 2 expects char ** as the second argument,
-     *  while the C API for Python 3 expects wchar_t **argv as the second argument.
-     * **/ 
-    wchar_t ** argm = (wchar_t **)(argv); 
-    PySys_SetArgv(argc, argm); 
+// 	/** The C API for Python 2 expects char ** as the second argument,
+//      *  while the C API for Python 3 expects wchar_t **argv as the second argument.
+//      * **/ 
+//     wchar_t ** argm = (wchar_t **)(argv); 
+//     PySys_SetArgv(argc, argm); 
 	
-	/** Execute python script **/ 
-    string command = "execfile('" + script_path + "')";
-	if (PyRun_SimpleString(command.c_str()) == NULL)
-	{
-		return -1;
-	}
+// 	/** Execute python script **/ 
+//     string command = "execfile('" + script_path + "')";
+// 	if (PyRun_SimpleString(command.c_str()) == NULL)
+// 	{
+// 		return -1;
+// 	}
 	
-	Py_Finalize();
-    delete []argv;
+// 	Py_Finalize();
+//     delete []argv;
 
-	return 0;
-}
+// 	return 0;
+// }
 
