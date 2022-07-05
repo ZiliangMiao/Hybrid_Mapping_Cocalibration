@@ -457,10 +457,9 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
 
 void FisheyeProcess::EdgeExtraction()
 {
-    std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
+    std::string script_path = this->kPkgPath + "/python_scripts/image_process/EdgeExtraction.py";
     std::string kSpots = to_string(this->num_spots);
     std::string cmd_str = "python3 " 
         + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
-    cout << cmd_str << endl;
     system(cmd_str.c_str());
 }

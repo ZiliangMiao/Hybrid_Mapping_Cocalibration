@@ -863,10 +863,9 @@ void LidarProcess::CreateFullviewPcd() {
 
 void LidarProcess::EdgeExtraction()
 {
-    std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
+    std::string script_path = this->kPkgPath + "/python_scripts/image_process/EdgeExtraction.py";
     std::string kSpots = to_string(this->num_spots);
     std::string cmd_str = "python3 " 
         + script_path + " " + this->kDatasetPath + " " + "lidar" + " " + kSpots;
-    cout << cmd_str << endl;
     system(cmd_str.c_str());
 }

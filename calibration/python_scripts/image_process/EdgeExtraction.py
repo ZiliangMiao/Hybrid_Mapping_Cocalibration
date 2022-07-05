@@ -233,12 +233,12 @@ if __name__ == "__main__":
     dataset_path = sys.argv[1]
     mode = sys.argv[2]
     kSpots = sys.argv[3]
-    print("Current root path: \n" + root_path)
-    print("kSpots: \n" + kSpots)
+    
 
     for spot in range(int(kSpots)):
         
         data_path = dataset_path + "/spot" + str(spot) + "/0"
+        print("Edge extraction in: " + data_path + " ... ", end="")
 
         dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
         dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
@@ -277,6 +277,7 @@ if __name__ == "__main__":
             edge_cam = np.zeros(edge_cam.shape, np.uint8)
             cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
             cv2.imwrite(dir_cam_output, edge_cam)
+            print("done.")
 
         # -------- Lidar --------
 
@@ -299,6 +300,7 @@ if __name__ == "__main__":
             edge_lid = np.zeros(edge_lid.shape, np.uint8)
             cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
             cv2.imwrite(dir_lid_output, edge_lid)
+            print("done.")
 
     # patch
     # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
