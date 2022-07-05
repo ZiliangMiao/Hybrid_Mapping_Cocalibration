@@ -79,13 +79,10 @@ FisheyeProcess::FisheyeProcess() {
             this -> poses_files_path_vec[i][j] = pose_file_path;
         }
     }
-
-    cout << endl;
 }
 
 void FisheyeProcess::ReadEdge() {
-    cout << "----- Fisheye: ReadEdge -----" << endl;
-    cout << "View Index in Fisheye ReadEdge: " << this->view_idx << endl;
+    cout << "----- Fisheye: ReadEdge -----" << " Spot Index: " << this->spot_idx << endl;
     string edge_fisheye_txt_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
 
     ifstream infile(edge_fisheye_txt_path);
@@ -110,11 +107,10 @@ void FisheyeProcess::ReadEdge() {
     edge_fisheye_pixels.erase(unique(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end()), edge_fisheye_pixels.end());
     cout << "Fisheye Edge Points after Duplicated Removed: " << edge_fisheye_pixels.size() << endl;
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] =  edge_fisheye_pixels;
-    cout << endl;
 }
 
 cv::Mat FisheyeProcess::ReadFisheyeImage() {
-    cout << "----- Fisheye: ReadOrgImage -----" << endl;
+    cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << endl;
     string fisheye_hdr_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     cv::Mat fisheye_hdr_filped_image;
@@ -123,22 +119,20 @@ cv::Mat FisheyeProcess::ReadFisheyeImage() {
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows == this->kFisheyeRows || fisheye_hdr_image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
-    cout << endl;
     return fisheye_hdr_filped_image;
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
-    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
+    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << " Spot Index: " << this->spot_idx << endl;
     /** read the original fisheye image and check the image size **/
     cv::Mat image = ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = FisheyeImageToSphere(image);
-    cout << endl;
     return result;
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image) {
-    cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
+    cout << "----- Fisheye: FisheyeImageToSphere -----"  << " Spot Index: " << this->spot_idx << endl;
     int r, g, b;
     float x, y, z;
     float radius, theta, phi;
@@ -197,18 +191,16 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     }
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
-    cout << endl;
     return result;
 }
 
 void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
-    cout << "----- Fisheye: SphereToPlane2 -----" << endl;
+    cout << "----- Fisheye: SphereToPlane2 -----" << " Spot Index: " << this->spot_idx << endl;
     SphereToPlane(polar_cloud, -1.0);
-    cout << endl;
 }
 
 void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
-    cout << "----- Fisheye: SphereToPlane -----" << endl;
+    cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
     double flat_rows = this->kFlatRows;
     double flat_cols = this->kFlatCols;
     cv::Mat flat_image = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
@@ -322,11 +314,10 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
-    cout << endl;
 }
 
 void FisheyeProcess::EdgeToPixel() {
-    cout << "----- Fisheye: EdgeToPixel -----" << endl;
+    cout << "----- Fisheye: EdgeToPixel -----" << " Spot Index: " << this->spot_idx << endl;
     string edge_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
 
@@ -344,11 +335,10 @@ void FisheyeProcess::EdgeToPixel() {
         }
     }
     this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
-    cout << endl;
 }
 
 void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pixel_cloud) {
-    cout << "----- Fisheye: PixLookUp -----" << endl;
+    cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
     EdgePixels edge_pixels = this -> edge_pixels_vec[this->spot_idx][this->view_idx];
@@ -389,13 +379,12 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
         outfile << edge_fisheye_pixel[0] << "\t" << edge_fisheye_pixel[1] << endl;
     }
     outfile.close();
-    cout << endl;
 }
 
 // create static blur image for autodiff ceres optimization
 // the "eale" and "polar" option is implemented but not tested/supported in optimization.
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
-    cout << "----- Fisheye: Kde -----" << endl;
+    cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
     const int n_rows = scale * this->kFisheyeRows;
@@ -463,11 +452,11 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     outfile.close();
     cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
          <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
-    cout << endl;
     return img;
 }
 
 int FisheyeProcess::EdgeExtraction(int mode) {
+    cout << "----- Fisheye: EdgeExtraction -----"  << " Spot Index: " << this->spot_idx << endl;
     /** Initialization **/
 	Py_Initialize();
 	if (!Py_IsInitialized()) {
@@ -501,7 +490,6 @@ int FisheyeProcess::EdgeExtraction(int mode) {
 	
 	Py_Finalize();
     delete []argv;
-
 	return 0;
 }
 

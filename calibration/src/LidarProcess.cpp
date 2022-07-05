@@ -90,7 +90,6 @@ LidarProcess::LidarProcess() {
             this->poses_files_path_vec[i][j] = pose_file_path;
         }
     }
-    cout << endl;
 }
 
 
@@ -307,7 +306,6 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     pcl::io::savePCDFileBinary(polar_pcd_path, *polar_cloud);
     tuple<CloudPtr, CloudPtr> result;
     result = make_tuple(polar_cloud, radius_outlier_cloud);
-    cout << endl;
     return result;
 }
 
@@ -540,7 +538,6 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
     cout << "LiDAR flat image path: " << flat_img_path << endl;
     cv::imwrite(flat_img_path, flat_img);
-    cout << endl;
 }
 
 void LidarProcess::EdgeToPixel() {
@@ -562,13 +559,11 @@ void LidarProcess::EdgeToPixel() {
         }
     }
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
-    cout << endl;
 }
 
 void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
-    cout << "----- LiDAR: PixLookUp -----" << endl;
-    cout << "Spot Index: " << this->spot_idx << endl;
+    cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_pixel_space = 0;
     EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
@@ -629,12 +624,10 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
                 << "\t" << point.intensity << endl;
     }
     outfile.close();
-    cout << endl;
 }
 
 void LidarProcess::ReadEdge() {
-    cout << "----- LiDAR: ReadEdge -----" << endl;
-    cout << "View Index in LiDAR ReadEdge: " << this->view_idx << endl;
+    cout << "----- LiDAR: ReadEdge -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     string edge_cloud_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
     EdgePts edge_pts;
     ifstream infile(edge_cloud_txt_path);
@@ -672,7 +665,6 @@ void LidarProcess::ReadEdge() {
     }
     cout << "Filtered LiDAR points: " << edge_cloud -> points.size() << endl;
     this->edge_cloud_vec[this->spot_idx][this->view_idx] = edge_cloud;
-    cout << endl;
 }
 
 /***** Extrinsic and Inverse Intrinsic Transform for Visualization of LiDAR Points in Flat Image *****/
@@ -723,7 +715,6 @@ vector<vector<double>> LidarProcess::EdgeCloudProjectToFisheye(vector<double> _p
         edge_fisheye_projection[0][i] = p_uv(0);
         edge_fisheye_projection[1][i] = p_uv(1);
     }
-    cout << endl;
     return edge_fisheye_projection;
 }
 
