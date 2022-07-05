@@ -96,7 +96,7 @@ void fusionViz(FisheyeProcess &cam, LidarProcess &lid, vector<double> params, do
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
-    string edge_proj_txt_path = lid.scenes_files_path_vec[lid.spot_idx][lid.view_idx].edge_fisheye_projection_path;
+    string edge_proj_txt_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].edge_fisheye_projection_path;
     outfile.open(edge_proj_txt_path, ios::out);
 
     vector<vector<double>> edge_lid_projection = lid.EdgeCloudProjectToFisheye(params);
@@ -158,8 +158,15 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string fullview_cloud_path = lid.fullview_sparse_cloud_path;
-    string fisheye_hdr_img_path = cam.scenes_files_path_vec[cam.spot_idx][cam.full_view_idx].fisheye_hdr_img_path;
+    string fullview_cloud_path;
+    if (lid.kDenseCloud) {
+        fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_dense_cloud_path;
+    }
+    else {
+        fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_sparse_cloud_path;
+    }
+
+    string fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][cam.fullview_idx].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
@@ -220,7 +227,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
 
     /** upward and downward cloud recolor **/
     /** load icp pose transform matrix **/
-    string pose_trans_upward_mat_path = lid.scenes_files_path_vec[lid.spot_idx][2].pose_trans_mat_path;
+    string pose_trans_upward_mat_path = lid.poses_files_path_vec[lid.spot_idx][2].pose_trans_mat_path;
     std::ifstream mat_upward;
     mat_upward.open(pose_trans_upward_mat_path);
     Eigen::Matrix4f pose_trans_upward_mat;
@@ -232,7 +239,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     mat_upward.close();
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
-    string pose_trans_downward_mat_path = lid.scenes_files_path_vec[lid.spot_idx][0].pose_trans_mat_path;
+    string pose_trans_downward_mat_path = lid.poses_files_path_vec[lid.spot_idx][0].pose_trans_mat_path;
     std::ifstream mat_downward;
     mat_downward.open(pose_trans_downward_mat_path);
     Eigen::Matrix4f pose_trans_downward_mat;
@@ -562,6 +569,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &cam,
     cam.SetSpotIdx(0);
     for (int idx = 0; idx < kViews; idx++) {
         lid.SetViewIdx(idx);
+        cam.SetViewIdx(idx);
         fusionViz(cam, lid, params_res, bandwidth);
     }
 

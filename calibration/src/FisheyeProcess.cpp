@@ -36,60 +36,54 @@ using namespace mlpack::tree;
 using namespace mlpack::kernel;
 using namespace arma;
 
-FisheyeProcess::FisheyeProcess(const string &pkg_path, const string &dataset) {
+FisheyeProcess::FisheyeProcess() {
     cout << "----- Fisheye: ImageProcess -----" << endl;
     /** create objects, initialization **/
-    string scenes_path_temp;
+    string pose_folder_path_temp;
     PoseFilePath pose_file_path_temp;
-
     EdgePixels edge_pixels_temp;
-    TagsMap tags_map_temp;
     EdgeFisheyePixels edge_fisheye_pixels_temp;
-
+    TagsMap tags_map_temp;
     for (int i = 0; i < num_spots; ++i) {
-        vector<string> scenes_path_vec_temp;
-        vector<PoseFilePath> pose_file_path_vec_temp;
+        vector<string> poses_path_vec_temp;
+        vector<PoseFilePath> poses_file_path_vec_temp;
         vector<EdgePixels> edge_pixels_vec_temp;
         vector<TagsMap> tags_map_vec_temp;
         vector<EdgeFisheyePixels> edge_fisheye_pixels_vec_temp;
-
         for (int j = 0; j < num_views; ++j) {
-            scenes_path_vec_temp.push_back(scenes_path_temp);
-            pose_file_path_vec_temp.push_back(pose_file_path_temp);
+            poses_path_vec_temp.push_back(pose_folder_path_temp);
+            poses_file_path_vec_temp.push_back(pose_file_path_temp);
             edge_pixels_vec_temp.push_back(edge_pixels_temp);
             tags_map_vec_temp.push_back(tags_map_temp);
             edge_fisheye_pixels_vec_temp.push_back(edge_fisheye_pixels_temp);
         }
-        this->scenes_path_vec.push_back(scenes_path_vec_temp);
-        this->scenes_files_path_vec.push_back(pose_file_path_vec_temp);
+        this->poses_folder_path_vec.push_back(poses_path_vec_temp);
+        this->poses_files_path_vec.push_back(poses_file_path_vec_temp);
         this->edge_pixels_vec.push_back(edge_pixels_vec_temp);
         this->tags_map_vec.push_back(tags_map_vec_temp);
         this->edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels_vec_temp);
     }
 
     /** degree map **/
-    for (int i = 0; i < this -> num_spots; ++i) {
-        for (int j = 0; j < this -> num_views; ++j) {
-            int v_degree = -40 + 40 * j;
+    for (int i = 0; i < this->num_spots; ++i) {
+        for (int j = 0; j < this->num_views; ++j) {
+            int v_degree = -this->view_angle_step + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/" + dataset + "/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
-            struct PoseFilePath sc(scenes_path_vec[i][j]);
-            this -> scenes_files_path_vec[i][j] = sc;
+            struct PoseFilePath pose_file_path(poses_folder_path_vec[i][j]);
+            this -> poses_files_path_vec[i][j] = pose_file_path;
         }
     }
-
-    cout << endl;
 }
 
 void FisheyeProcess::ReadEdge() {
-    cout << "----- Fisheye: ReadEdge -----" << endl;
-    cout << "View Index in Fisheye ReadEdge: " << this->view_idx << endl;
-    string edge_fisheye_txt_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
+    cout << "----- Fisheye: ReadEdge -----" << " Spot Index: " << this->spot_idx << endl;
+    string edge_fisheye_txt_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
 
     ifstream infile(edge_fisheye_txt_path);
     string line;
@@ -113,12 +107,11 @@ void FisheyeProcess::ReadEdge() {
     edge_fisheye_pixels.erase(unique(edge_fisheye_pixels.begin(), edge_fisheye_pixels.end()), edge_fisheye_pixels.end());
     cout << "Fisheye Edge Points after Duplicated Removed: " << edge_fisheye_pixels.size() << endl;
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] =  edge_fisheye_pixels;
-    cout << endl;
 }
 
 cv::Mat FisheyeProcess::ReadFisheyeImage() {
-    cout << "----- Fisheye: ReadOrgImage -----" << endl;
-    string fisheye_hdr_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
+    cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << endl;
+    string fisheye_hdr_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     cv::Mat fisheye_hdr_filped_image;
     cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
@@ -126,22 +119,20 @@ cv::Mat FisheyeProcess::ReadFisheyeImage() {
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows == this->kFisheyeRows || fisheye_hdr_image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
-    cout << endl;
     return fisheye_hdr_filped_image;
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
-    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << endl;
+    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << " Spot Index: " << this->spot_idx << endl;
     /** read the original fisheye image and check the image size **/
     cv::Mat image = ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = FisheyeImageToSphere(image);
-    cout << endl;
     return result;
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image) {
-    cout << "----- Fisheye: FisheyeImageToSphere -----" << endl;
+    cout << "----- Fisheye: FisheyeImageToSphere -----"  << " Spot Index: " << this->spot_idx << endl;
     int r, g, b;
     float x, y, z;
     float radius, theta, phi;
@@ -200,18 +191,16 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     }
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
-    cout << endl;
     return result;
 }
 
 void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
-    cout << "----- Fisheye: SphereToPlane2 -----" << endl;
+    cout << "----- Fisheye: SphereToPlane2 -----" << " Spot Index: " << this->spot_idx << endl;
     SphereToPlane(polar_cloud, -1.0);
-    cout << endl;
 }
 
 void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
-    cout << "----- Fisheye: SphereToPlane -----" << endl;
+    cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
     double flat_rows = this->kFlatRows;
     double flat_cols = this->kFlatCols;
     cv::Mat flat_image = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
@@ -312,9 +301,9 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     cout << "number of invalid searches:" << invalid_search << endl;
     cout << "number of invalid indices:" << invalid_index << endl;
 
-    string flat_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
-    string fusion_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
-    string result_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
+    string flat_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
+    string fusion_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
+    string result_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
     if (bandwidth < 0) {
@@ -325,12 +314,11 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
-    cout << endl;
 }
 
 void FisheyeProcess::EdgeToPixel() {
-    cout << "----- Fisheye: EdgeToPixel -----" << endl;
-    string edge_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
+    cout << "----- Fisheye: EdgeToPixel -----" << " Spot Index: " << this->spot_idx << endl;
+    string edge_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG((edge_img.rows != 0 && edge_img.cols != 0),
@@ -347,11 +335,10 @@ void FisheyeProcess::EdgeToPixel() {
         }
     }
     this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
-    cout << endl;
 }
 
 void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pixel_cloud) {
-    cout << "----- Fisheye: PixLookUp -----" << endl;
+    cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
     EdgePixels edge_pixels = this -> edge_pixels_vec[this->spot_idx][this->view_idx];
@@ -381,7 +368,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] = edge_fisheye_pixels;
     cout << "number of invalid lookups(image): " << invalid_edge_pix << endl;
 
-    string edge_org_txt_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
+    string edge_org_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
     /********* write the coordinates into txt file *********/
     ofstream outfile;
     outfile.open(edge_org_txt_path, ios::out);
@@ -392,13 +379,12 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
         outfile << edge_fisheye_pixel[0] << "\t" << edge_fisheye_pixel[1] << endl;
     }
     outfile.close();
-    cout << endl;
 }
 
 // create static blur image for autodiff ceres optimization
-// the "scale" and "polar" option is implemented but not tested/supported in optimization.
+// the "eale" and "polar" option is implemented but not tested/supported in optimization.
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
-    cout << "----- Fisheye: Kde -----" << endl;
+    cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
     const int n_rows = scale * this->kFisheyeRows;
@@ -449,7 +435,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     kde.Evaluate(query, kde_estimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
-    string kde_txt_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
+    string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
     ofstream outfile;
     outfile.open(kde_txt_path, ios::out);
     if (!outfile.is_open()) {
@@ -466,17 +452,15 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     outfile.close();
     cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
          <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
-    cout << endl;
     return img;
 }
 
-void FisheyeProcess::EdgeExtraction(string &pkg_path, string &dataset_path)
+void FisheyeProcess::EdgeExtraction()
 {
-    std::string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
-    std::string path = pkg_path + "/";
+    std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
     std::string kSpots = to_string(this->num_spots);
     std::string cmd_str = "python3 " 
-        + script_path + " " + dataset_path + " " + "fisheye" + " " + kSpots;
+        + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
     cout << cmd_str << endl;
     system(cmd_str.c_str());
 }

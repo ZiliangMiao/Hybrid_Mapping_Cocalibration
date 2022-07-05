@@ -1,7 +1,9 @@
 #include <string>
 #include <vector>
 #include <pcl/common/common.h>
-
+/** ros **/
+#include <ros/ros.h>
+#include <ros/package.h>
 using namespace std;
 typedef pcl::PointXYZRGB RGBPointT;
 typedef pcl::PointCloud<RGBPointT> RGBCloudT;
@@ -10,12 +12,15 @@ typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
 class FisheyeProcess{
 public:
     /** essential params **/
+    const string kPkgPath = ros::package::getPath("calibration");
+    const string kDatasetPath = this->kPkgPath + "/data/lh3";
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 1;
+    int num_spots = 4;
     int num_views = 3;
-    int full_view_idx = (num_views - 1) / 2;
-    vector<vector<string>> scenes_path_vec;
+    int view_angle_step = 40;
+    int fullview_idx = (this->num_views-1) / 2;
+    vector<vector<string>> poses_folder_path_vec;
 
     /** original data - images **/
     const int kFisheyeRows = 2048;
@@ -39,7 +44,7 @@ public:
         vector<int> pts_indices;
     }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
     typedef vector<vector<Tags>> TagsMap;
-    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each scene **/
+    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
 
     /***** Intrinsic Parameters *****/
     struct Intrinsic {
@@ -55,18 +60,18 @@ public:
         double v0 = 1200.975472;
     } intrinsic;
 
-    /********* File Path of the Specific Scene *********/
+    /********* File Path of the Specific Pose *********/
     struct PoseFilePath {
         PoseFilePath () = default;
-        PoseFilePath (const string& ScenePath) {
-            this -> output_folder_path = ScenePath + "/outputs";
-            this -> fusion_result_folder_path = ScenePath + "/results";
-            this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";
-            this -> edge_img_path = ScenePath + "/edges/cam_edge.png";
-            this -> flat_img_path = this -> output_folder_path + "/flatImage.bmp";
-            this -> edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
-            this -> kde_samples_path = this -> output_folder_path + "/camKDE.txt";
-            this -> fusion_img_path = this -> fusion_result_folder_path + "/fusion.bmp";
+        PoseFilePath (const string &pose_folder_path) {
+            this->output_folder_path = pose_folder_path + "/outputs/fisheye_outputs";
+            this->fusion_result_folder_path = pose_folder_path + "/results";
+            this->fisheye_hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
+            this->edge_img_path = pose_folder_path + "/edges/camEdge.png";
+            this->flat_img_path = this -> output_folder_path + "/flatImage.bmp";
+            this->edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
+            this->kde_samples_path = this -> output_folder_path + "/camKDE.txt";
+            this->fusion_img_path = this -> fusion_result_folder_path + "/fusion.bmp";
         }
         string output_folder_path;
         string fusion_result_folder_path;
@@ -77,13 +82,13 @@ public:
         string edge_fisheye_pixels_path;
         string kde_samples_path;
     };
-    vector<vector<struct PoseFilePath>> scenes_files_path_vec;
+    vector<vector<struct PoseFilePath>> poses_files_path_vec;
 
     /** Degree Map **/
     std::map<int, int> degree_map;
 
 public:
-    FisheyeProcess(const string &pkg_path, const string &dataset);
+    FisheyeProcess();
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
@@ -96,7 +101,7 @@ public:
     void EdgeToPixel();
     void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale, bool polar);
-    void EdgeExtraction(string &pkg_path, string &dataset_path);
+    void EdgeExtraction();
 
     /** Get and Set Methods **/
     void SetIntrinsic(vector<double> parameters) {

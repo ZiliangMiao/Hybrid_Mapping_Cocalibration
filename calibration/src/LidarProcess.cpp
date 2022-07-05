@@ -39,66 +39,62 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-LidarProcess::LidarProcess(const string &pkg_path, const string &dataset) {
+LidarProcess::LidarProcess() {
     cout << "----- LiDAR: LidarProcess -----" << endl;
     /** create objects, initialization **/
-    PoseFilePath pose_file_path_temp;
-    string scenes_path_temp;
+    string pose_folder_path_temp;
+    PoseFilePath pose_files_path_temp;
     EdgePixels edge_pixels_temp;
-    CloudPtr edge_cloud_temp;
     EdgePts edge_pts_temp;
+    CloudPtr edge_cloud_temp;
     TagsMap tags_map_temp;
     Eigen::Matrix4f pose_trans_mat_temp;
-    for (int i = 0; i < num_spots; ++i) {
-        vector<PoseFilePath> pose_file_path_vec_temp;
-        vector<string> scenes_path_vec_temp;
+    for (int i = 0; i < this->num_spots; ++i) {
+        vector<string> poses_folder_path_vec_temp;
+        vector<PoseFilePath> poses_file_path_vec_temp;
         vector<EdgePixels> edge_pixels_vec_temp;
-        vector<CloudPtr> edge_cloud_vec_temp;
         vector<EdgePts> edge_pts_vec_temp;
+        vector<CloudPtr> edge_cloud_vec_temp;
         vector<TagsMap> tags_map_vec_temp;
-        vector<Eigen::Matrix4f> pose_trans_mat_vec_temp;
+        vector<Eigen::Matrix4f> poses_trans_mat_vec_temp;
         for (int j = 0; j < num_views; ++j) {
-            pose_file_path_vec_temp.push_back(pose_file_path_temp);
-            scenes_path_vec_temp.push_back(scenes_path_temp);
+            poses_folder_path_vec_temp.push_back(pose_folder_path_temp);
+            poses_file_path_vec_temp.push_back(pose_files_path_temp);
             edge_pixels_vec_temp.push_back(edge_pixels_temp);
-            edge_cloud_vec_temp.push_back(edge_cloud_temp);
             edge_pts_vec_temp.push_back(edge_pts_temp);
+            edge_cloud_vec_temp.push_back(edge_cloud_temp);
             tags_map_vec_temp.push_back(tags_map_temp);
-            pose_trans_mat_vec_temp.push_back(pose_trans_mat_temp);
+            poses_trans_mat_vec_temp.push_back(pose_trans_mat_temp);
         }
-        this->scenes_files_path_vec.push_back(pose_file_path_vec_temp);
-        this->scenes_path_vec.push_back(scenes_path_vec_temp);
+        this->poses_folder_path_vec.push_back(poses_folder_path_vec_temp);
+        this->poses_files_path_vec.push_back(poses_file_path_vec_temp);
         this->edge_pixels_vec.push_back(edge_pixels_vec_temp);
-        this->edge_cloud_vec.push_back(edge_cloud_vec_temp);
         this->edge_pts_vec.push_back(edge_pts_vec_temp);
+        this->edge_cloud_vec.push_back(edge_cloud_vec_temp);
         this->tags_map_vec.push_back(tags_map_vec_temp);
-        this->pose_trans_mat_vec.push_back(pose_trans_mat_vec_temp);
+        this->pose_trans_mat_vec.push_back(poses_trans_mat_vec_temp);
     }
 
-    /** degree map **/
-    this->fullview_rec_folder_path = pkg_path + "/data/" + dataset + "/fullview_rec";
-    this->fullview_dense_cloud_path = this->fullview_rec_folder_path + "/fullview_dense_cloud.pcd";
-    this->fullview_sparse_cloud_path = this->fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
-
-    for (int i = 0; i < this -> num_spots; ++i) {
-        for (int j = 0; j < this -> num_views; ++j) {
-            int v_degree = -40 + 40 * j;
+    for (int i = 0; i < this->num_spots; ++i) {
+        for (int j = 0; j < this->num_views; ++j) {
+            int v_degree = -this->view_angle_step + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/" + dataset + "/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
-    for (int i = 0; i < this -> num_spots; ++i) {
-        for (int j = 0; j < this -> num_views; ++j) {
-            struct PoseFilePath sc(scenes_path_vec[i][j]);
-            this -> scenes_files_path_vec[i][j] = sc;
+    for (int i = 0; i < this->num_spots; ++i) {
+        string spot_path = this->kDatasetPath + "/spot" + to_string(i);
+        for (int j = 0; j < this->num_views; ++j) {
+            struct PoseFilePath pose_file_path(spot_path, poses_folder_path_vec[i][j]);
+            this->poses_files_path_vec[i][j] = pose_file_path;
         }
     }
-    cout << endl;
 }
 
 
 void LidarProcess::ICP() {
+    cout << "----- LiDAR: ICP -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     const bool kIcpViz = false;
     CloudPtr cloud_target_input(new CloudT);
     CloudPtr cloud_source_input(new CloudT);
@@ -107,19 +103,18 @@ void LidarProcess::ICP() {
     CloudPtr cloud_source_initial_trans(new CloudT); /** souce cloud with initial rigid transformation **/
     CloudPtr cloud_icped(new CloudT); /** apply icp result to source point cloud **/
 
-    std::string pkg_path = ros::package::getPath("calibration");
-    std::string src_pcd_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].icp_pcd_path;
-    std::string tgt_pcd_path = this -> scenes_files_path_vec[this->spot_idx][(this->num_views-1)/2].icp_pcd_path;
+    std::string src_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].icp_pcd_path;
+    std::string tgt_pcd_path = this -> poses_files_path_vec[this->spot_idx][(this->num_views - 1) / 2].icp_pcd_path;
 
     /** file loading check **/
     if (pcl::io::loadPCDFile<PointT>(tgt_pcd_path, *cloud_target_input) == -1) {
         PCL_ERROR("Could Not Load Target File!\n");
     }
-    cout << "ICP: Loaded " << cloud_target_input->size() << " points from target file" << endl;
-    if (pcl::io::loadPCDFile<PointT>(src_pcd_path, *cloud_source_input) == -1) {
+    cout << "Loaded " << cloud_target_input->size() << " points from target file" << endl;
+    if (pcl::io::loadPCDFile<PointT>(src_pcd_path,*cloud_source_input) == -1) {
         PCL_ERROR("Could Not Load Source File!\n");
     }
-    cout << "ICP: Loaded " << cloud_source_input->size() << " data points from source file" << endl;
+    cout << "Loaded " << cloud_source_input->size() << " data points from source file" << endl;
 
     /** invalid point filter **/
     std::vector<int> mapping_in;
@@ -176,18 +171,18 @@ void LidarProcess::ICP() {
     icp.setEuclideanFitnessEpsilon(0.01);
     icp.align(*cloud_icped, initial_trans_mat);
     if (icp.hasConverged()) {
-        cout << "ICP Converged, View: " << this->view_idx << endl;
+        cout << "ICP Converged" << endl;
         cout << "ICP Fitness Score: " << icp.getFitnessScore() << endl;
         cout << "ICP Fitness Epsilon: " << icp.getEuclideanFitnessEpsilon() << endl;
         cout << "ICP Transformation Matrix: \n" << icp.getFinalTransformation() << endl;
         /** write mat to txt file **/
         this -> pose_trans_mat_vec[this->spot_idx][this->view_idx] = icp.getFinalTransformation();
         std::ofstream mat_out;
-        mat_out.open(this->scenes_files_path_vec[this->spot_idx][this->view_idx].pose_trans_mat_path);
+        mat_out.open(this->poses_files_path_vec[this->spot_idx][this->view_idx].pose_trans_mat_path);
         mat_out << icp.getFinalTransformation() << endl;
         mat_out.close();
         /** write registered point cloud to pcd file **/
-        string registered_cloud_path = this->fullview_rec_folder_path +
+        string registered_cloud_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fullview_recon_folder_path +
                                        "/icp_registered_" + to_string(v_degree) + ".pcd";
         pcl::io::savePCDFileBinary(registered_cloud_path, *cloud_icped);
     }
@@ -225,15 +220,16 @@ void LidarProcess::ICP() {
 
 
 std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
-    cout << "----- LiDAR: LidarToSphere -----" << endl;
+    cout << "----- LiDAR: LidarToSphere -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the initial projection mode - by intensity or by depth **/
     const bool projByIntensity = this->kProjByIntensity;
     float x, y, z;
     float radius;
     float theta, phi;
+    float theta_min = M_PI, theta_max = -M_PI;
     float proj_param;
 
-    string dense_pcd_path = this->fullview_dense_cloud_path;
+    string dense_pcd_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fullview_dense_cloud_path;
     /** original cartesian point cloud **/
     CloudPtr org_cloud(new CloudT);
     pcl::io::loadPCDFile(dense_pcd_path, *org_cloud);
@@ -255,7 +251,6 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cond_filter.setCondition(range_cond);
     cond_filter.setInputCloud(org_cloud);
     cond_filter.filter(*cond_filtered_cloud);
-
 
     /** check the pass through filtered point cloud size **/
     int cond_filtered_cloud_size = cond_filtered_cloud->points.size();
@@ -297,25 +292,25 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
         polar_pt.z = 0;
         polar_pt.intensity = proj_param;
         polar_cloud->points.push_back(polar_pt);
+
+        if (theta > theta_max) { theta_max = theta; }
+        else if (theta < theta_min) { theta_min = theta; }
     }
-    // cout << "max theta of the fullview cloud: " << theta_max
-    //      << " min theta of the fullview cloud: " << theta_min;
-    cout << "polar cloud size:" << polar_cloud->points.size() << endl;
+    cout << "min theta of the fullview cloud: " << theta_min << "\n"
+         << " max theta of the fullview cloud: " << theta_max << endl;
 
     /** save to pcd files and create tuple return **/
-    string polar_pcd_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].polar_pcd_path;
-    string cart_pcd_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].cart_pcd_path;
+    string polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].polar_pcd_path;
+    string cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].cart_pcd_path;
     pcl::io::savePCDFileBinary(cart_pcd_path, *radius_outlier_cloud);
     pcl::io::savePCDFileBinary(polar_pcd_path, *polar_cloud);
     tuple<CloudPtr, CloudPtr> result;
     result = make_tuple(polar_cloud, radius_outlier_cloud);
-    cout << endl;
     return result;
 }
 
 void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& cart_cloud) {
-    cout << "----- LiDAR: SphereToPlane -----" << endl;
-    clock_t start_time = clock();
+    cout << "----- LiDAR: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the data container **/
     cv::Mat flat_img = cv::Mat::zeros(kFlatRows, kFlatCols, CV_32FC1); /** define the flat image **/
     vector<vector<Tags>> tags_map (kFlatRows, vector<Tags>(kFlatCols));
@@ -391,8 +386,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
 
                 /** hidden points filter **/
                 int hidden_pt_num = 0;
-                const bool kHiddenPtsFilter = false;
-                if (kHiddenPtsFilter) {
+                if (this->kHiddenPtsFilter) {
                     for (int i = 0; i < search_num; ++i) {
                         float dis_former, dis;
                         if (i == 0) {
@@ -509,9 +503,9 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
         }
     }
 
-    /** add the tags_map of this specific scene to maps **/
+    /** add the tags_map of this specific pose to maps **/
     this->tags_map_vec[this->spot_idx][this->view_idx] = tags_map;
-    string tags_map_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].tags_map_path;
+    string tags_map_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].tags_map_path;
     ofstream outfile;
     outfile.open(tags_map_path, ios::out);
     if (!outfile.is_open()) {
@@ -541,18 +535,15 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
 
     cout << "number of invalid searches:" << invalid_search_num << endl;
     cout << "number of invalid indices:" << invalid_idx_num << endl;
-    string flat_img_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
+    string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
     cout << "LiDAR flat image path: " << flat_img_path << endl;
     cv::imwrite(flat_img_path, flat_img);
-    cout << "LiDAR flat image generated successfully in " <<(double)(clock() - start_time) / CLOCKS_PER_SEC 
-        << "s.\nSpot Index: " << this->spot_idx << "View Index: " << this->view_idx << endl;
-    cout << endl;
 }
 
 void LidarProcess::EdgeToPixel() {
     /** generate edge_pixels and push back into edge_pixels_vec **/
-    cout << "----- LiDAR: EdgeToPixel -----" << endl;
-    string edge_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
+    cout << "----- LiDAR: EdgeToPixel -----" << " Spot Index: " << this->spot_idx << endl;
+    string edge_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG((edge_img.rows != 0 && edge_img.cols != 0), "size of original fisheye image is 0, check the path and filename! \nView Index: %d \nPath: %s", this->view_idx, edge_img_path.data());
@@ -568,12 +559,11 @@ void LidarProcess::EdgeToPixel() {
         }
     }
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
-    cout << endl;
 }
 
 void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
-    cout << "----- LiDAR: PixLookUp -----" << endl;
+    cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_pixel_space = 0;
     EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
@@ -621,7 +611,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     this->edge_cloud_vec[this->spot_idx][this->view_idx] = edge_cloud;
 
     /** write the coordinates and weights into .txt file **/
-    string edge_pts_coordinates_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
+    string edge_pts_coordinates_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
     ofstream outfile;
     outfile.open(edge_pts_coordinates_path, ios::out);
     if (!outfile.is_open()) {
@@ -634,13 +624,11 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
                 << "\t" << point.intensity << endl;
     }
     outfile.close();
-    cout << endl;
 }
 
 void LidarProcess::ReadEdge() {
-    cout << "----- LiDAR: ReadEdge -----" << endl;
-    cout << "View Index in LiDAR ReadEdge: " << this->view_idx << endl;
-    string edge_cloud_txt_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
+    cout << "----- LiDAR: ReadEdge -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
+    string edge_cloud_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
     EdgePts edge_pts;
     ifstream infile(edge_cloud_txt_path);
     string line;
@@ -677,14 +665,11 @@ void LidarProcess::ReadEdge() {
     }
     cout << "Filtered LiDAR points: " << edge_cloud -> points.size() << endl;
     this->edge_cloud_vec[this->spot_idx][this->view_idx] = edge_cloud;
-    cout << endl;
 }
 
 /***** Extrinsic and Inverse Intrinsic Transform for Visualization of LiDAR Points in Flat Image *****/
 vector<vector<double>> LidarProcess::EdgeCloudProjectToFisheye(vector<double> _p) {
-    cout << "----- LiDAR: EdgeCloudProjectToFisheye -----" << endl;
-    cout << "View Index in EdgeCloudProjectToFisheye:" << this->view_idx << endl;
-
+    cout << "----- LiDAR: EdgeCloudProjectToFisheye -----" << " Spot Index: " << this->spot_idx << endl;
     Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
@@ -730,7 +715,6 @@ vector<vector<double>> LidarProcess::EdgeCloudProjectToFisheye(vector<double> _p
         edge_fisheye_projection[0][i] = p_uv(0);
         edge_fisheye_projection[1][i] = p_uv(1);
     }
-    cout << endl;
     return edge_fisheye_projection;
 }
 
@@ -768,25 +752,24 @@ void LidarProcess::BagToPcd(string bag_file) {
         pcl_conversions::toPCL(*input, pcl_pc2);
         pcl::fromPCLPointCloud2(pcl_pc2, *intensityCloud);
         string id_str = to_string(i);
-        string pcds_folder_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
+        string pcds_folder_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
         pcl::io::savePCDFileBinary(pcds_folder_path + "/" + id_str + ".pcd", *intensityCloud);
     }
 }
 
 void LidarProcess::CreateDensePcd() {
-    bool merge_icp = true; /** merge_dense = false **/
     int num_pcds;
     string pcd_path;
     string folder_path;
-    if (merge_icp) {
-        num_pcds = LidarProcess::kNumIcpPcds;
-        pcd_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].icp_pcd_path;
-        folder_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].icp_pcds_folder_path;
+    if (this->kDenseCloud) {
+        num_pcds = LidarProcess::kNumRecPcds;
+        pcd_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcd_path;
+        folder_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
     }
     else {
-        num_pcds = LidarProcess::kNumRecPcds;
-        pcd_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].dense_pcd_path;
-        folder_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
+        num_pcds = LidarProcess::kNumIcpPcds;
+        pcd_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].icp_pcd_path;
+        folder_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].icp_pcds_folder_path;
     }
 
     pcl::PCDReader reader; /** used for read PCD files **/
@@ -822,16 +805,16 @@ void LidarProcess::CreateDensePcd() {
 }
 
 void LidarProcess::CreateFullviewPcd() {
-    const bool kDenseFullview = false;
+    cout << "----- LiDAR: CreateFullviewPcd -----" << " Spot Index: " << this->spot_idx << endl;
     /** target and fullview cloud path **/
     string fullview_target_cloud_path, fullview_cloud_path;
-    if (kDenseFullview) {
-        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][this->full_view_idx].dense_pcd_path;
-        fullview_cloud_path = this->fullview_rec_folder_path + "/fullview_dense_cloud.pcd";
+    if (this->kDenseCloud) {
+        fullview_target_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].dense_pcd_path;
+        fullview_cloud_path = this->poses_files_path_vec[this->spot_idx][0].fullview_dense_cloud_path;
     }
     else {
-        fullview_target_cloud_path = this->scenes_files_path_vec[this->spot_idx][this->full_view_idx].icp_pcd_path;
-        fullview_cloud_path = this->fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
+        fullview_target_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].icp_pcd_path;
+        fullview_cloud_path = this->poses_files_path_vec[this->spot_idx][0].fullview_sparse_cloud_path;
     }
 
     /** load full view point cloud **/
@@ -842,11 +825,11 @@ void LidarProcess::CreateFullviewPcd() {
     cout << "Degree 0 Full View Dense Pcd Loaded!" << endl;
 
     for(int i = 0; i < this->num_views; i++) {
-        if (i == this->full_view_idx) {
+        if (i == this->fullview_idx) {
             continue;
         }
         /** load icp pose transform matrix **/
-        string pose_trans_mat_path = this->scenes_files_path_vec[this->spot_idx][i].pose_trans_mat_path;
+        string pose_trans_mat_path = this->poses_files_path_vec[this->spot_idx][i].pose_trans_mat_path;
         std::ifstream mat_in;
         mat_in.open(pose_trans_mat_path);
         Eigen::Matrix4f pose_trans_mat;
@@ -856,20 +839,20 @@ void LidarProcess::CreateFullviewPcd() {
             }
         }
         mat_in.close();
+        cout << "Degree " << this->degree_map[i] << " ICP Mat: " << "\n" << pose_trans_mat << endl;
         /** transform point cloud **/
         CloudPtr input_cloud(new CloudT);
         CloudPtr input_cloud_trans(new CloudT);
         string input_cloud_path;
-        if (kDenseFullview) {
-            input_cloud_path = this->scenes_files_path_vec[this->spot_idx][i].dense_pcd_path;
+        if (this->kDenseCloud) {
+            input_cloud_path = this->poses_files_path_vec[this->spot_idx][i].dense_pcd_path;
         }
         else {
-            input_cloud_path = this->scenes_files_path_vec[this->spot_idx][i].icp_pcd_path;
+            input_cloud_path = this->poses_files_path_vec[this->spot_idx][i].icp_pcd_path;
         }
         if (pcl::io::loadPCDFile<PointT>(input_cloud_path, *input_cloud) == -1) {
             PCL_ERROR("Pcd File Not Exist!");
         }
-        cout << "Degree " << this->degree_map[i] << ": Dense Pcd Loaded!" << endl;
         pcl::transformPointCloud(*input_cloud, *input_cloud_trans, pose_trans_mat);
         /** point cloud addition **/
         *fullview_cloud = *fullview_cloud + *input_cloud_trans;
@@ -878,13 +861,12 @@ void LidarProcess::CreateFullviewPcd() {
     cout << "Create Full View Point Cloud File Successfully!" << endl;
 }
 
-void LidarProcess::EdgeExtraction(string &pkg_path, string &dataset_path)
+void LidarProcess::EdgeExtraction()
 {
-    std::string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
-    std::string path = pkg_path + "/";
+    std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
     std::string kSpots = to_string(this->num_spots);
     std::string cmd_str = "python3 " 
-        + script_path + " " + dataset_path + " " + "fisheye" + " " + kSpots;
+        + script_path + " " + this->kDatasetPath + " " + "lidar" + " " + kSpots;
     cout << cmd_str << endl;
     system(cmd_str.c_str());
 }
