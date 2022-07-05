@@ -130,7 +130,7 @@ public:
     void ReadEdge();
     vector<vector<double>> EdgeCloudProjectToFisheye(vector<double> _p);
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
-    int EdgeExtraction(string pkg_path, string dataset, int mode);
+    void EdgeExtraction();
 
     /***** LiDAR Pre-Processing *****/
     std::tuple<CloudPtr, CloudPtr> LidarToSphere();

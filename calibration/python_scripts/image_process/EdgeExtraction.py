@@ -225,28 +225,32 @@ def check_folder():
             os.mkdir(dir)
 
 if __name__ == "__main__":
-    spot_range = 4
-    for spot in range(spot_range):
-        if not (len(sys.argv) > 3):
-            print("failed")
-            break
-        root_path = sys.argv[3]
-        default_name = sys.argv[1]
-        mode = sys.argv[2]  
-        print("Current root path: \n" + root_path)
-        data_path = root_path + "/data/" + default_name + "/" + str(spot) + "/0"
+    
+    kArgs = 4
+    if not (len(sys.argv) >= kArgs):
+        print("Edge extraction failed.")
+    root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
+    dataset_path = sys.argv[1]
+    mode = sys.argv[2]
+    kSpots = sys.argv[3]
+    
+
+    for spot in range(int(kSpots)):
+        
+        data_path = dataset_path + "/spot" + str(spot) + "/0"
+        print("Edge extraction in: " + data_path + " ... ", end="")
 
         dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
         dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
         dir_cam_filtered = data_path + "/edges/canny_outputs/cam_1_filtered.png"
         dir_cam_canny = data_path + "/edges/canny_outputs/cam_2_canny.png"
-        dir_cam_output = data_path + "/edges/cam_edge.png"
+        dir_cam_output = data_path + "/edges/camEdge.png"
 
         dir_lid_original = data_path + "/outputs/lidar_outputs/flatLidarImage.bmp"
-        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask" + str(spot) + ".png"
+        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask.png"
         dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
         dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
-        dir_lid_output = data_path + "/edges/lid_edge.png"
+        dir_lid_output = data_path + "/edges/lidEdge.png"
 
         check_folder()
 
@@ -273,6 +277,7 @@ if __name__ == "__main__":
             edge_cam = np.zeros(edge_cam.shape, np.uint8)
             cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
             cv2.imwrite(dir_cam_output, edge_cam)
+            print("done.")
 
         # -------- Lidar --------
 
@@ -295,6 +300,7 @@ if __name__ == "__main__":
             edge_lid = np.zeros(edge_lid.shape, np.uint8)
             cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
             cv2.imwrite(dir_lid_output, edge_lid)
+            print("done.")
 
     # patch
     # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
@@ -318,7 +324,9 @@ if __name__ == "__main__":
 
     # cv2.imwrite(dir_lid_output, edge_lid)
     # cv2.imwrite(dir_cam_output, edge_cam)
-    print("image_process completed.")
+
+    if (len(sys.argv) >= kArgs):
+        print("Edge extraction completed.")
 
     # ################################################################################################
     # # LiDAR # define the hyper-params of LiDAR

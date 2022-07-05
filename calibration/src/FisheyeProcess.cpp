@@ -1,12 +1,12 @@
 /** basic **/
 #include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
 #include <unordered_map>
 #include <string>
 #include <vector>
 #include <cmath>
 #include <time.h>
-#include "python3.6/Python.h"
 /** opencv **/
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -27,6 +27,7 @@
 #include <mlpack/core/tree/cover_tree.hpp>
 /** headings **/
 #include "FisheyeProcess.h"
+#include "spline.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -35,6 +36,7 @@ using namespace mlpack::metric;
 using namespace mlpack::tree;
 using namespace mlpack::kernel;
 using namespace arma;
+using namespace tk;
 
 FisheyeProcess::FisheyeProcess() {
     cout << "----- Fisheye: ImageProcess -----" << endl;
@@ -127,11 +129,12 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     /** read the original fisheye image and check the image size **/
     cv::Mat image = ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    result = FisheyeImageToSphere(image);
+    tk::spline spline;
+    result = FisheyeImageToSphere(image, false, spline);
     return result;
 }
 
-std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image) {
+std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline) {
     cout << "----- Fisheye: FisheyeImageToSphere -----"  << " Spot Index: " << this->spot_idx << endl;
     int r, g, b;
     float x, y, z;
@@ -140,10 +143,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     float a0, a2, a3, a4;
     float c, d, e;
     float u0, v0;
-    a0 = this->intrinsic.a0;
-    a2 = this->intrinsic.a2;
-    a3 = this->intrinsic.a3;
-    a4 = this->intrinsic.a4;
+    
     c = this->intrinsic.c;
     d = this->intrinsic.d;
     e = this->intrinsic.e;
@@ -163,11 +163,21 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             y = e * u + 1 * v - v0;
             radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                /** spherical coordinates **/
-                /** caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi **/
-                phi = atan2(y, x); // note that atan2 is defined as Y/X
-                theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+                if (!enable_spline){
+                    a0 = this->intrinsic.a0;
+                    a2 = this->intrinsic.a2;
+                    a3 = this->intrinsic.a3;
+                    a4 = this->intrinsic.a4;
+                    z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+                }
+                else{
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = spline(radius);
+                }
 
                 /** point cloud with origin polar coordinates **/
                 polar_pt.x = theta;
@@ -382,8 +392,8 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
 }
 
 // create static blur image for autodiff ceres optimization
-// the "eale" and "polar" option is implemented but not tested/supported in optimization.
-std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
+// the "polar" option is implemented but not tested/supported in optimization.
+std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
@@ -399,33 +409,17 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
         reference(1, i) = edge_fisheye_pixels[i][1];
     }
 
-    if (!polar) {
-        query = arma::mat(2, n_cols * n_rows);
-        arma::vec rows = arma::linspace(0, this->kFisheyeRows - 1, n_rows);
-        arma::vec cols = arma::linspace(0, this->kFisheyeCols - 1, n_cols);
+    query = arma::mat(2, n_cols * n_rows);
+    arma::vec rows = arma::linspace(0, this->kFisheyeRows - 1, n_rows);
+    arma::vec cols = arma::linspace(0, this->kFisheyeCols - 1, n_cols);
 
-        for (int i = 0; i < n_rows; ++i) {
-            for (int j = 0; j < n_cols; ++j) {
-                query(0, i * n_cols + j) = rows.at(i);
-                query(1, i * n_cols + j) = cols.at(j);
-            }
+    for (int i = 0; i < n_rows; ++i) {
+        for (int j = 0; j < n_cols; ++j) {
+            query(0, i * n_cols + j) = rows.at(i);
+            query(1, i * n_cols + j) = cols.at(j);
         }
     }
-    else {
-        query = arma::mat(2, n_cols * n_rows);
-        arma::vec r_q = arma::linspace(1, this->kFlatRows, n_rows);
-        arma::vec sin_q = arma::linspace(0, (2 * M_PI) * (1 - 1 / n_cols), n_cols);
-        arma::vec cos_q = sin_q;
-        sin_q.for_each([](mat::elem_type &val) { val = sin(val); });
-        cos_q.for_each([](mat::elem_type &val) { val = cos(val); });
 
-        for (int i = 0; i < n_rows; ++i) {
-            for (int j = 0; j < n_cols; ++j) {
-                query(0, i * n_cols + j) = r_q.at(i) * cos_q.at(j) + this->intrinsic.u0;
-                query(1, i * n_cols + j) = r_q.at(i) * sin_q.at(j) + this->intrinsic.v0;
-            }
-        }
-    }
 
     arma::vec kde_estimations;
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
@@ -455,42 +449,10 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     return img;
 }
 
-int FisheyeProcess::EdgeExtraction(int mode) {
-    cout << "----- Fisheye: EdgeExtraction -----"  << " Spot Index: " << this->spot_idx << endl;
-    /** Initialization **/
-	Py_Initialize();
-	if (!Py_IsInitialized()) {
-		return -1;
-	}
-
-    int argc = 3;
-    char arg0[this->kPkgPath.size()];
-    char arg1[this->kDatasetPath.size()];
-    char arg2[to_string(this->view_angle_step).size()];
-    strcpy(arg0, this->kPkgPath.data());
-    strcpy(arg1, this->kDatasetPath.data());
-    strcpy(arg2, to_string(this->view_angle_step).data());
-
-    char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
-    string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
-
-	/** Import sys **/
-	PyRun_SimpleString("import sys");
-	
-	/** The C API for Python 2 expects char ** as the second argument,
-     *  while the C API for Python 3 expects wchar_t **argv as the second argument.
-     * **/ 
-    wchar_t ** argm = (wchar_t **)(argv); 
-    PySys_SetArgv(argc, argm); 
-	
-	/** Execute python script **/ 
-    string command = "execfile('" + script_path + "')";
-	if (PyRun_SimpleString(command.c_str()) == NULL) {
-		return -1;
-	}
-	
-	Py_Finalize();
-    delete []argv;
-	return 0;
+void FisheyeProcess::EdgeExtraction() {
+    std::string script_path = this->kPkgPath + "/python_scripts/image_process/EdgeExtraction.py";
+    std::string kSpots = to_string(this->num_spots);
+    std::string cmd_str = "python3 " 
+        + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
+    system(cmd_str.c_str());
 }
-
