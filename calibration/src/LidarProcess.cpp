@@ -75,15 +75,15 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     }
 
     /** degree map **/
-    this->fullview_rec_folder_path = pkg_path + "/data/floor5/fullview_rec";
+    this->fullview_rec_folder_path = pkg_path + "/data/sanjiao/fullview_rec";
     this->fullview_dense_cloud_path = this->fullview_rec_folder_path + "/fullview_dense_cloud.pcd";
     this->fullview_sparse_cloud_path = this->fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
 
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
-            int v_degree = -50 + 50 * j;
+            int v_degree = -40 + 40 * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> scenes_path_vec[i][j] = pkg_path + "/data/sanjiao/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
@@ -777,7 +777,7 @@ void LidarProcess::CreateDensePcd() {
     int num_pcds;
     string pcd_path;
     string folder_path;
-    if (true) {
+    if (merge_icp) {
         num_pcds = LidarProcess::kNumIcpPcds;
         pcd_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].icp_pcd_path;
         folder_path = this->scenes_files_path_vec[this->spot_idx][this->view_idx].icp_pcds_folder_path;
@@ -821,7 +821,7 @@ void LidarProcess::CreateDensePcd() {
 }
 
 void LidarProcess::CreateFullviewPcd() {
-    const bool kDenseFullview = true;
+    const bool kDenseFullview = false;
     /** target and fullview cloud path **/
     string fullview_target_cloud_path, fullview_cloud_path;
     if (kDenseFullview) {

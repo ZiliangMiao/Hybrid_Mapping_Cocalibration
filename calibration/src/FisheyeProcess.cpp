@@ -6,7 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <time.h>
-// #include "python3.6/Python.h"
+#include "python3.6/Python.h"
 /** opencv **/
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/core.hpp>
@@ -70,9 +70,9 @@ FisheyeProcess::FisheyeProcess(string pkg_path) {
     /** degree map **/
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
-            int v_degree = -50 + 50 * j;
+            int v_degree = -40 + 40 * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> scenes_path_vec[i][j] = pkg_path + "/data/sanjiao/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
@@ -469,34 +469,45 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     return img;
 }
 
-// int main(int argc, char* argv[])
-// {
-// 	//第一步：初始化Python
-// 	//在调用Python的提供的给C的API之前，通过执行初始化
-// 	//来添加Python的内建模块、__main__、sys等
-// 	Py_Initialize();
+int EdgeExtraction(string dataset, int mode)
+{
+    /** Initialization **/
 
-// 	//检查初始化是否完成
-// 	if (!Py_IsInitialized())
-// 	{
-// 		return -1;
-// 	}
+	Py_Initialize();
+
+	if (!Py_IsInitialized())
+	{
+		return -1;
+	}
+
+    int argc = 0;
+    char arg0[16];
+    char arg1[16];
+    if (mode == 0){strcpy(arg1, "fisheye");}
+    else{strcpy(arg1, "lidar");}
+    strcpy(arg0, dataset.c_str());
+    char **argv = new char *[argc+1]{arg0, arg1} ;
+    string script_path = "../python_scripts/image_process/edge_extraction.py";
+
+	/** Import sys **/
+	PyRun_SimpleString("import sys");
 	
-// 	//第二步：导入sys模块
-// 	PyRun_SimpleString("import sys");
+	/** The C API for Python 2 expects char ** as the second argument,
+     *  while the C API for Python 3 expects wchar_t **argv as the second argument.
+     * **/ 
+    wchar_t ** argm = (wchar_t **)(argv); 
+    PySys_SetArgv(argc, argm); 
 	
-// 	//第三步：导入执行脚本时的命令行参数，如：./sample.py arg1 arg2
-// 	//PyRun_SimpleString("sys.argv['arg1','arg2']"); 有网友反馈这条命令不可用了，用下面的可以替换下
-// 	PySys_SetArgv(argc, argv);
+	/** Execute python script **/ 
+    string command = "execfile('" + script_path + "')";
+	if (PyRun_SimpleString(command.c_str()) == NULL)
+	{
+		return -1;
+	}
 	
-// 	//第四步：执行调用脚本文件命令,注意文件的路径
-// 	if (PyRun_SimpleString("execfile('./sample.py')") == NULL)
-// 	{
-// 		return -1;
-// 	}
-	
-// 	//第五步：关闭Python解释器
-// 	Py_Finalize();
-// 	return 0;
-// }
+	Py_Finalize();
+    delete []argv;
+
+	return 0;
+}
 

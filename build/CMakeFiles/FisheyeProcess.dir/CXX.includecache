@@ -29,6 +29,8 @@ cmath
 -
 time.h
 -
+python3.6/Python.h
+/home/halsey/software/catkin_ws/src/Livox_Fisheye_Fusion/calibration/src/python3.6/Python.h
 opencv2/opencv.hpp
 -
 opencv2/core/core.hpp

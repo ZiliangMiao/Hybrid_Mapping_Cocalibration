@@ -33,18 +33,19 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = false;
-const bool kLidarFlatProcess = false;
+const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
+const bool kCreateDensePcd = true;
+const bool kInitialIcp = true;
+const bool kCreateFullViewPcd = true;
 const bool kReconstruction = true;
 
 /********* Directory Path of ROS Package *********/
 string pkg_path = ros::package::getPath("calibration");
+string dataset = "sanjiao";
 
 bool checkFolder(string folder_path){
     if(opendir(folder_path.c_str()) == NULL){                 // The first parameter of 'opendir' is char *
@@ -85,6 +86,7 @@ int main(int argc, char** argv) {
             std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
             fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
+        // fisheye_process.EdgeExtraction(dataset, 0);
     }
     else if (kFisheyeEdgeProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
