@@ -27,6 +27,7 @@
 #include <mlpack/core/tree/cover_tree.hpp>
 /** headings **/
 #include "FisheyeProcess.h"
+#include "spline.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -35,6 +36,7 @@ using namespace mlpack::metric;
 using namespace mlpack::tree;
 using namespace mlpack::kernel;
 using namespace arma;
+using namespace tk;
 
 FisheyeProcess::FisheyeProcess() {
     cout << "----- Fisheye: ImageProcess -----" << endl;
@@ -127,11 +129,12 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     /** read the original fisheye image and check the image size **/
     cv::Mat image = ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    result = FisheyeImageToSphere(image);
+    tk::spline spline;
+    result = FisheyeImageToSphere(image, false, spline);
     return result;
 }
 
-std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image) {
+std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline) {
     cout << "----- Fisheye: FisheyeImageToSphere -----"  << " Spot Index: " << this->spot_idx << endl;
     int r, g, b;
     float x, y, z;
@@ -140,10 +143,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     float a0, a2, a3, a4;
     float c, d, e;
     float u0, v0;
-    a0 = this->intrinsic.a0;
-    a2 = this->intrinsic.a2;
-    a3 = this->intrinsic.a3;
-    a4 = this->intrinsic.a4;
+    
     c = this->intrinsic.c;
     d = this->intrinsic.d;
     e = this->intrinsic.e;
@@ -163,11 +163,21 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             y = e * u + 1 * v - v0;
             radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                /** spherical coordinates **/
-                /** caution: the default range of phi is -pi to pi, we need to modify this range to 0 to 2pi **/
-                phi = atan2(y, x); // note that atan2 is defined as Y/X
-                theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+                if (!enable_spline){
+                    a0 = this->intrinsic.a0;
+                    a2 = this->intrinsic.a2;
+                    a3 = this->intrinsic.a3;
+                    a4 = this->intrinsic.a4;
+                    z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+                }
+                else{
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = spline(radius);
+                }
 
                 /** point cloud with origin polar coordinates **/
                 polar_pt.x = theta;

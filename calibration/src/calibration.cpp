@@ -34,15 +34,15 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = true;
-const bool kFisheyeEdgeProcess = true;
-const bool kLidarFlatProcess = true;
-const bool kLidarEdgeProcess = true;
+const bool kFisheyeFlatProcess = false;
+const bool kFisheyeEdgeProcess = false;
+const bool kLidarFlatProcess = false;
+const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = true;
-const bool kCreateDensePcd = true;
-const bool kInitialIcp = true;
-const bool kCreateFullViewPcd = true;
-const bool kReconstruction = true;
+const bool kCreateDensePcd = false;
+const bool kInitialIcp = false;
+const bool kCreateFullViewPcd = false;
+const bool kReconstruction = false;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
@@ -335,13 +335,13 @@ int main(int argc, char** argv) {
         /********* Initial Visualization *********/
         fisheye.SetSpotIdx(0);
         lidar.SetSpotIdx(0);
-        for (int i = 0; i < fisheye.num_views; i++) {
-            lidar.SetViewIdx(i);
-            fisheye.SetViewIdx(i);
-            lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
-            fisheye.ReadEdge();
-            fusionViz(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
-        }
+        fisheye.SetViewIdx((fisheye.num_views - 1) / 2);
+        lidar.SetViewIdx((lidar.num_views - 1) / 2);
+        lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+        fisheye.ReadEdge();
+        
+        fusionViz(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+
         for (int i = 0; i < bw.size(); i++) {
             double bandwidth = bw[i];
             cout << "Round " << i << endl;

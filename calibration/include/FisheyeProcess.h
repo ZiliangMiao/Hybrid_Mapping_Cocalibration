@@ -4,7 +4,10 @@
 /** ros **/
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <spline.h>
+
 using namespace std;
+using namespace tk;
 typedef pcl::PointXYZRGB RGBPointT;
 typedef pcl::PointCloud<RGBPointT> RGBCloudT;
 typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
@@ -92,7 +95,7 @@ public:
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
-    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image);
+    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline);
     void SphereToPlane(RGBCloudPtr sphere_polar_cloud);
     void SphereToPlane(RGBCloudPtr sphere_polar_cloud, double bandwidth);
 
