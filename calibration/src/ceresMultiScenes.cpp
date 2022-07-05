@@ -208,10 +208,10 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
             /** push the point back into one of the three point clouds **/
             /** 1200 1026 330 1070 **/
             if (inv_uv_radius < 350 || inv_uv_radius > 1050) {
-                upward_cloud -> points.push_back(pt);
+                upward_cloud->points.push_back(pt);
             }
             else {
-                fullview_rgb_cloud -> points.push_back(pt);
+                fullview_rgb_cloud->points.push_back(pt);
             }
         }
         else {
@@ -236,6 +236,8 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         }
     }
     mat_upward.close();
+    cout << "Upward View: " << " Spot Index: " << lid.spot_idx << " View Index: " << upward_view_idx << "\n"
+         << "ICP Trans Mat:" << "\n " << pose_trans_upward_mat << endl;
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
     /** load upward view fisheye image **/
@@ -254,6 +256,8 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         }
     }
     mat_downward.close();
+    cout << "Downward View: " << " Spot Index: " << lid.spot_idx << " View Index: " << downward_view_idx << "\n"
+         << "ICP Trans Mat:" << "\n " << pose_trans_downward_mat << endl;
     Eigen::Matrix4f pose_trans_downward_mat_inv = pose_trans_downward_mat.inverse();
 
     /** load downward view fisheye image **/
@@ -290,6 +294,7 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     }
     /** transformation to target view **/
     pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat);
+    pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_upward_mat); /** the downward cloud here also need a trans **/
 
     /** inverse transformation to downward view **/
     pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_downward_mat_inv);
