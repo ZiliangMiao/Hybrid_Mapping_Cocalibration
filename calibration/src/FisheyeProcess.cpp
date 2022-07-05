@@ -415,7 +415,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
 
     for (int i = 0; i < n_rows; ++i) {
         for (int j = 0; j < n_cols; ++j) {
-            query(0, i * n_cols + j) = rows.at(n_rows - 1 - i);
+            query(0, i * n_cols + j) = rows.at(i);
             query(1, i * n_cols + j) = cols.at(j);
         }
     }

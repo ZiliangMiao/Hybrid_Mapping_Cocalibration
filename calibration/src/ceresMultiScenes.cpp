@@ -542,7 +542,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = 16;
-    options.max_num_iterations = 75;
+    options.max_num_iterations = 50;
     options.function_tolerance = 1e-6;
     options.use_nonmonotonic_steps = false;
 
