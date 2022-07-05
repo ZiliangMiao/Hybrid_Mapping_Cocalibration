@@ -108,7 +108,7 @@ public:
     std::map<int, int> degree_map;
 
 public:
-    LidarProcess(const string& pkg_path);
+    LidarProcess(const string& pkg_path, const string &dataset);
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();

@@ -38,7 +38,7 @@ typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
-LidarProcess::LidarProcess(const string& pkg_path) {
+LidarProcess::LidarProcess(const string &pkg_path, const string &dataset) {
     cout << "----- LiDAR: LidarProcess -----" << endl;
     /** create objects, initialization **/
     PoseFilePath pose_file_path_temp;
@@ -75,7 +75,7 @@ LidarProcess::LidarProcess(const string& pkg_path) {
     }
 
     /** degree map **/
-    this->fullview_rec_folder_path = pkg_path + "/data/sanjiao/fullview_rec";
+    this->fullview_rec_folder_path = pkg_path + "/data/" + dataset + "/fullview_rec";
     this->fullview_dense_cloud_path = this->fullview_rec_folder_path + "/fullview_dense_cloud.pcd";
     this->fullview_sparse_cloud_path = this->fullview_rec_folder_path + "/fullview_sparse_cloud.pcd";
 
@@ -83,7 +83,7 @@ LidarProcess::LidarProcess(const string& pkg_path) {
         for (int j = 0; j < this -> num_views; ++j) {
             int v_degree = -40 + 40 * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/sanjiao/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> scenes_path_vec[i][j] = pkg_path + "/data/" + dataset + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 

@@ -15,6 +15,7 @@ public:
     int num_spots = 1;
     int num_views = 3;
     int full_view_idx = (num_views - 1) / 2;
+    string dataset;
     vector<vector<string>> scenes_path_vec;
 
     /** original data - images **/
@@ -83,7 +84,7 @@ public:
     std::map<int, int> degree_map;
 
 public:
-    FisheyeProcess(string pkgPath);
+    FisheyeProcess(const string &pkg_path, const string &dataset);
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
@@ -96,7 +97,7 @@ public:
     void EdgeToPixel();
     void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale, bool polar);
-    // int EdgeExtraction(string dataset, int mode);
+    int EdgeExtraction(int mode);
 
     /** Get and Set Methods **/
     void SetIntrinsic(vector<double> parameters) {

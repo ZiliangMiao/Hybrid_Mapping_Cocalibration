@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
     };
 
     cout << "----------------- Camera Processing ---------------------" << endl;
-    FisheyeProcess fisheye_process(pkg_path);
+    FisheyeProcess fisheye_process(pkg_path, dataset);
     fisheye_process.SetIntrinsic(params_calib);
 
     if (kFisheyeFlatProcess) {
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
             std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
             fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
-        // fisheye_process.EdgeExtraction(dataset, 0);
+        fisheye_process.EdgeExtraction(0);
     }
     else if (kFisheyeEdgeProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
 
     cout << endl;
     cout << "----------------- LiDAR Processing ---------------------" << endl;
-    LidarProcess lidar_process(pkg_path);
+    LidarProcess lidar_process(pkg_path, dataset);
     lidar_process.SetExtrinsic(params_calib);
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
