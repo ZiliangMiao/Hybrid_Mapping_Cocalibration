@@ -14,7 +14,7 @@ public:
     int view_idx = 0;
     int num_spots = 4;
     int num_views = 3;
-    vector<vector<string>> scenes_path_vec;
+    vector<vector<string>> pose_folder_path_vec;
 
     /** original data - images **/
     const int kFisheyeRows = 2048;
@@ -38,7 +38,7 @@ public:
         vector<int> pts_indices;
     }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
     typedef vector<vector<Tags>> TagsMap;
-    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each scene **/
+    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
 
     /***** Intrinsic Parameters *****/
     struct Intrinsic {
@@ -54,14 +54,14 @@ public:
         double v0 = 1200.975472;
     } intrinsic;
 
-    /********* File Path of the Specific Scene *********/
+    /********* File Path of the Specific Pose *********/
     struct PoseFilePath {
         PoseFilePath () = default;
-        PoseFilePath (const string& ScenePath) {
-            this -> output_folder_path = ScenePath + "/outputs";
-            this -> fusion_result_folder_path = ScenePath + "/results";
-            this -> fisheye_hdr_img_path = ScenePath + "/images/grab_0.bmp";
-            this -> edge_img_path = ScenePath + "/edges/camEdge.png";
+        PoseFilePath (const string& pose_folder_path) {
+            this -> output_folder_path = pose_folder_path + "/outputs";
+            this -> fusion_result_folder_path = pose_folder_path + "/results";
+            this -> fisheye_hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
+            this -> edge_img_path = pose_folder_path + "/edges/camEdge.png";
             this -> flat_img_path = this -> output_folder_path + "/flatImage.bmp";
             this -> edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
             this -> kde_samples_path = this -> output_folder_path + "/camKDE.txt";
@@ -76,7 +76,7 @@ public:
         string edge_fisheye_pixels_path;
         string kde_samples_path;
     };
-    vector<vector<struct PoseFilePath>> scenes_files_path_vec;
+    vector<vector<struct PoseFilePath>> poses_files_path_vec;
 
     /** Degree Map **/
     std::map<int, int> degree_map;

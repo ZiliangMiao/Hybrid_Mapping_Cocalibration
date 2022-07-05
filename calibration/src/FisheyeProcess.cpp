@@ -38,29 +38,26 @@ using namespace arma;
 FisheyeProcess::FisheyeProcess(string pkg_path) {
     cout << "----- Fisheye: ImageProcess -----" << endl;
     /** create objects, initialization **/
-    string scenes_path_temp;
+    string pose_folder_path_temp;
     PoseFilePath pose_file_path_temp;
-
     EdgePixels edge_pixels_temp;
-    TagsMap tags_map_temp;
     EdgeFisheyePixels edge_fisheye_pixels_temp;
-
+    TagsMap tags_map_temp;
     for (int i = 0; i < num_spots; ++i) {
-        vector<string> scenes_path_vec_temp;
-        vector<PoseFilePath> pose_file_path_vec_temp;
+        vector<string> poses_path_vec_temp;
+        vector<PoseFilePath> poses_file_path_vec_temp;
         vector<EdgePixels> edge_pixels_vec_temp;
         vector<TagsMap> tags_map_vec_temp;
         vector<EdgeFisheyePixels> edge_fisheye_pixels_vec_temp;
-
         for (int j = 0; j < num_views; ++j) {
-            scenes_path_vec_temp.push_back(scenes_path_temp);
-            pose_file_path_vec_temp.push_back(pose_file_path_temp);
+            poses_path_vec_temp.push_back(pose_folder_path_temp);
+            poses_file_path_vec_temp.push_back(pose_file_path_temp);
             edge_pixels_vec_temp.push_back(edge_pixels_temp);
             tags_map_vec_temp.push_back(tags_map_temp);
             edge_fisheye_pixels_vec_temp.push_back(edge_fisheye_pixels_temp);
         }
-        this->scenes_path_vec.push_back(scenes_path_vec_temp);
-        this->scenes_files_path_vec.push_back(pose_file_path_vec_temp);
+        this->pose_folder_path_vec.push_back(poses_path_vec_temp);
+        this->poses_files_path_vec.push_back(poses_file_path_vec_temp);
         this->edge_pixels_vec.push_back(edge_pixels_vec_temp);
         this->tags_map_vec.push_back(tags_map_vec_temp);
         this->edge_fisheye_pixels_vec.push_back(edge_fisheye_pixels_vec_temp);
@@ -71,14 +68,14 @@ FisheyeProcess::FisheyeProcess(string pkg_path) {
         for (int j = 0; j < this -> num_views; ++j) {
             int v_degree = -50 + 50 * j;
             this -> degree_map[j] = v_degree;
-            this -> scenes_path_vec[i][j] = pkg_path + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> pose_folder_path_vec[i][j] = pkg_path + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
-            struct PoseFilePath sc(scenes_path_vec[i][j]);
-            this -> scenes_files_path_vec[i][j] = sc;
+            struct PoseFilePath pose_file_path(pose_folder_path_vec[i][j]);
+            this -> poses_files_path_vec[i][j] = pose_file_path;
         }
     }
     cout << endl;
@@ -87,7 +84,7 @@ FisheyeProcess::FisheyeProcess(string pkg_path) {
 void FisheyeProcess::ReadEdge() {
     cout << "----- Fisheye: ReadEdge -----" << endl;
     cout << "View Index in Fisheye ReadEdge: " << this->view_idx << endl;
-    string edge_fisheye_txt_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
+    string edge_fisheye_txt_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
 
     ifstream infile(edge_fisheye_txt_path);
     string line;
@@ -116,7 +113,7 @@ void FisheyeProcess::ReadEdge() {
 
 cv::Mat FisheyeProcess::ReadFisheyeImage() {
     cout << "----- Fisheye: ReadOrgImage -----" << endl;
-    string fisheye_hdr_img_path = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
+    string fisheye_hdr_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG(((fisheye_hdr_image.rows != 0 && fisheye_hdr_image.cols != 0) || (fisheye_hdr_image.rows < 16384 || fisheye_hdr_image.cols < 16384)),
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
@@ -323,9 +320,9 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr sphereCloudPolar, double bandwidt
     cout << "number of invalid searches:" << invalidSearch << endl;
     cout << "number of invalid indices:" << invalidIndex << endl;
 
-    string flatImgPath = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
-    string fusionImgPath = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
-    string resultPath = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
+    string flatImgPath = this -> poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
+    string fusionImgPath = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
+    string resultPath = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
     if (bandwidth < 0) {
@@ -341,7 +338,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr sphereCloudPolar, double bandwidt
 
 void FisheyeProcess::EdgeToPixel() {
     cout << "----- Fisheye: EdgeToPixel -----" << endl;
-    string edgeImgPath = this -> scenes_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
+    string edgeImgPath = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edgeImage = cv::imread(edgeImgPath, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG(((edgeImage.rows != 0 && edgeImage.cols != 0) || (edgeImage.rows < 16384 || edgeImage.cols < 16384)),
@@ -395,7 +392,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] = edge_fisheye_pixels;
     cout << "number of invalid lookups(image): " << invalid_edge_pix << endl;
 
-    string edgeOrgTxtPath = this->scenes_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
+    string edgeOrgTxtPath = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
     /********* write the coordinates into txt file *********/
     ofstream outfile;
     outfile.open(edgeOrgTxtPath, ios::out);
@@ -410,7 +407,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
 }
 
 // create static blur image for autodiff ceres optimization
-// the "scale" and "polar" option is implemented but not tested/supported in optimization.
+// the "eale" and "polar" option is implemented but not tested/supported in optimization.
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
     cout << "----- Fisheye: Kde -----" << endl;
     clock_t start_time = clock();
@@ -463,7 +460,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     kde.Evaluate(query, kdeEstimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kdeEstimations);
-    string kdeTxtPath = this->scenes_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
+    string kdeTxtPath = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
     ofstream outfile;
     outfile.open(kdeTxtPath, ios::out);
     if (!outfile.is_open()) {
