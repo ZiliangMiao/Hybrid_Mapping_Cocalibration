@@ -57,7 +57,7 @@ FisheyeProcess::FisheyeProcess() {
             tags_map_vec_temp.push_back(tags_map_temp);
             edge_fisheye_pixels_vec_temp.push_back(edge_fisheye_pixels_temp);
         }
-        this->pose_folder_path_vec.push_back(poses_path_vec_temp);
+        this->poses_folder_path_vec.push_back(poses_path_vec_temp);
         this->poses_files_path_vec.push_back(poses_file_path_vec_temp);
         this->edge_pixels_vec.push_back(edge_pixels_vec_temp);
         this->tags_map_vec.push_back(tags_map_vec_temp);
@@ -65,17 +65,17 @@ FisheyeProcess::FisheyeProcess() {
     }
 
     /** degree map **/
-    for (int i = 0; i < this -> num_spots; ++i) {
-        for (int j = 0; j < this -> num_views; ++j) {
-            int v_degree = -40 + 40 * j;
+    for (int i = 0; i < this->num_spots; ++i) {
+        for (int j = 0; j < this->num_views; ++j) {
+            int v_degree = -this->view_angle_step + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
-            this -> pose_folder_path_vec[i][j] = this->kPkgPath + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
-            struct PoseFilePath pose_file_path(pose_folder_path_vec[i][j]);
+            struct PoseFilePath pose_file_path(poses_folder_path_vec[i][j]);
             this -> poses_files_path_vec[i][j] = pose_file_path;
         }
     }

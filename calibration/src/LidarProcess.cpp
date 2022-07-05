@@ -79,12 +79,12 @@ LidarProcess::LidarProcess() {
         for (int j = 0; j < this->num_views; ++j) {
             int v_degree = -this->view_angle_step + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
-            this -> poses_folder_path_vec[i][j] = this->kPkgPath + "/data/floor5/spot" + to_string(i) + "/" + to_string(v_degree);
+            this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
     }
 
     for (int i = 0; i < this->num_spots; ++i) {
-        string spot_path = this->kPkgPath + "/data/floor5/spot" + to_string(i);
+        string spot_path = this->kDatasetPath + "/spot" + to_string(i);
         for (int j = 0; j < this->num_views; ++j) {
             struct PoseFilePath pose_file_path(spot_path, poses_folder_path_vec[i][j]);
             this->poses_files_path_vec[i][j] = pose_file_path;

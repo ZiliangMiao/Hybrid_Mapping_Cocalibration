@@ -13,13 +13,14 @@ class FisheyeProcess{
 public:
     /** essential params **/
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/floor5";
+    const string kDatasetPath = this->kPkgPath + "/data/lh3";
     int spot_idx = 0;
     int view_idx = 0;
     int num_spots = 4;
     int num_views = 3;
+    int view_angle_step = 40;
     int fullview_idx = (this->num_views-1) / 2;
-    vector<vector<string>> pose_folder_path_vec;
+    vector<vector<string>> poses_folder_path_vec;
 
     /** original data - images **/
     const int kFisheyeRows = 2048;
@@ -63,7 +64,7 @@ public:
     struct PoseFilePath {
         PoseFilePath () = default;
         PoseFilePath (const string &pose_folder_path) {
-            this->output_folder_path = pose_folder_path + "/outputs";
+            this->output_folder_path = pose_folder_path + "/outputs/fisheye_outputs";
             this->fusion_result_folder_path = pose_folder_path + "/results";
             this->fisheye_hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
             this->edge_img_path = pose_folder_path + "/edges/camEdge.png";

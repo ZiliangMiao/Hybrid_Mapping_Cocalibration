@@ -13,13 +13,13 @@ class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/floor5";
+    const string kDatasetPath = this->kPkgPath + "/data/lh3";
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
     int num_spots = 4;
     int num_views = 3; /** note: each spot contains several views, and each view at a specific spot called a pose**/
-    int view_angle_step = 50;
+    int view_angle_step = 40;
     int fullview_idx = (this->num_views-1) / 2;
     vector<vector<string>> poses_folder_path_vec;
 

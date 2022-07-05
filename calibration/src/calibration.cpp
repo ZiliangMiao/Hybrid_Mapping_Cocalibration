@@ -39,11 +39,11 @@ const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
-const bool kCreateDensePcd = true;
+const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = true;
 const bool kReconstruction = false;
-const int kOneSpot = 3; /** -1 means run all the spots, other means run a specific spot **/
+const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
         1.00014, -0.000177, 0.000129, 1023, 1201
     }; /** fisheye intrinsics here are calibrated by chessboard **/
 
-    cout << "----------------- Camera Processing ---------------------" << endl;
+    cout << "----------------- Fisheye Processing ---------------------" << endl;
     fisheye.SetIntrinsic(initial_params);
 
     if (kFisheyeFlatProcess) {
@@ -379,11 +379,10 @@ int main(int argc, char** argv) {
             }
         }
         else {
-            int target_view_idx = 1; /** degree 0 **/
             fisheye.SetSpotIdx(kOneSpot);
             lidar.SetSpotIdx(kOneSpot);
-            lidar.SetViewIdx(target_view_idx);
-            fisheye.SetViewIdx(target_view_idx);
+            lidar.SetViewIdx(lidar.fullview_idx);
+            fisheye.SetViewIdx(lidar.fullview_idx);
             vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
             fusionViz3D(fisheye, lidar, calib_params);
         }
