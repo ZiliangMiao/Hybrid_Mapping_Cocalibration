@@ -392,8 +392,8 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
 }
 
 // create static blur image for autodiff ceres optimization
-// the "eale" and "polar" option is implemented but not tested/supported in optimization.
-std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool polar) {
+// the "polar" option is implemented but not tested/supported in optimization.
+std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
     const double relError = 0.05;
@@ -409,33 +409,17 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
         reference(1, i) = edge_fisheye_pixels[i][1];
     }
 
-    if (!polar) {
-        query = arma::mat(2, n_cols * n_rows);
-        arma::vec rows = arma::linspace(0, this->kFisheyeRows - 1, n_rows);
-        arma::vec cols = arma::linspace(0, this->kFisheyeCols - 1, n_cols);
+    query = arma::mat(2, n_cols * n_rows);
+    arma::vec rows = arma::linspace(0, this->kFisheyeRows - 1, n_rows);
+    arma::vec cols = arma::linspace(0, this->kFisheyeCols - 1, n_cols);
 
-        for (int i = 0; i < n_rows; ++i) {
-            for (int j = 0; j < n_cols; ++j) {
-                query(0, i * n_cols + j) = rows.at(i);
-                query(1, i * n_cols + j) = cols.at(j);
-            }
+    for (int i = 0; i < n_rows; ++i) {
+        for (int j = 0; j < n_cols; ++j) {
+            query(0, i * n_cols + j) = rows.at(n_rows - 1 - i);
+            query(1, i * n_cols + j) = cols.at(j);
         }
     }
-    else {
-        query = arma::mat(2, n_cols * n_rows);
-        arma::vec r_q = arma::linspace(1, this->kFlatRows, n_rows);
-        arma::vec sin_q = arma::linspace(0, (2 * M_PI) * (1 - 1 / n_cols), n_cols);
-        arma::vec cos_q = sin_q;
-        sin_q.for_each([](mat::elem_type &val) { val = sin(val); });
-        cos_q.for_each([](mat::elem_type &val) { val = cos(val); });
 
-        for (int i = 0; i < n_rows; ++i) {
-            for (int j = 0; j < n_cols; ++j) {
-                query(0, i * n_cols + j) = r_q.at(i) * cos_q.at(j) + this->intrinsic.u0;
-                query(1, i * n_cols + j) = r_q.at(i) * sin_q.at(j) + this->intrinsic.v0;
-            }
-        }
-    }
 
     arma::vec kde_estimations;
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);

@@ -481,7 +481,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     lidar.SetViewIdx((lidar.num_views - 1) / 2);
 
     /********* Fisheye KDE *********/
-    vector<double> p_c = fisheye.Kde(bandwidth, scale, false);
+    vector<double> p_c = fisheye.Kde(bandwidth, scale);
     double *kde_val = new double[p_c.size()];
     memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
     
