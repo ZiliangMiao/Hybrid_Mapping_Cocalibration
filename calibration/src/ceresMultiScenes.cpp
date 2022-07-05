@@ -166,23 +166,25 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_sparse_cloud_path;
     }
 
-    string fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][cam.fullview_idx].fisheye_hdr_img_path;
-
     CloudPtr fullview_cloud(new CloudT);
     RGBCloudPtr upward_cloud(new RGBCloudT);
     RGBCloudPtr downward_cloud(new RGBCloudT);
     RGBCloudPtr fullview_rgb_cloud(new RGBCloudT);
-
     pcl::io::loadPCDFile(fullview_cloud_path, *fullview_cloud);
-    cv::Mat raw_image = cam.ReadFisheyeImage();
+
+    /** load target view fisheye image **/
+    string fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][cam.fullview_idx].fisheye_hdr_img_path;
+    cv::Mat target_view_img = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
 
     RGBPointT pt;
     int u_max = 0, v_max = 0, u_min = 3000, v_min = 3000;
     cout << "--------------- Generating RGBXYZ Pointcloud ---------------" << endl;
+    /** color at view0 **/
     for (auto &point : fullview_cloud->points) {
         if (point.x == 0 && point.y == 0 && point.z == 0) {
             continue;
         }
+        /** extrinsic trans & invers intrinsic trans **/
         lid_point << point.x, point.y, point.z;
         lid_trans = R * lid_point + t;
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
@@ -192,24 +194,21 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         int u = floor(projection(0));
         int v = floor(projection(1));
         
-        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
+        if (0 <= u && u < target_view_img.rows && 0 <= v && v < target_view_img.cols) {
             pt.x = point.x;
             pt.y = point.y;
             pt.z = point.z;
-            pt.b = raw_image.at<cv::Vec3b>(u, v)[0];
-            pt.g = raw_image.at<cv::Vec3b>(u, v)[1];
-            pt.r = raw_image.at<cv::Vec3b>(u, v)[2];
+            pt.b = target_view_img.at<cv::Vec3b>(u, v)[0];
+            pt.g = target_view_img.at<cv::Vec3b>(u, v)[1];
+            pt.r = target_view_img.at<cv::Vec3b>(u, v)[2];
             if (u > u_max){ u_max = u;}
             if (v > v_max){ v_max = v;}
             if (u < u_min){ u_min = u;}
             if (v < v_min){ v_min = v;}
             /** push the point back into one of the three point clouds **/
             /** 1200 1026 330 1070 **/
-            if (inv_uv_radius < 330) {
+            if (inv_uv_radius < 350 || inv_uv_radius > 1050) {
                 upward_cloud -> points.push_back(pt);
-            }
-            else if (inv_uv_radius > 1070) {
-                downward_cloud -> points.push_back(pt);
             }
             else {
                 fullview_rgb_cloud -> points.push_back(pt);
@@ -219,15 +218,15 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
             pt.x = point.x;
             pt.y = point.y;
             pt.z = point.z;
-            downward_cloud -> points.push_back(pt);
+            upward_cloud->points.push_back(pt);
         }
     }
-    cout << raw_image.rows << " " << raw_image.cols << endl;
+    cout << target_view_img.rows << " " << target_view_img.cols << endl;
     cout << u_min << " " << v_min << " " << u_max << " " << v_max << " " << endl;
 
-    /** upward and downward cloud recolor **/
-    /** load icp pose transform matrix **/
-    string pose_trans_upward_mat_path = lid.poses_files_path_vec[lid.spot_idx][2].pose_trans_mat_path;
+    /** load upward view icp pose transform matrix **/
+    int upward_view_idx = lid.fullview_idx + 1;
+    string pose_trans_upward_mat_path = lid.poses_files_path_vec[lid.spot_idx][upward_view_idx].pose_trans_mat_path;
     std::ifstream mat_upward;
     mat_upward.open(pose_trans_upward_mat_path);
     Eigen::Matrix4f pose_trans_upward_mat;
@@ -239,7 +238,13 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     mat_upward.close();
     Eigen::Matrix4f pose_trans_upward_mat_inv = pose_trans_upward_mat.inverse();
 
-    string pose_trans_downward_mat_path = lid.poses_files_path_vec[lid.spot_idx][0].pose_trans_mat_path;
+    /** load upward view fisheye image **/
+    string upward_fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][upward_view_idx].fisheye_hdr_img_path;
+    cv::Mat upward_view_img = cv::imread(upward_fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+
+    /** load downward view icp pose transform matrix **/
+    int downward_view_idx = lid.fullview_idx - 1;
+    string pose_trans_downward_mat_path = lid.poses_files_path_vec[lid.spot_idx][downward_view_idx].pose_trans_mat_path;
     std::ifstream mat_downward;
     mat_downward.open(pose_trans_downward_mat_path);
     Eigen::Matrix4f pose_trans_downward_mat;
@@ -251,7 +256,12 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     mat_downward.close();
     Eigen::Matrix4f pose_trans_downward_mat_inv = pose_trans_downward_mat.inverse();
 
-    /** inverse transformation to upward pose **/
+    /** load downward view fisheye image **/
+    string downward_fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][downward_view_idx].fisheye_hdr_img_path;
+    cv::Mat downward_view_img = cv::imread(downward_fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
+
+    /** upward and downward cloud recolor **/
+    /** inverse transformation to upward view **/
     pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat_inv);
     /** upward cloud recolor **/
     for (auto &point : upward_cloud->points) {
@@ -265,26 +275,29 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
-        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
-            /** to be done **/
-            point.b = 0;
-            point.g = 255;
-            point.r = 0;
+        if (0 <= u && u < upward_view_img.rows && 0 <= v && v < upward_view_img.cols) {
+            /** point cloud recolor at upward view **/
+            point.b = upward_view_img.at<cv::Vec3b>(u, v)[0];
+            point.g = upward_view_img.at<cv::Vec3b>(u, v)[1];
+            point.r = upward_view_img.at<cv::Vec3b>(u, v)[2];
+        }
+        else {
+            pt.x = point.x;
+            pt.y = point.y;
+            pt.z = point.z;
+            downward_cloud->points.push_back(pt);
         }
     }
-    /** transformation to target pose **/
+    /** transformation to target view **/
     pcl::transformPointCloud(*upward_cloud, *upward_cloud, pose_trans_upward_mat);
 
-    /** inverse transformation to downward pose **/
+    /** inverse transformation to downward view **/
     pcl::transformPointCloud(*downward_cloud, *downward_cloud, pose_trans_downward_mat_inv);
-    /** upward cloud recolor **/
+    /** downward cloud recolor **/
     for (auto &point : downward_cloud->points) {
         if (point.x == 0 && point.y == 0 && point.z == 0) {
             continue;
         }
-        point.b = 255;
-        point.g = 0;
-        point.r = 0;
         lid_trans << point.x, point.y, point.z;
         theta = acos(lid_trans(2) / sqrt(pow(lid_trans(0), 2) + pow(lid_trans(1), 2) + pow(lid_trans(2), 2)));
         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
@@ -292,11 +305,11 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
         projection = {inv_uv_radius / uv_radius * lid_trans(0) + uv_0(0), inv_uv_radius / uv_radius * lid_trans(1) + uv_0(1)};
         int u = floor(projection(0));
         int v = floor(projection(1));
-        if (0 <= u && u < raw_image.rows && 0 <= v && v < raw_image.cols) {
-            /** to be done **/
-            point.b = 0;
-            point.g = 0;
-            point.r = 255;
+        if (0 <= u && u < downward_view_img.rows && 0 <= v && v < downward_view_img.cols) {
+            /** point cloud recolor at downward view **/
+            point.b = downward_view_img.at<cv::Vec3b>(u, v)[0];
+            point.g = downward_view_img.at<cv::Vec3b>(u, v)[1];
+            point.r = downward_view_img.at<cv::Vec3b>(u, v)[2];
         }
     }
     /** transformation to target pose **/

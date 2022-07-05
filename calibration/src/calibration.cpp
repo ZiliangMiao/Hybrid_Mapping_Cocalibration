@@ -50,7 +50,6 @@ int CheckFolder(string spot_path) {
     if (0 != access(spot_path.c_str(), 0)) {
         /** if this folder not exist, create a new one **/
         md = mkdir(spot_path.c_str(), S_IRWXU);
-
     }
     return md;
 }
@@ -133,7 +132,7 @@ int main(int argc, char** argv) {
                 fisheye.SphereToPlane(fisheye_polar_cloud);
             }
         }
-        fisheye.EdgeExtraction(0);
+//        fisheye.EdgeExtraction(0);
     }
     else if (kFisheyeEdgeProcess) {
         if (kOneSpot == -1) {
@@ -223,15 +222,21 @@ int main(int argc, char** argv) {
             lidar.CreateFullviewPcd();
         }
         /** pcl viewer visualization **/
-//        CloudPtr full_view(new CloudT);
-//        string fullview_cloud_path = lidar.poses_files_path_vec[3][0].fullview_dense_cloud_path;
-//        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
-//        pcl::visualization::CloudViewer viewer("Viewer");
-//        viewer.showCloud(full_view);
-//        while (!viewer.wasStopped()) {
-//
-//        }
-//        cv::waitKey();
+        string fullview_cloud_path;
+        if (lidar.kDenseCloud) {
+           fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_dense_cloud_path;
+        }
+        else {
+            fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_sparse_cloud_path;
+        }
+        CloudPtr full_view(new CloudT);
+        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
+        pcl::visualization::CloudViewer viewer("Viewer");
+        viewer.showCloud(full_view);
+        while (!viewer.wasStopped()) {
+
+        }
+        cv::waitKey();
     }
     if (kLidarFlatProcess) {
         if (kOneSpot == -1) {

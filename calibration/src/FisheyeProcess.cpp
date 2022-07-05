@@ -463,13 +463,14 @@ int FisheyeProcess::EdgeExtraction(int mode) {
 		return -1;
 	}
 
-    int argc = 2;
+    int argc = 3;
     char arg0[this->kPkgPath.size()];
-    char arg1[8];
-    char arg2[this->kDatasetPath.size()];
+    char arg1[this->kDatasetPath.size()];
+    char arg2[to_string(this->view_angle_step).size()];
     strcpy(arg0, this->kPkgPath.data());
-    strcpy(arg1, "lidar  ");
-    strcpy(arg2, this->kDatasetPath.data());
+    strcpy(arg1, this->kDatasetPath.data());
+    strcpy(arg2, to_string(this->view_angle_step).data());
+
     char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
     string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
 
