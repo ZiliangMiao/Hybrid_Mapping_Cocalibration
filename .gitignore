@@ -10,5 +10,6 @@ gimbal/cmake-build-debug/*
 gimbal/.idea/*
 gimbal/.vscode/*
 
+build/*
 .idea/*
 .vscode/*

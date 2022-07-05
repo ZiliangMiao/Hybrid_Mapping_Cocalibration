@@ -1,8 +1,10 @@
 #include <string>
 #include <vector>
 #include <pcl/common/common.h>
+/** ros **/
+#include <ros/ros.h>
+#include <ros/package.h>
 using namespace std;
-
 typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
@@ -10,21 +12,27 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
+    const string kPkgPath = ros::package::getPath("calibration");
+    const string kDatasetPath = this->kPkgPath + "/data/floor5";
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
     int num_spots = 4;
     int num_views = 3; /** note: each spot contains several views, and each view at a specific spot called a pose**/
     int view_angle_step = 50;
+    int fullview_idx = (this->num_views-1) / 2;
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
+    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud,
+ * otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
-    const double kRadPerPix = (M_PI / 2) / 1000;
+    const double kRadPerPix = (M_PI * 2) / 4000;
+    const bool kHiddenPtsFilter = false; /** hidden points filter of pixels' space in Func SphereToPlane **/
 
     /** tags and maps **/
     typedef struct Tags {
@@ -109,7 +117,7 @@ public:
     std::map<int, int> degree_map;
 
 public:
-    LidarProcess(const string& pkg_path);
+    LidarProcess();
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();
@@ -122,6 +130,7 @@ public:
     void ReadEdge();
     vector<vector<double>> EdgeCloudProjectToFisheye(vector<double> _p);
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
+    int EdgeExtraction(string pkg_path, string dataset, int mode);
 
     /***** LiDAR Pre-Processing *****/
     std::tuple<CloudPtr, CloudPtr> LidarToSphere();
