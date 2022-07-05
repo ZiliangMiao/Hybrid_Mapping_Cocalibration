@@ -290,9 +290,12 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
         int v = floor(projection(1));
         if (0 <= u && u < upward_view_img.rows && 0 <= v && v < upward_view_img.cols) {
             /** point cloud recolor at upward view **/
-            point.b = upward_view_img.at<cv::Vec3b>(u, v)[0];
-            point.g = upward_view_img.at<cv::Vec3b>(u, v)[1];
-            point.r = upward_view_img.at<cv::Vec3b>(u, v)[2];
+//            point.b = upward_view_img.at<cv::Vec3b>(u, v)[0];
+//            point.g = upward_view_img.at<cv::Vec3b>(u, v)[1];
+//            point.r = upward_view_img.at<cv::Vec3b>(u, v)[2];
+            point.b = 255;
+            point.g = 0;
+            point.r = 0;
         }
         else {
             pt.x = point.x;
@@ -321,9 +324,12 @@ void fusionViz3D(FisheyeProcess fisheye, LidarProcess lidar, vector<double> para
         int v = floor(projection(1));
         if (0 <= u && u < downward_view_img.rows && 0 <= v && v < downward_view_img.cols) {
             /** point cloud recolor at downward view **/
-            point.b = downward_view_img.at<cv::Vec3b>(u, v)[0];
-            point.g = downward_view_img.at<cv::Vec3b>(u, v)[1];
-            point.r = downward_view_img.at<cv::Vec3b>(u, v)[2];
+//            point.b = downward_view_img.at<cv::Vec3b>(u, v)[0];
+//            point.g = downward_view_img.at<cv::Vec3b>(u, v)[1];
+//            point.r = downward_view_img.at<cv::Vec3b>(u, v)[2];
+            point.b = 0;
+            point.g = 255;
+            point.r = 0;
         }
     }
     /** transformation to target pose **/

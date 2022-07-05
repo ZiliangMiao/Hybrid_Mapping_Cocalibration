@@ -38,11 +38,11 @@ const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = true;
+const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = false;
-const bool kReconstruction = false;
+const bool kReconstruction = true;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
@@ -386,7 +386,7 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(kOneSpot);
             lidar.SetViewIdx(lidar.fullview_idx);
             fisheye.SetViewIdx(lidar.fullview_idx);
-            vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+            vector<double> calib_params = {0.00811102, 0.0180018, -1.5508, -0.28, -0.00938784, -0.050215, 1021, 1199, 5, 610.981, 1.04428, -1.66937, 1};
             fusionViz3D(fisheye, lidar, calib_params);
         }
     }
