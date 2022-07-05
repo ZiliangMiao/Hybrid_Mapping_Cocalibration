@@ -101,7 +101,7 @@ public:
     void EdgeToPixel();
     void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale, bool polar);
-    int EdgeExtraction(string pkg_path, int mode);
+    int EdgeExtraction(int mode);
 
     /** Get and Set Methods **/
     void SetIntrinsic(vector<double> parameters) {

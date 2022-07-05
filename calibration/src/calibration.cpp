@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
                 fisheye.SphereToPlane(fisheye_polar_cloud);
             }
         }
-        fisheye.EdgeExtraction(fisheye.kPkgPath, 0);
+        fisheye.EdgeExtraction(0);
     }
     else if (kFisheyeEdgeProcess) {
         if (kOneSpot == -1) {

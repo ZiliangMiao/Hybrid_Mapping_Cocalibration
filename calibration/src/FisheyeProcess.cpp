@@ -467,23 +467,22 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     return img;
 }
 
-int FisheyeProcess::EdgeExtraction(string pkg_path, int mode) {
+int FisheyeProcess::EdgeExtraction(int mode) {
     /** Initialization **/
 	Py_Initialize();
 	if (!Py_IsInitialized()) {
 		return -1;
 	}
-    string dataset_path = "floor5";
 
     int argc = 2;
-    char arg0[pkg_path.size()];
+    char arg0[this->kPkgPath.size()];
     char arg1[8];
-    char arg2[dataset_path.size()];
-    strcpy(arg0, pkg_path.data());
+    char arg2[this->kDatasetPath.size()];
+    strcpy(arg0, this->kPkgPath.data());
     strcpy(arg1, "lidar  ");
-    strcpy(arg2, dataset_path.data());
+    strcpy(arg2, this->kDatasetPath.data());
     char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
-    string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
+    string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
 
 	/** Import sys **/
 	PyRun_SimpleString("import sys");
