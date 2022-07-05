@@ -34,15 +34,15 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = true;
+const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
-const bool kLidarFlatProcess = true;
+const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
-const bool kReconstruction = false;
+const bool kCreateFullViewPcd = false;
+const bool kReconstruction = true;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
@@ -286,8 +286,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    cout << "----------------- Ceres Optimization ---------------------" << endl;
+
     if (kCeresOptimization) {
+        cout << "----------------- Ceres Optimization ---------------------" << endl;
         /** a0, a1, a2, a3, a4; size of params = 13 **/
 //         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
 //         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
@@ -367,6 +368,7 @@ int main(int argc, char** argv) {
     }
 
     if (kReconstruction) {
+        cout << "----------------- RGB Reconstruction ---------------------" << endl;
         if (kOneSpot == -1) {
             for (int i = 0; i < lidar.num_spots; ++i) {
                 int target_view_idx = 1; /** degree 0 **/

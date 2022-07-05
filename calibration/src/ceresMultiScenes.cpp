@@ -158,7 +158,14 @@ void fusionViz3D(FisheyeProcess cam, LidarProcess lid, vector<double> params) {
     Eigen::Vector3d lid_trans;
     Eigen::Vector2d projection;
 
-    string fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_sparse_cloud_path;
+    string fullview_cloud_path;
+    if (lid.kDenseCloud) {
+        fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_dense_cloud_path;
+    }
+    else {
+        fullview_cloud_path = lid.poses_files_path_vec[lid.spot_idx][lid.view_idx].fullview_sparse_cloud_path;
+    }
+
     string fisheye_hdr_img_path = cam.poses_files_path_vec[cam.spot_idx][cam.fullview_idx].fisheye_hdr_img_path;
 
     CloudPtr fullview_cloud(new CloudT);
