@@ -226,20 +226,14 @@ def check_folder():
 
 if __name__ == "__main__":
     spot_range = 4
-    
-    root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-    print("Current root path: \n" + root_path)
-
     for spot in range(spot_range):
-        if (len(sys.argv) > 2):
-            default_name = sys.argv[1]
-            mode = sys.argv[2]
-        elif (len(sys.argv) > 1):
-            default_name = sys.argv[1]
-            mode = 'lidar'
-        else:
-            default_name = "floor5"
-            mode = 'lidar'
+        if not (len(sys.argv) > 3):
+            print("failed")
+            break
+        root_path = sys.argv[3]
+        default_name = sys.argv[1]
+        mode = sys.argv[2]  
+        print("Current root path: \n" + root_path)
         data_path = root_path + "/data/" + default_name + "/" + str(spot) + "/0"
 
         dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"

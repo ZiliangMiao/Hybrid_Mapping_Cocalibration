@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <numeric>
+#include "python3.6/Python.h"
 /** ros **/
 #include <ros/ros.h>
 #include <rosbag/bag.h>
@@ -875,4 +876,48 @@ void LidarProcess::CreateFullviewPcd() {
     }
     pcl::io::savePCDFileBinary(fullview_cloud_path, *fullview_cloud);
     cout << "Create Full View Point Cloud File Successfully!" << endl;
+}
+
+int LidarProcess::EdgeExtraction(string pkg_path, string dataset, int mode)
+{
+    /** Initialization **/
+
+	Py_Initialize();
+
+	if (!Py_IsInitialized()) 
+	{
+		return -1;
+	}
+
+    int argc = 3;
+    char arg0[pkg_path.size()];
+    char arg1[dataset.size()];
+    char arg2[8];
+    strcpy(arg0, pkg_path.data());
+    strcpy(arg1, dataset.data());
+    strcpy(arg2, "lidar  ");
+    
+    char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
+    string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
+
+	/** Import sys **/
+	PyRun_SimpleString("import sys");
+	
+	/** The C API for Python 2 expects char ** as the second argument,
+     *  while the C API for Python 3 expects wchar_t **argv as the second argument.
+     * **/ 
+    wchar_t ** argm = (wchar_t **)(argv); 
+    PySys_SetArgv(argc, argm); 
+	
+	/** Execute python script **/ 
+    string command = "execfile('" + script_path + "')";
+	if (PyRun_SimpleString(command.c_str()) == NULL)
+	{
+		return -1;
+	}
+	
+	Py_Finalize();
+    delete []argv;
+
+	return 0;
 }

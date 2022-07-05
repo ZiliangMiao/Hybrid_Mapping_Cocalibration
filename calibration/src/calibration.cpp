@@ -29,6 +29,7 @@ using namespace cv;
 //            cout << param_test_1 << endl;
 //        }
 //    }
+
 typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
@@ -86,7 +87,7 @@ int main(int argc, char** argv) {
             std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
             fisheye_process.SphereToPlane(fisheye_polar_cloud);
         }
-        fisheye_process.EdgeExtraction(0);
+        fisheye_process.EdgeExtraction(pkg_path, dataset, 0);
     }
     else if (kFisheyeEdgeProcess) {
         for (int i = 0; i < fisheye_process.num_spots; ++i) {
@@ -151,6 +152,7 @@ int main(int argc, char** argv) {
             CloudPtr lidPolarCloud;
             std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
             lidar_process.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+            fisheye_process.EdgeExtraction(pkg_path, dataset, 1);
         }
     }
     else if (kLidarEdgeProcess) {

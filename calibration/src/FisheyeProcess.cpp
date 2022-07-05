@@ -76,8 +76,6 @@ FisheyeProcess::FisheyeProcess(const string &pkg_path, const string &dataset) {
         }
     }
 
-    this->dataset = dataset;
-
     for (int i = 0; i < this -> num_spots; ++i) {
         for (int j = 0; j < this -> num_views; ++j) {
             struct PoseFilePath sc(scenes_path_vec[i][j]);
@@ -472,25 +470,27 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale, bool pol
     return img;
 }
 
-int FisheyeProcess::EdgeExtraction(int mode)
+int FisheyeProcess::EdgeExtraction(string pkg_path, string dataset, int mode)
 {
     /** Initialization **/
 
 	Py_Initialize();
 
-	if (!Py_IsInitialized())
+	if (!Py_IsInitialized()) 
 	{
 		return -1;
 	}
 
-    int argc = 0;
-    char arg0[16];
-    char arg1[16];
-    if (mode == 0){strcpy(arg1, "fisheye");}
-    else{strcpy(arg1, "lidar");}
-    strcpy(arg0, this->dataset.c_str());
-    char **argv = new char *[argc+1]{arg0, arg1} ;
-    string script_path = "../python_scripts/image_process/edge_extraction.py";
+    int argc = 3;
+    char arg0[pkg_path.size()];
+    char arg1[dataset.size()];
+    char arg2[8];
+    strcpy(arg0, pkg_path.data());
+    strcpy(arg1, dataset.data());
+    strcpy(arg2, "lidar  ");
+    
+    char **argv = new char *[argc+1]{arg0, arg1, arg2} ;
+    string script_path = pkg_path + "/python_scripts/image_process/edge_extraction.py";
 
 	/** Import sys **/
 	PyRun_SimpleString("import sys");
