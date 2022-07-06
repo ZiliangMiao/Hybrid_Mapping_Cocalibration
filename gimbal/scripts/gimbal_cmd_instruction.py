@@ -6,7 +6,6 @@ from geometry_msgs.msg import Twist
 import sys, select, termios, tty
 
 msg = """
-
 --------------------------help--------------------------
 Welcome to ISEE RECONSTUCTION TORCH!                   |
 =========================                              |                                                  |
@@ -17,32 +16,31 @@ Moving around:                                         |
                                                        |
 a : horizontal 0 degree                                |
 d : horizontal 90 degrees                              |
-q : vertical 60 degrees                                |
-w : vertical 40 degrees                                |
-e : vertical 20 degrees                                |
+q : vertical 50 degrees                                |
+w : vertical 50 degrees                                |
+e : vertical 25 degrees                                |
 s : vertical 0 degree                                  |
-z : vertical -20 degrees                               |
-x : vertical -40 degrees                               |
-c : vertical -60 degrees                               |
+z : vertical -25 degrees                               |
+x : vertical -50 degrees                               |
+c : vertical -50 degrees                               |
 k : stop                                               |
                                                        |
 CTRL-C to quit                                         |
 --------------------------help--------------------------
-
 """
 
 control_mode_dictionary = {
-        'a':1,
-        'd':2,
-        'q':3,
-        'w':4,
-        'e':5,
-        's':6,
-        'z':7,
-        'x':8,
-        'c':9,
-        'k':0,
-        }
+    'a':1,
+    'd':2,
+    'q':3,
+    'w':4,
+    'e':5,
+    's':6,
+    'z':7,
+    'x':8,
+    'c':9,
+    'k':0,
+}
 
 def GetKey():
     tty.setraw(sys.stdin.fileno())
@@ -74,4 +72,5 @@ if __name__=="__main__":
         if (key == '\x03'):
             print("Process Terminates!")
             break
+
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
