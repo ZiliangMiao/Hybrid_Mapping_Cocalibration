@@ -38,11 +38,11 @@ const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
-const bool kCeresOptimization = false;
+const bool kCeresOptimization = true;
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = false;
-const bool kReconstruction = true;
+const bool kReconstruction = false;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
@@ -296,9 +296,16 @@ int main(int argc, char** argv) {
 //         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
+        /** the two sensors are parallel on y axis **/
         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        vector<double> params_init = {0.0, 0.0, -M_PI/2, -0.25, 0.0, -0.05, 1023.0, 1201.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
-        vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 100e+0, 100e+0, 80+0, 30e+0};
+        vector<double> params_init = {   M_PI, 0.00, M_PI/2, /** Rx Ry Rz **/
+                                         0.27, 0.00 -0.03, /** tx ty tz **/
+                                         1023.0, 1201.0,
+                                         0.0, 616.7214056132, 1.0, -1.0, 1.0};
+        vector<double> dev = {1e-1, 1e-1, 1e-1,
+                              3e-2, 3e-2, 5e-2,
+                              3e+0, 3e+0,
+                              5e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};

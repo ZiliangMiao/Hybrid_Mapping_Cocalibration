@@ -130,7 +130,7 @@ void fusionViz(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double> para
     tk::spline poly_spline = getPoly(params);
 
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
-        fisheye.FisheyeImageToSphere(merge_image, true, poly_spline);
+        fisheye.FisheyeImageToSphere(merge_image, false, poly_spline);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
@@ -520,7 +520,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
 
     Eigen::Vector2d img_size = {fisheye.kFisheyeRows, fisheye.kFisheyeCols};
-    
+
     fisheye.SetSpotIdx(0);
     lidar.SetSpotIdx(0);
     fisheye.SetViewIdx((fisheye.num_views - 1) / 2);

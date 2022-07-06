@@ -114,13 +114,13 @@ void FisheyeProcess::ReadEdge() {
 cv::Mat FisheyeProcess::ReadFisheyeImage(string fisheye_hdr_img_path) {
     cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << endl;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
-    cv::Mat fisheye_hdr_filped_image;
-    cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
+//    cv::Mat fisheye_hdr_filped_image;
+//    cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows != 0 && fisheye_hdr_image.cols != 0),
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows == this->kFisheyeRows || fisheye_hdr_image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
-    return fisheye_hdr_filped_image;
+    return fisheye_hdr_image;
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
