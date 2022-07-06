@@ -12,6 +12,9 @@
 #include <pcl/registration/gicp.h>
 #include <pcl/common/time.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/registration/ia_ransac.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/fpfh.h>
 
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
@@ -70,55 +73,115 @@ int main(int argc, char** argv) {
 
     /** initial rigid transformation **/
     Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
-    initial_trans.translation() << 0.6, 5.2, 0.0;
+    initial_trans.translation() << 0.6, 5.1, 0.0;
     float rx = 0.0, ry = 0.0, rz = +1.45/(float)180;
     Eigen::Matrix3f R;
     R = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
         * Eigen::AngleAxisf(ry*M_PI,  Eigen::Vector3f::UnitY())
         * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
     initial_trans.rotate(R);
-    printf("\nMethod #2: using an Affine3f\n");
-    std::cout << initial_trans.matrix() << std::endl;
+    cout << "Initial Transformation Matrix: " << endl;
+    cout << initial_trans.matrix() << endl;
     pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans);
 
     Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
 
-    /** voxel down sampling **/
+//    /** voxel down sampling filter **/
 //    pcl::VoxelGrid <PointT> vg;
-//    vg.setInputCloud(cloud_in_rad);
-//    vg.setLeafSize(0.01f, 0.01f, 0.01f);
-//    vg.filter(*cloud_target_filtered);
-//
-//    vg.setInputCloud(cloud_aim_rad);
+//    vg.setInputCloud(cloud_source_filtered);
 //    vg.setLeafSize(0.01f, 0.01f, 0.01f);
 //    vg.filter(*cloud_source_filtered);
+//
+//
+//    /** Normal Calculation **/
+//    pcl::NormalEstimation<pcl::PointXYZ,pcl::Normal> ne_src;
+//    ne_src.setInputCloud(cloud_source_filtered);
+//    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree_src(new pcl::search::KdTree< pcl::PointXYZ>());
+//    ne_src.setSearchMethod(tree_src);
+//    pcl::PointCloud<pcl::Normal>::Ptr cloud_src_normals(new pcl::PointCloud< pcl::Normal>);
+//    ne_src.setRadiusSearch(0.02);
+//    ne_src.compute(*cloud_src_normals);
+//    pcl::NormalEstimation<pcl::PointXYZ,pcl::Normal> ne_tgt;
+//    ne_tgt.setInputCloud(cloud_target_filtered);
+//    pcl::search::KdTree< pcl::PointXYZ>::Ptr tree_tgt(new pcl::search::KdTree< pcl::PointXYZ>());
+//    ne_tgt.setSearchMethod(tree_tgt);
+//    pcl::PointCloud<pcl::Normal>::Ptr cloud_tgt_normals(new pcl::PointCloud< pcl::Normal>);
+//    ne_tgt.setRadiusSearch(0.02);
+//    ne_tgt.compute(*cloud_tgt_normals);
+//
+//
+//    /** FPFH Calculation **/
+//    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_src;
+//    fpfh_src.setInputCloud(cloud_source_filtered);
+//    fpfh_src.setInputNormals(cloud_src_normals);
+//    pcl::search::KdTree<PointT>::Ptr tree_src_fpfh (new pcl::search::KdTree<PointT>);
+//    fpfh_src.setSearchMethod(tree_src_fpfh);
+//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_src(new pcl::PointCloud<pcl::FPFHSignature33>());
+//    fpfh_src.setRadiusSearch(0.05);
+//    fpfh_src.compute(*fpfhs_src);
+//    std::cout << "compute *cloud_src fpfh" << endl;
+//
+//    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_tgt;
+//    fpfh_tgt.setInputCloud(cloud_target_filtered);
+//    fpfh_tgt.setInputNormals(cloud_tgt_normals);
+//    pcl::search::KdTree<PointT>::Ptr tree_tgt_fpfh (new pcl::search::KdTree<PointT>);
+//    fpfh_tgt.setSearchMethod(tree_tgt_fpfh);
+//    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_tgt(new pcl::PointCloud<pcl::FPFHSignature33>());
+//    fpfh_tgt.setRadiusSearch(0.05);
+//    fpfh_tgt.compute(*fpfhs_tgt);
+//    std::cout<<"compute *cloud_tgt fpfh"<<endl;
+//
+//    /** SAC **/
+//    pcl::SampleConsensusInitialAlignment<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> scia;
+//    scia.setInputSource(cloud_source_filtered);
+//    scia.setInputTarget(cloud_target_filtered);
+//    scia.setSourceFeatures(fpfhs_src);
+//    scia.setTargetFeatures(fpfhs_tgt);
+//    //scia.setMinSampleDistance(1);
+//    //scia.setNumberOfSamples(2);
+//    //scia.setCorrespondenceRandomness(20);
+//    PointCloudT::Ptr sac_result (new PointCloudT);
+//    scia.align(*sac_result, initial_trans_mat);
+//    std::cout  <<"sac has converged:"<<scia.hasConverged()<<"  score: "<<scia.getFitnessScore()<<endl;
+//    Eigen::Matrix4f sac_trans_mat = scia.getFinalTransformation();
+//    cout << "SAC Transformation Matrix: " << endl;
+//    cout << sac_trans_mat << endl;
 
     timeer.reset();
-    //pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp; //创建ICP对象，用于ICP配准
-    //pcl::GeneralizedIterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-    //icp.setMaximumIterations(500);    //设置最大迭代次数iterations=true
-    //icp.setMaxCorrespondenceDistance(0.5);
-    //icp.setTransformationEpsilon(1e-6);
-    //icp.setEuclideanFitnessEpsilon(1);
-    //icp.setInputCloud(cloud_target_filtered); //设置输入点云
-    //icp.setInputTarget(cloud_source_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
-    //icp.align(*cloud_icped1);          //匹配后源点云
 
+    /** generalized icp **/
+//    pcl::GeneralizedIterativeClosestPoint<PointT, PointT> gicp;
+//    gicp.setMaximumIterations(500);    //设置最大迭代次数iterations=true
+//    gicp.setMaxCorrespondenceDistance(0.03);
+//    gicp.setTransformationEpsilon(1e-10);
+//    gicp.setEuclideanFitnessEpsilon(0.1);
+//    gicp.setInputCloud(cloud_target_filtered); //设置输入点云
+//    gicp.setInputTarget(cloud_source_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
+//    gicp.align(*cloud_icped, initial_trans_mat); //匹配后源点云
+//    if (gicp.hasConverged()) {
+//        cout << "\nGICP Iterations: " << gicp.getMaximumOptimizerIterations() << endl;
+//        cout << "\nGICP has converged, score is: " << gicp.getFitnessScore() << std::endl;
+//        cout << "\nGICP has converged, Epsilon is: " << gicp.getEuclideanFitnessEpsilon() << std::endl;
+//        cout << "\nGICP transformation is \n " << gicp.getFinalTransformation() << std::endl;
+//    } else {
+//        PCL_ERROR("\nGICP has not converged.\n");
+//        return (-1);
+//    }
+//    std::cout << "GICP run time: " << timeer.getTimeSeconds() << " s" << std::endl;
+
+    /** original icp **/
     pcl::IterativeClosestPoint <PointT, PointT> icp; //创建ICP对象，用于ICP配准
     icp.setMaximumIterations(500);
     icp.setInputCloud(cloud_source_filtered); //设置输入点云
     icp.setInputTarget(cloud_target_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
+    icp.setMaxCorrespondenceDistance(0.01);
+    icp.setTransformationEpsilon(1e-10); // 两次变化矩阵之间的差值
+    icp.setEuclideanFitnessEpsilon(1e-15); // 均方误差
     icp.align(*cloud_icped, initial_trans_mat); //匹配后源点云
-
-    //icp.setMaximumIterations(1);  // 设置为1以便下次调用
-    //std::cout << "Applied " << iterations << " ICP iteration(s)" << std::endl;
     if (icp.hasConverged()) {
-        std::cout << "\nICP has converged, score is: " << icp.getFitnessScore() << std::endl;
-        std::cout << "\nICP has converged, Epsilon is: " << icp.getEuclideanFitnessEpsilon() << std::endl;
-        //std::cout << "\nICP transformation " << iterations << " : cloud_target_filtered -> cloud_source_filtered" << std::endl;
-        std::cout << "\nICP transformation is \n " << icp.getFinalTransformation() << std::endl;
-        //transformation_matrix = icp.getFinalTransformation().cast<double>();
-        //print4x4Matrix(transformation_matrix);
+        cout << "\nICP has converged, score is: " << icp.getFitnessScore() << endl;
+        cout << "\nICP has converged, Epsilon is: " << icp.getEuclideanFitnessEpsilon() << endl;
+        cout << "\nICP transformation is \n " << icp.getFinalTransformation() << endl;
     } else {
         PCL_ERROR("\nICP has not converged.\n");
         return (-1);
