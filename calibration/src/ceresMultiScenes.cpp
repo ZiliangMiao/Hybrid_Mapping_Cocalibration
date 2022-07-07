@@ -493,15 +493,9 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     memcpy(params, &params_init[0], params_init.size() * sizeof(double));
 
     /********* Fisheye KDE -> bicubic interpolators *********/
-
     // std::vector<ceres::Grid2D<double>> grids;
     // std::vector<double> ref_vals;
     // std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
-
-    fisheye.SetSpotIdx(0);
-    lidar.SetSpotIdx(0);
-    fisheye.SetViewIdx((fisheye.num_views - 1) / 2);
-    lidar.SetViewIdx((lidar.num_views - 1) / 2);
 
     /********* Fisheye KDE *********/
     vector<double> p_c = fisheye.Kde(bandwidth, scale);
@@ -514,17 +508,11 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
 
     /********* Initialize Ceres Problem *********/
     ceres::Problem problem;
-
     problem.AddParameterBlock(params, kExtrinsics);
     problem.AddParameterBlock(params + kExtrinsics, kParams - kExtrinsics);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
-
     Eigen::Vector2d img_size = {fisheye.kFisheyeRows, fisheye.kFisheyeCols};
 
-    fisheye.SetSpotIdx(0);
-    lidar.SetSpotIdx(0);
-    fisheye.SetViewIdx((fisheye.num_views - 1) / 2);
-    lidar.SetViewIdx((lidar.num_views - 1) / 2);
     /** a scene weight could be added here **/
     for (int j = 0; j < lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size(); ++j) {
         const double weight = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points[j].intensity;
@@ -559,7 +547,6 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     }
 
     /********* Initial Options *********/
-
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
@@ -577,22 +564,13 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     // options.callbacks.push_back(&callback);
 
     ceres::Solver::Summary summary;
-
     ceres::Solve(options, &problem, &summary);
-
     std::cout << summary.FullReport() << "\n";
     customOutput(name, params, params_init);
     outfile.close();
 
     /********* 2D Image Visualization *********/
-
     std::vector<double> params_res(params, params + sizeof(params) / sizeof(double));
-    fisheye.SetSpotIdx(0);
-    lidar.SetSpotIdx(0);
-    fisheye.SetViewIdx((fisheye.num_views - 1) / 2);
-    lidar.SetViewIdx((lidar.num_views - 1) / 2);
     fusionViz(fisheye, lidar, params_res, bandwidth);
-
-
     return params_res;
 }

@@ -77,7 +77,7 @@ LidarProcess::LidarProcess() {
 
     for (int i = 0; i < this->num_spots; ++i) {
         for (int j = 0; j < this->num_views; ++j) {
-            int v_degree = -this->view_angle_step + this->view_angle_step * j;
+            int v_degree = this->view_angle_init + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
             this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }

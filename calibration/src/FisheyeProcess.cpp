@@ -69,7 +69,7 @@ FisheyeProcess::FisheyeProcess() {
     /** degree map **/
     for (int i = 0; i < this->num_spots; ++i) {
         for (int j = 0; j < this->num_views; ++j) {
-            int v_degree = -this->view_angle_step + this->view_angle_step * j;
+            int v_degree = this->view_angle_init + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
             this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
@@ -112,7 +112,7 @@ void FisheyeProcess::ReadEdge() {
 }
 
 cv::Mat FisheyeProcess::ReadFisheyeImage(string fisheye_hdr_img_path) {
-    cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << endl;
+    cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
 //    cv::Mat fisheye_hdr_filped_image;
 //    cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
@@ -124,7 +124,7 @@ cv::Mat FisheyeProcess::ReadFisheyeImage(string fisheye_hdr_img_path) {
 }
 
 std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
-    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << " Spot Index: " << this->spot_idx << endl;
+    cout << "----- Fisheye: FisheyeImageToSphere2 -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     /** read the original fisheye image and check the image size **/
     string fisheye_hdr_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat image = ReadFisheyeImage(fisheye_hdr_img_path);
@@ -210,7 +210,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
 }
 
 void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
-    cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
+    cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     double flat_rows = this->kFlatRows;
     double flat_cols = this->kFlatCols;
     cv::Mat flat_image = cv::Mat::zeros(flat_rows, flat_cols, CV_8UC3); // define the flat image
@@ -311,9 +311,9 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     cout << "number of invalid searches:" << invalid_search << endl;
     cout << "number of invalid indices:" << invalid_index << endl;
 
-    string flat_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
-    string fusion_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
-    string result_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
+    string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
+    string fusion_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
+    string result_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
     if (bandwidth < 0) {
@@ -328,7 +328,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
 
 void FisheyeProcess::EdgeToPixel() {
     cout << "----- Fisheye: EdgeToPixel -----" << " Spot Index: " << this->spot_idx << endl;
-    string edge_img_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
+    string edge_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG((edge_img.rows != 0 && edge_img.cols != 0),

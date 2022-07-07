@@ -55,6 +55,8 @@ add_executable(rvizPub src/rvizPub.cpp)
 add_executable(icp src/icp.cpp)
 add_executable(fullview_icp src/fullview_icp.cpp)
 
+add_executable(pairwise src/pairwise_incremental_registration.cpp)
+
 ## Add dependencies
 add_dependencies(calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(FisheyeProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -64,12 +66,16 @@ add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_E
 add_dependencies(icp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(fullview_icp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
+add_dependencies(pairwise ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 ## Link libraries
 target_link_libraries(LidarProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(FisheyeProcess ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
 target_link_libraries(rvizPub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(icp ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(fullview_icp ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
+
+target_link_libraries(pairwise ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 target_link_libraries(calibration
   FisheyeProcess
