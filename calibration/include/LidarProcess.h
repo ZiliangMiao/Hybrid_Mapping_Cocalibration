@@ -25,7 +25,7 @@ public:
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud,
+    const bool kDenseCloud = false; /** true means merge the dense cloud and create fullview dense cloud,
  * otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
@@ -139,13 +139,13 @@ public:
     void PixLookUp(const CloudPtr& cart_cloud);
 
     /***** Get and Set Methods *****/
-    void SetExtrinsic(vector<double> _p) {
-        this->extrinsic.rx = _p[0];
-        this->extrinsic.ry = _p[1];
-        this->extrinsic.rz = _p[2];
-        this->extrinsic.tx = _p[3];
-        this->extrinsic.ty = _p[4];
-        this->extrinsic.tz = _p[5];
+    void SetExtrinsic(vector<double> &parameters) {
+        this->extrinsic.rx = parameters[0];
+        this->extrinsic.ry = parameters[1];
+        this->extrinsic.rz = parameters[2];
+        this->extrinsic.tx = parameters[3];
+        this->extrinsic.ty = parameters[4];
+        this->extrinsic.tz = parameters[5];
     }
 
     void SetSpotIdx(int spot_idx) {

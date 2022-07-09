@@ -30,6 +30,8 @@
 
 /** headings **/
 #include "LidarProcess.h"
+#include "utils.h"
+
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -147,19 +149,26 @@ void LidarProcess::ICP() {
     outlier_filter.filter(*cloud_source_filtered);
 
     /** initial rigid transformation **/
-    Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
+    Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
-    initial_trans.translation() << 0.0, 0.15 * sin(v_degree/(float)180 * M_PI), 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
-    float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
+    ext_init << 0.0f, (float)v_degree/(float)180*M_PI, 0.0f, 
+                0.15f * sin((float)v_degree/(float)180 * M_PI) , 0.0f, 0.15f - 0.15f * cos((float)v_degree/(float)180 * M_PI);
+    Eigen::Matrix4f initial_trans_mat = ExtrinsicTransformMatrix(ext_init);
+    // cout << ext_init << endl;
+    // cout << initial_trans_mat << endl;
 
-    Eigen::Matrix3f rotation_mat;
-    rotation_mat = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
-        * Eigen::AngleAxisf(ry*M_PI, Eigen::Vector3f::UnitY())
-        * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
-    initial_trans.rotate(rotation_mat);
-    cout << initial_trans.matrix() << endl;
-    Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
-    pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans);
+    // Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
+    // initial_trans.translation() << 0.15 * sin(v_degree/(float)180 * M_PI), 0.0, 0.15 - 0.15 * cos(v_degree/(float)180 * M_PI);
+    // float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
+    // Eigen::Matrix3f rotation_mat;
+    // rotation_mat = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
+    //     * Eigen::AngleAxisf(ry*M_PI, Eigen::Vector3f::UnitY())
+    //     * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
+    // initial_trans.rotate(rotation_mat);
+    // cout << rx << ry << rz << endl;
+    // cout << initial_trans.matrix() << endl;
+    // Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
+    pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans_mat);
 
     /** original icp **/
     pcl::IterativeClosestPoint <PointT, PointT> icp;
@@ -216,9 +225,6 @@ void LidarProcess::ICP() {
     }
 }
 
-
-
-
 std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "----- LiDAR: LidarToSphere -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the initial projection mode - by intensity or by depth **/
@@ -265,6 +271,13 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
 
+    /** Initial Transfomation **/
+    CloudPtr cart_cloud(new CloudT);
+    Eigen::Matrix<float, 6, 1> extrinsic_vec; 
+    extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
+                    (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
+    Eigen::Matrix4f T_matrix = ExtrinsicTransformMatrix(extrinsic_vec);
+    pcl::transformPointCloud(*radius_outlier_cloud, *cart_cloud, T_matrix);
     /** radius outlier filter cloud size check **/
     int radius_outlier_cloud_size = radius_outlier_cloud->points.size();
     cout << "radius outlier filtered cloud size:" << radius_outlier_cloud_size << endl;
@@ -273,10 +286,10 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     CloudPtr polar_cloud(new CloudT);
     PointT polar_pt;
     for (int i = 0; i < radius_outlier_cloud_size; i++) {
-        x = radius_outlier_cloud->points[i].x;
-        y = radius_outlier_cloud->points[i].y;
-        z = radius_outlier_cloud->points[i].z;
-        proj_param = radius_outlier_cloud->points[i].intensity;
+        x = cart_cloud->points[i].x;
+        y = cart_cloud->points[i].y;
+        z = cart_cloud->points[i].z;
+        proj_param = cart_cloud->points[i].intensity;
         if (!projByIntensity) {
             radius = proj_param;
         }
@@ -332,14 +345,14 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
 
     for (int u = 0; u < kFlatRows; ++u) {
         /** upper and lower bound of the current theta unit **/
-        float theta_lb = u * kRadPerPix;
-        float theta_ub = (u + 1) * kRadPerPix;
+        float theta_lb = - u * kRadPerPix + M_PI;
+        float theta_ub = - (u + 1) * kRadPerPix + M_PI;
         float theta_center = (theta_ub + theta_lb) / 2;
 
         for (int v = 0; v < kFlatCols; ++v) {
             /** upper and lower bound of the current phi unit **/
-            float phi_lb = M_PI - v * kRadPerPix;
-            float phi_ub = M_PI - (v + 1) * kRadPerPix;
+            float phi_lb = v * kRadPerPix - M_PI;
+            float phi_ub = (v + 1) * kRadPerPix - M_PI;
             float phi_center = (phi_ub + phi_lb) / 2;
 
             /** assign the theta and phi center to the search_center **/
@@ -668,55 +681,51 @@ void LidarProcess::ReadEdge() {
 }
 
 /***** Extrinsic and Inverse Intrinsic Transform for Visualization of LiDAR Points in Flat Image *****/
-vector<vector<double>> LidarProcess::EdgeCloudProjectToFisheye(vector<double> _p) {
-    cout << "----- LiDAR: EdgeCloudProjectToFisheye -----" << " Spot Index: " << this->spot_idx << endl;
-    Eigen::Matrix<double, 3, 1> eulerAngle(_p[0], _p[1], _p[2]);
-    Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
-    Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
-    Eigen::Matrix<double, 6, 1> a_;
-    switch (_p.size() - 3) {
-        case 10:
-            a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
-            break;
-        case 9:
-            a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
-            break;
-        default:
-            a_ << double(0), _p[8], double(0), _p[9], double(0), _p[10];
-            break;
-    }
+// vector<vector<double>> LidarProcess::EdgeCloudProjectToFisheye(vector<double> _p) {
+//     cout << "----- LiDAR: EdgeCloudProjectToFisheye -----" << " Spot Index: " << this->spot_idx << endl;
+//     Eigen::Matrix<double, 3, 1> r(_p[0], _p[1], _p[2]);
+//     Eigen::Matrix<double, 3, 1> t{_p[3], _p[4], _p[5]};
+//     Eigen::Matrix<double, 2, 1> uv_0{_p[6], _p[7]};
+//     Eigen::Matrix<double, 6, 1> a_;
+//     switch (_p.size() - 3) {
+//         case 10:
+//             a_ << _p[8], _p[9], _p[10], _p[11], _p[12], double(0);
+//             break;
+//         case 9:
+//             a_ << _p[8], _p[9], double(0), _p[10], double(0), _p[11];
+//             break;
+//         default:
+//             a_ << double(0), _p[8], double(0), _p[9], double(0), _p[10];
+//             break;
+//     }
 
-    double phi, theta;
-    double inv_r, r;
-    double res, val;
+//     double phi, theta;
+//     double inv_uv_radius, radius;
+//     double res, val;
 
-    // extrinsic transform
-    Eigen::Matrix<double, 3, 3> R;
-    Eigen::AngleAxisd xAngle(AngleAxisd(eulerAngle(0), Vector3d::UnitX()));
-    Eigen::AngleAxisd yAngle(AngleAxisd(eulerAngle(1), Vector3d::UnitY()));
-    Eigen::AngleAxisd zAngle(AngleAxisd(eulerAngle(2), Vector3d::UnitZ()));
-    R = zAngle * yAngle * xAngle;
+//     // extrinsic transform
+//     Eigen::Matrix3d R;
+//     R = Eigen::AngleAxisd(r(0), Eigen::Vector3d::UnitX())
+//         * Eigen::AngleAxisd(r(1), Eigen::Vector3d::UnitY())
+//         * Eigen::AngleAxisd(r(2), Eigen::Vector3d::UnitZ());
 
-    Eigen::Matrix<double, 3, 1> p_;
-    Eigen::Matrix<double, 3, 1> p_trans;
-    Eigen::Matrix<double, 2, 1> S;
-    Eigen::Matrix<double, 2, 1> p_uv;
+//     Eigen::Vector3d p_, p_trans;
+//     Eigen::Vector2d p_uv;
 
-    vector<vector<double>> edge_fisheye_projection(2, vector<double>(this->edge_cloud_vec[this->spot_idx][this->view_idx]->points.size()));
+//     vector<vector<double>> edge_fisheye_projection(2, vector<double>(this->edge_cloud_vec[this->spot_idx][this->view_idx]->points.size()));
 
-    for (int i = 0; i < this->edge_cloud_vec[this->spot_idx][this->view_idx]->points.size(); i++) {
-        p_ << this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].x, this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].y, this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].z;
-        p_trans = R * p_ + t;
-        theta = acos(p_trans(2) / sqrt(pow(p_trans(0), 2) + pow(p_trans(1), 2) + pow(p_trans(2), 2)));
-        inv_r = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
-        r = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
-        S = {inv_r * p_trans(0) / r, inv_r * p_trans(1) / r};
-        p_uv = S + uv_0;
-        edge_fisheye_projection[0][i] = p_uv(0);
-        edge_fisheye_projection[1][i] = p_uv(1);
-    }
-    return edge_fisheye_projection;
-}
+//     for (int i = 0; i < this->edge_cloud_vec[this->spot_idx][this->view_idx]->points.size(); i++) {
+//         p_ << this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].x, this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].y, this->edge_cloud_vec[this->spot_idx][this->view_idx]->points[i].z;
+//         p_trans = R * p_ + t;
+//         theta = acos(p_trans(2) / sqrt(pow(p_trans(0), 2) + pow(p_trans(1), 2) + pow(p_trans(2), 2)));
+//         inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4) + a_(5) * pow(theta, 5);
+//         radius = sqrt(p_trans(1) * p_trans(1) + p_trans(0) * p_trans(0));
+//         p_uv = {inv_uv_radius * p_trans(0) / radius + uv_0(0), inv_uv_radius * p_trans(1) / radius + uv_0(1)};
+//         edge_fisheye_projection[0][i] = p_uv(0);
+//         edge_fisheye_projection[1][i] = p_uv(1);
+//     }
+//     return edge_fisheye_projection;
+// }
 
 int LidarProcess::ReadFileList(const std::string &folder_path, std::vector<std::string> &file_list) {
     DIR *dp;

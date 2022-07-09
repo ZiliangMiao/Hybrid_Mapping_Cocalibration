@@ -157,6 +157,8 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
 
+    float theta_min = M_PI, theta_max = -M_PI;
+
     for (int u = 0; u < this->kFisheyeRows; u++) {
         for (int v = 0; v < this->kFisheyeCols; v++) {
             x = c * u + d * v - u0;
@@ -196,9 +198,14 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 pixel_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 pixel_pt.r = image.at<cv::Vec3b>(u, v)[2];
                 fisheye_pixel_cloud->points.push_back(pixel_pt);
+                if (theta > theta_max) { theta_max = theta; }
+                else if (theta < theta_min) { theta_min = theta; }
             }
         }
     }
+    cout << "min theta of the fisheye cloud: " << theta_min << "\n"
+         << " max theta of the fisheye cloud: " << theta_max << endl;
+
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
     return result;
@@ -231,13 +238,13 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flat_rows; ++u) {
         // upper bound and lower bound of the current theta unit
-        float theta_lb = u * rad_per_pix;
-        float theta_ub = (u + 1) * rad_per_pix;
+        float theta_lb = - u * rad_per_pix + M_PI;
+        float theta_ub = - (u + 1) * rad_per_pix + M_PI;
         float theta_center = (theta_ub + theta_lb) / 2;
         for (int v = 0; v < flat_cols; ++v) {
             // upper bound and lower bound of the current phi unit
-            float phi_lb = M_PI - v * rad_per_pix;
-            float phi_ub = M_PI - (v + 1) * rad_per_pix;
+            float phi_lb = v * rad_per_pix - M_PI;
+            float phi_ub = (v + 1) * rad_per_pix - M_PI;
             float phi_center = (phi_ub + phi_lb) / 2;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB search_point;

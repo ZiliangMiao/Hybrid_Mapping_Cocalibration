@@ -108,7 +108,7 @@ public:
     void EdgeExtraction();
 
     /** Get and Set Methods **/
-    void SetIntrinsic(vector<double> parameters) {
+    void SetIntrinsic(vector<double> &parameters) {
         /** polynomial params **/
         this->intrinsic.a0 = parameters[6];
         this->intrinsic.a2 = parameters[7];
