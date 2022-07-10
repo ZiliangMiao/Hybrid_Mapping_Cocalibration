@@ -34,19 +34,19 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = true;
-const bool kFisheyeEdgeProcess = true;
+const bool kFisheyeFlatProcess = false;
+const bool kFisheyeEdgeProcess = false;
 
-const bool kCreateDensePcd = true;
-const bool kInitialIcp = true;
-const bool kCreateFullViewPcd = true;
+const bool kCreateDensePcd = false;
+const bool kInitialIcp = false;
+const bool kCreateFullViewPcd = false;
 
-const bool kLidarFlatProcess = true;
-const bool kLidarEdgeProcess = true;
+const bool kLidarFlatProcess = false;
+const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
 const bool kReconstruction = true;
-const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
+const int kOneSpot = 2; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 //        }
 //    }
 
-    vector<double> init_proj_params = {
+    std::vector<double> init_proj_params = {
             M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
             0.27, 0.00, -0.03, /** tx ty tz **/
             -606.16, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
             1023, 1201 /** u0, v0 **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
 
-    vector<double> params_calib;
+    std::vector<double> params_calib;
 
     /** class object generation **/
     FisheyeProcess fisheye;
@@ -304,47 +304,47 @@ int main(int argc, char** argv) {
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
         /** a0, a1, a2, a3, a4; size of params = 13 **/
-//         vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-//         vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
-//         vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
+//         std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+//         std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
+//         std::vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         /** the two sensors are parallel on y axis **/
-        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        vector<double> params_init = {
+        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+        std::vector<double> params_init = {
                 M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
                 0.27, 0.00, -0.03, /** tx ty tz **/
                 1023.0, 1201.0,
                 616.7214056132 * M_PI, -616.7214056132, -1.0, 1.0, -1.0
         }; /** initial parameters **/
-        vector<double> dev = {1e-1, 1e-1, 1e-1,
+        std::vector<double> dev = {1e-1, 1e-1, 1e-1,
                               3e-2, 3e-2, 5e-2,
                               3e+0, 3e+0,
                               50e+0, 100e+0, 100e+0, 80+0, 30e+0};
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
-        // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        // vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
-        // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
+        // std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+        // std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
+        // std::vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
 
         /** a0, a1, a3, a5; size of params = 12 **/
-//        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
-//        vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
-//        vector<double> dev = {2e-2, 2e-2, 4e-2, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 4e+0, 2e+0};
+//        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
+//        std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
+//        std::vector<double> dev = {2e-2, 2e-2, 4e-2, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 4e+0, 2e+0};
 
         /** a0, a1, a3, a5; size of params = 12 **/
-//        vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
-//        vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, -1, 1};
-//        vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 2e+1, 10e+0, 5e+0};
+//        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
+//        std::vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, -1, 1};
+//        std::vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 2e+1, 10e+0, 5e+0};
 
         /** a1, a3, a5; size of params = 11 **/
-        // vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
-        // vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
-        // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
+        // std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
+        // std::vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
+        // std::vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
 
-        vector<double> lb(dev.size()), ub(dev.size());
-        vector<double> bw = {32, 32, 16, 8, 4, 2};
-        // vector<double> bw = {32, 16, 8, 4, 2};
+        std::vector<double> lb(dev.size()), ub(dev.size());
+        std::vector<double> bw = {32, 32, 16, 8, 4, 2};
+        // std::vector<double> bw = {32, 16, 8, 4, 2};
 
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
@@ -360,8 +360,14 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        fisheye.SetSpotIdx(0);
-        lidar.SetSpotIdx(0);
+        if (kOneSpot == -1) {
+            fisheye.SetSpotIdx(0);
+            lidar.SetSpotIdx(0);
+        }
+        else {
+            fisheye.SetSpotIdx(kOneSpot);
+            lidar.SetSpotIdx(kOneSpot);
+        }
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
@@ -396,7 +402,7 @@ int main(int argc, char** argv) {
                 lidar.SetSpotIdx(i);
                 fisheye.SetViewIdx(lidar.fullview_idx);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
+                std::vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
                 Visualization3D(fisheye, lidar, calib_params);
             }
         }
@@ -405,7 +411,7 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(kOneSpot);
             fisheye.SetViewIdx(lidar.fullview_idx);
             lidar.SetViewIdx(lidar.fullview_idx);
-            // vector<double> calib_params = {
+            // std::vector<double> calib_params = {
             //     M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
             //     0.27, 0.00, -0.03, /** tx ty tz **/
             //     1023.0, 1201.0,

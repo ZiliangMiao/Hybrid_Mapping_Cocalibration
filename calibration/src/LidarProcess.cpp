@@ -768,8 +768,8 @@ void LidarProcess::BagToPcd(string bag_file) {
 
 void LidarProcess::CreateDensePcd() {
     int num_pcds;
-    string pcd_path;
-    string folder_path;
+    string folder_path, pcd_path;
+
     if (this->kDenseCloud) {
         num_pcds = LidarProcess::kNumRecPcds;
         pcd_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcd_path;
@@ -873,7 +873,7 @@ void LidarProcess::CreateFullviewPcd() {
 void LidarProcess::EdgeExtraction()
 {
     std::string script_path = this->kPkgPath + "/python_scripts/image_process/EdgeExtraction.py";
-    std::string kSpots = to_string(this->num_spots);
+    std::string kSpots = to_string(this->spot_idx);
     std::string cmd_str = "python3 " 
         + script_path + " " + this->kDatasetPath + " " + "lidar" + " " + kSpots;
     system(cmd_str.c_str());

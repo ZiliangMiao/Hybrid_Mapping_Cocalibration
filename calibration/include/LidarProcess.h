@@ -25,7 +25,7 @@ public:
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-    const bool kDenseCloud = false; /** true means merge the dense cloud and create fullview dense cloud,
+    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud,
  * otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/

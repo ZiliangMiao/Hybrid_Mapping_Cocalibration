@@ -9,6 +9,7 @@ set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
 
 find_package(mlpack REQUIRED)
 find_package(Ceres REQUIRED)
+find_package(OpenMP REQUIRED)
 find_package(PCL 1.8 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -19,6 +20,13 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   std_msgs
 )
+
+if(OPENMP_FOUND)
+message("OPENMP FOUND")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS} -std=c++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++17")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+endif()
 
 set(PCL_INCLUDE_DIRS /usr/include/pcl-1.8)
 message(${PCL_LIBRARIES})

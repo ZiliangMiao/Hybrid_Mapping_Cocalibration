@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <thread>
 // eigen
 #include <Eigen/Core>
 // ros
@@ -29,22 +30,15 @@
 #include "LidarProcess.h"
 #include "utils.h"
 
-using namespace std;
-using namespace cv;
-using namespace Eigen;
-using namespace tk;
-
 ofstream outfile;
 
 /** kExtrinsics + kIntrinsics = number of parameters **/
 static const int kExtrinsics = 6;
 static const int kIntrinsics = 7;
 
-void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double> &params, double bandwidth) {
+void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
     string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.view_idx].fisheye_hdr_img_path;
     cv::Mat raw_image = fisheye.ReadFisheyeImage(fisheye_hdr_img_path);
-    cv::Mat lidarRGB = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
-    cv::Mat merge_image = cv::Mat::zeros(raw_image.rows, raw_image.cols, CV_8UC3);
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
@@ -56,7 +50,6 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double
     
     CloudPtr edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
     CloudPtr edge_trans_cloud(new CloudT);
-    RGBCloudPtr edge_rgb_cloud(new RGBCloudT);
     Eigen::Matrix<double, 4, 4> T_mat = ExtrinsicMat(extrinsic);
     pcl::transformPointCloud(*edge_cloud, *edge_trans_cloud, T_mat);
 
@@ -67,97 +60,28 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double
     for (auto &point : edge_trans_cloud->points) {
         lidar_point << point.x, point.y, point.z;
         projection = IntrinsicTransform(intrinsic, lidar_point);
-        int u = std::clamp(projection(0), (double)0.0, (double)(lidarRGB.rows - 1));
-        int v = std::clamp(projection(1), (double)0.0, (double)(lidarRGB.cols - 1));
-        lidarRGB.at<Vec3b>(u, v)[0] = 0;    // b
-        lidarRGB.at<Vec3b>(u, v)[1] = 0;    // g
-        lidarRGB.at<Vec3b>(u, v)[2] = 255;  // r
-        rgb_pt.x = point.x;
-        rgb_pt.y = point.y;
-        rgb_pt.z = point.z;
-        rgb_pt.b = 0;
-        rgb_pt.g = 0;
-        rgb_pt.r = 255;
-        edge_rgb_cloud->points.push_back(rgb_pt);
+        int u = std::clamp((int)round(projection(0)), 0, raw_image.rows - 1);
+        int v = std::clamp((int)round(projection(1)), 0, raw_image.cols - 1);
+        raw_image.at<cv::Vec3b>(u, v)[0] = 0;    // b
+        raw_image.at<cv::Vec3b>(u, v)[1] = 0;    // g
+        raw_image.at<cv::Vec3b>(u, v)[2] = 255;  // r
         outfile << u << "," << v << endl;
     }
     
     outfile.close();
 
-    /** fusion image generation **/
-    cv::addWeighted(raw_image, 1, lidarRGB, 1, 0, merge_image);
-
+    /** generate fusion image **/
     tk::spline poly_spline = InverseSpline(params);
 
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
-        fisheye.FisheyeImageToSphere(merge_image, false, poly_spline);
+        fisheye.FisheyeImageToSphere(raw_image, false, poly_spline);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
     std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
     fisheye.SphereToPlane(camOrgPolarCloud, bandwidth);
 }
 
-RGBCloudPtr Coloring(pcl::PointCloud<RGBPointT> &input_cloud,
-                    pcl::PointCloud<RGBPointT> &output_cloud,
-                    cv::Mat &target_view_img,
-                    Eigen::Matrix<float, 7, 1> &intrinsic) {
-    
-    RGBCloudPtr input_cloud_ptr = input_cloud.makeShared();
-    RGBCloudPtr output_cloud_ptr = output_cloud.makeShared();
-    Eigen::Vector3f lidar_point;
-    Eigen::Vector2f projection;
-    RGBPointT pt;
-
-    int u_max = 0, v_max = 0, u_min = 3000, v_min = 3000;
-    for (auto &point : input_cloud_ptr->points) {
-        if (point.x == 0 && point.y == 0 && point.z == 0) {
-            continue;
-        }
-        pt.x = point.x;
-        pt.y = point.y;
-        pt.z = point.z;
-        pt.b = 160;
-        pt.g = 160;
-        pt.r = 160;
-
-        lidar_point << point.x, point.y, point.z;
-        projection = IntrinsicTransform(intrinsic, lidar_point);
-        int u = floor(projection(0));
-        int v = floor(projection(1));
-
-        if (0 <= u && u < target_view_img.rows && 0 <= v && v < target_view_img.cols) {
-            double radius = sqrt(pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(0), 2));
-            if (u > u_max){ u_max = u;}
-            if (v > v_max){ v_max = v;}
-            if (u < u_min){ u_min = u;}
-            if (v < v_min){ v_min = v;}
-
-            /** push the point back into one of the three point clouds **/
-            /** 1200 1026 330 1070 **/
-            if (radius > 400 && radius < 1000) {
-                pt.b = target_view_img.at<cv::Vec3b>(u, v)[0];
-                pt.g = target_view_img.at<cv::Vec3b>(u, v)[1];
-                pt.r = target_view_img.at<cv::Vec3b>(u, v)[2];
-            }
-            else {
-                output_cloud_ptr->points.push_back(pt);
-            }
-        }
-        else {
-            output_cloud_ptr->points.push_back(pt);
-        }
-    }
-
-    cout << target_view_img.rows << " " << target_view_img.cols << endl;
-    cout << u_min << " " << v_min << " " << u_max << " " << v_max << " " << endl;
-
-    output_cloud = *output_cloud_ptr;
-    input_cloud = *input_cloud_ptr;
-
-    return output_cloud_ptr;
-}
-
-void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double> &params) {
+void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
  
     string fullview_cloud_path, pose_mat_path, fisheye_img_path;
     Eigen::Matrix<float, 6, 1> extrinsic;
@@ -271,7 +195,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double
     }
 }
 
-void fusionViz3D(FisheyeProcess &fisheye, LidarProcess &lidar, vector<double> &params) {
+void fusionViz3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
 
     string fullview_cloud_path;
     if (lidar.kDenseCloud) {
@@ -629,10 +553,10 @@ private:
 std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
                                      LidarProcess &lidar,
                                      double bandwidth,
-                                     vector<double> params_init,
-                                     vector<const char *> name,
-                                     vector<double> lb,
-                                     vector<double> ub,
+                                     std::vector<double> params_init,
+                                     std::vector<const char *> name,
+                                     std::vector<double> lb,
+                                     std::vector<double> ub,
                                      int kDisabledBlock) {
     const int kParams = params_init.size();
     const int kViews = fisheye.num_views;
@@ -700,7 +624,7 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
-    options.num_threads = 16;
+    options.num_threads = thread::hardware_concurrency();
     options.max_num_iterations = 50;
     options.function_tolerance = 1e-6;
     options.use_nonmonotonic_steps = true;

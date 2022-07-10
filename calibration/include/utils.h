@@ -10,9 +10,6 @@
 // headings
 #include "spline.h"
 
-using namespace Eigen;
-using namespace tk;
-
 template <typename T>
 Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic, bool degree){
     Eigen::Matrix<T, 6, 1> extrinsic_;
@@ -60,7 +57,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 7, 1> &intrinsic, Eig
     return projection;
 }
 
-void CeresOutput(vector<const char *> name, double *params, vector<double> params_init) {
+void CeresOutput(std::vector<const char *> name, double *params, std::vector<double> params_init) {
     std::cout << "Initial ";
     for (unsigned int i = 0; i < name.size(); i++)
     {
@@ -75,7 +72,7 @@ void CeresOutput(vector<const char *> name, double *params, vector<double> param
     std::cout << "\n";
 }
 
-tk::spline InverseSpline(vector<double> &params){
+tk::spline InverseSpline(std::vector<double> &params){
     Eigen::Matrix<double, 5, 1> a_;
     a_ << params[8], params[9], params[10], params[11], params[12];
     int theta_ub = 180;
