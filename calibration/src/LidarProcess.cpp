@@ -153,7 +153,7 @@ void LidarProcess::ICP() {
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/(float)180*M_PI, 0.0f, 
                 0.15f * sin((float)v_degree/(float)180 * M_PI) , 0.0f, 0.15f - 0.15f * cos((float)v_degree/(float)180 * M_PI);
-    Eigen::Matrix4f initial_trans_mat = ExtrinsicTransformMatrix(ext_init);
+    Eigen::Matrix4f initial_trans_mat = ExtrinsicMat(ext_init);
     // cout << ext_init << endl;
     // cout << initial_trans_mat << endl;
 
@@ -276,8 +276,8 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     Eigen::Matrix<float, 6, 1> extrinsic_vec; 
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
                     (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
-    Eigen::Matrix4f T_matrix = ExtrinsicTransformMatrix(extrinsic_vec);
-    pcl::transformPointCloud(*radius_outlier_cloud, *cart_cloud, T_matrix);
+    Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
+    pcl::transformPointCloud(*radius_outlier_cloud, *cart_cloud, T_mat);
     /** radius outlier filter cloud size check **/
     int radius_outlier_cloud_size = radius_outlier_cloud->points.size();
     cout << "radius outlier filtered cloud size:" << radius_outlier_cloud_size << endl;

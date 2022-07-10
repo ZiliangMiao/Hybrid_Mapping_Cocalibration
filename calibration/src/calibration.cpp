@@ -34,17 +34,17 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = false;
-const bool kFisheyeEdgeProcess = false;
+const bool kFisheyeFlatProcess = true;
+const bool kFisheyeEdgeProcess = true;
 
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
+const bool kCreateDensePcd = true;
+const bool kInitialIcp = true;
+const bool kCreateFullViewPcd = true;
 
-const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = false;
+const bool kLidarFlatProcess = true;
+const bool kLidarEdgeProcess = true;
 
-const bool kCeresOptimization = false;
+const bool kCeresOptimization = true;
 const bool kReconstruction = true;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
@@ -83,6 +83,8 @@ int main(int argc, char** argv) {
             1, 0, 0, /** c, d, e **/
             1023, 1201 /** u0, v0 **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
+
+    vector<double> params_calib;
 
     /** class object generation **/
     FisheyeProcess fisheye;
@@ -340,7 +342,6 @@ int main(int argc, char** argv) {
         // vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
         // vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
 
-        vector<double> params_calib;
         vector<double> lb(dev.size()), ub(dev.size());
         vector<double> bw = {32, 32, 16, 8, 4, 2};
         // vector<double> bw = {32, 16, 8, 4, 2};
@@ -366,25 +367,25 @@ int main(int argc, char** argv) {
         lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
         fisheye.ReadEdge();
         
-        fusionViz(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+        Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
 
-        // for (int i = 0; i < bw.size(); i++) {
-        //     double bandwidth = bw[i];
-        //     cout << "Round " << i << endl;
-        //     /**
-        //      * kDisabledBlock = 0 -> enable all the params
-        //      * kDisabledBlock = 1 -> enable intrinsics only
-        //      * kDisabledBlock = 2 -> enable extrinsics only
-        //      * **/
-        //     if (i == 0) {
-        //         int kDisabledBlock = 2;
-        //         params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_init, name, lb, ub, kDisabledBlock);
-        //     }
-        //     else {
-        //         int kDisabledBlock = 0;
-        //         params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_calib, name, lb, ub, kDisabledBlock);
-        //     }
-        // }
+        for (int i = 0; i < bw.size(); i++) {
+            double bandwidth = bw[i];
+            cout << "Round " << i << endl;
+            /**
+             * kDisabledBlock = 0 -> enable all the params
+             * kDisabledBlock = 1 -> enable intrinsics only
+             * kDisabledBlock = 2 -> enable extrinsics only
+             * **/
+            if (i == 0) {
+                int kDisabledBlock = 2;
+                params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_init, name, lb, ub, kDisabledBlock);
+            }
+            else {
+                int kDisabledBlock = 0;
+                params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_calib, name, lb, ub, kDisabledBlock);
+            }
+        }
     }
 
     if (kReconstruction) {
@@ -396,7 +397,7 @@ int main(int argc, char** argv) {
                 fisheye.SetViewIdx(lidar.fullview_idx);
                 lidar.SetViewIdx(lidar.fullview_idx);
                 vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
-                fusionViz3D(fisheye, lidar, calib_params);
+                Visualization3D(fisheye, lidar, calib_params);
             }
         }
         else {
@@ -404,13 +405,14 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(kOneSpot);
             fisheye.SetViewIdx(lidar.fullview_idx);
             lidar.SetViewIdx(lidar.fullview_idx);
-            vector<double> calib_params = {
-                M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
-                0.27, 0.00, -0.03, /** tx ty tz **/
-                1023.0, 1201.0,
-                616.7214056132 * M_PI, -616.7214056132, -1.0, 1.0, -1.0
-            };
-            fusionViz3D(fisheye, lidar, calib_params);
+            // vector<double> calib_params = {
+            //     M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
+            //     0.27, 0.00, -0.03, /** tx ty tz **/
+            //     1023.0, 1201.0,
+            //     616.7214056132 * M_PI, -616.7214056132, -1.0, 1.0, -1.0
+            // };
+            // Visualization3D(fisheye, lidar, calib_params);
+            Visualization3D(fisheye, lidar, params_calib);
         }
     }
     return 0;

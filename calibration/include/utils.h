@@ -14,7 +14,7 @@ using namespace Eigen;
 using namespace tk;
 
 template <typename T>
-Eigen::Matrix<T, 4, 4> ExtrinsicTransformMatrix(Eigen::Matrix<T, 6, 1> &extrinsic, bool degree){
+Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic, bool degree){
     Eigen::Matrix<T, 6, 1> extrinsic_;
     if (degree) {
         Eigen::Matrix<T, 1, 1> deg2rad;
@@ -22,12 +22,12 @@ Eigen::Matrix<T, 4, 4> ExtrinsicTransformMatrix(Eigen::Matrix<T, 6, 1> &extrinsi
         extrinsic_ = extrinsic * deg2rad;
     }
     else { extrinsic_ = extrinsic; }
-    Eigen::Matrix<T, 4, 4> T_mat = ExtrinsicTransformMatrix(extrinsic_);
+    Eigen::Matrix<T, 4, 4> T_mat = ExtrinsicMat(extrinsic_);
     return T_mat;
 }
 
 template <typename T>
-Eigen::Matrix<T, 4, 4> ExtrinsicTransformMatrix(Eigen::Matrix<T, 6, 1> &extrinsic){
+Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic){
     /***** R = Rx * Ry * Rz *****/
     Eigen::Matrix<T, 3, 3> R;
     R = Eigen::AngleAxis<T>(extrinsic(2), Eigen::Matrix<T, 3, 1>::UnitZ())
