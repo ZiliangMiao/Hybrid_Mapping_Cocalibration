@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-data_path = data_path = root_path + "/data/lh3/spot0/0/outputs"
+data_path = data_path = root_path + "/data/lh3_global/spot2/0/outputs"
 
 ########################################################################################################################
 # load files #
@@ -86,8 +86,8 @@ if __name__=="__main__":
     lid_mode = "lid"
     # load and visualize
     
-    cam = load_data(cam_sample_shape, "cam")
-    visualization(img_rows, img_cols, cam)
+    # cam = load_data(cam_sample_shape, "cam")
+    # visualization(img_rows, img_cols, cam)
 
     lid = load_data(lid_sample_shape, "lid")
     kde = load_data(cam_sample_shape, "kde")

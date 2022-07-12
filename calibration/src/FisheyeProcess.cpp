@@ -256,6 +256,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
             std::vector<float> pointRadiusSquaredDistance;
             // radius search
             int num_RNN = kdtree.radiusSearch(search_point, search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance); // number of the radius nearest neighbors
+            float scale = 1.0f;
             // if the corresponding points are found in the radius neighborhood
             if (num_RNN == 0) {
                 // assign the theta and phi center to the searchPoint
@@ -266,11 +267,11 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
                 std::vector<int> pointIdxRadiusSearch;
                 std::vector<float> pointRadiusSquaredDistance;
                 int numSecondSearch = 0;
-                float scale = 1;
+                scale = 2.0f - ((float)u / flat_rows);
                 while (numSecondSearch == 0) {
-                    scale = scale + 0.05;
+                    scale = scale + 0.1f;
                     numSecondSearch = kdtree2.radiusSearch(searchPoint, scale * search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
-                    if (scale > 2) {
+                    if (scale > 3) {
                         flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
                         flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
                         flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r

@@ -34,28 +34,19 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = false;
 
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
+const bool kCreateDensePcd = true;
+const bool kInitialIcp = true;
+const bool kCreateFullViewPcd = true;
 
-const bool kLidarFlatProcess = false;
+const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
 const bool kReconstruction = true;
-const int kOneSpot = 2; /** -1 means run all the spots, other means run a specific spot **/
-
-int CheckFolder(string spot_path) {
-    int md = 0; /** 0 means the folder is already exist or has been created successfully **/
-    if (0 != access(spot_path.c_str(), 0)) {
-        /** if this folder not exist, create a new one **/
-        md = mkdir(spot_path.c_str(), S_IRWXU);
-    }
-    return md;
-}
+const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
     /** ros initialization **/
@@ -78,7 +69,7 @@ int main(int argc, char** argv) {
 
     std::vector<double> init_proj_params = {
             M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
-            0.27, 0.00, -0.03, /** tx ty tz **/
+            0.27, 0.00, 0.03, /** tx ty tz **/
             -606.16, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
             1, 0, 0, /** c, d, e **/
             1023, 1201 /** u0, v0 **/
@@ -116,8 +107,8 @@ int main(int argc, char** argv) {
     cout << "----------------- Fisheye Processing ---------------------" << endl;
     
     if (kFisheyeFlatProcess) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < fisheye.num_spots; ++i) {
+        for (int i = 0; i < fisheye.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx);
                 std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
@@ -130,22 +121,10 @@ int main(int argc, char** argv) {
                 fisheye.PixLookUp(fisheye_pixel_cloud);
             }
         }
-        else {
-            fisheye.SetSpotIdx(kOneSpot); /** spot idx **/
-            fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
-            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-            RGBCloudPtr fisheye_polar_cloud;
-            RGBCloudPtr fisheye_pixel_cloud;
-            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-            fisheye.SphereToPlane(fisheye_polar_cloud);
-            fisheye.EdgeExtraction();
-            fisheye.EdgeToPixel();
-            fisheye.PixLookUp(fisheye_pixel_cloud);
-        }
     }
     else if (kFisheyeEdgeProcess) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < fisheye.num_spots; ++i) {
+        for (int i = 0; i < fisheye.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
                 std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
@@ -157,25 +136,13 @@ int main(int argc, char** argv) {
                 fisheye.PixLookUp(fisheye_pixel_cloud);
             }
         }
-        else {
-            fisheye.SetSpotIdx(kOneSpot); /** spot idx **/
-            fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
-            std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-            RGBCloudPtr fisheye_polar_cloud;
-            RGBCloudPtr fisheye_pixel_cloud;
-            std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-            fisheye.SphereToPlane(fisheye_polar_cloud);
-            fisheye.EdgeToPixel();
-            fisheye.PixLookUp(fisheye_pixel_cloud);
-
-        }
     }
 
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     /********* Create Dense Pcd for All Scenes *********/
     if (kCreateDensePcd) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 for (int j = 0; j < lidar.num_views; ++j) {
                     lidar.SetViewIdx(j);
@@ -183,17 +150,10 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        else {
-            lidar.SetSpotIdx(kOneSpot);
-            for (int j = 0; j < lidar.num_views; ++j) {
-                lidar.SetViewIdx(j);
-                lidar.CreateDensePcd();
-            }
-        }
     }
     if (kInitialIcp) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 for (int j = 0; j < lidar.num_views; ++j) {
                     if (j == lidar.fullview_idx) {
@@ -204,49 +164,29 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        else {
-            lidar.SetSpotIdx(kOneSpot);
-            for (int j = 0; j < lidar.num_views; ++j) {
-                if (j == lidar.fullview_idx) {
-                    continue;
-                }
-                lidar.SetViewIdx(j);
-                lidar.ICP();
-            }
-        }
     }
     if (kCreateFullViewPcd) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.CreateFullviewPcd(); /** generate full view pcds **/
             }
         }
-        else {
-            lidar.SetSpotIdx(kOneSpot);
-            lidar.CreateFullviewPcd();
-        }
         /** pcl viewer visualization **/
-        string fullview_cloud_path;
-//        if (lidar.kDenseCloud) {
-//           fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_dense_cloud_path;
-//        }
-//        else {
-//            fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_sparse_cloud_path;
-//        }
-        fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_sparse_cloud_path;
-        CloudPtr full_view(new CloudT);
-        pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
-        pcl::visualization::CloudViewer viewer("Viewer");
-        viewer.showCloud(full_view);
-        while (!viewer.wasStopped()) {
+        // string fullview_cloud_path;
+        // fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_sparse_cloud_path;
+        // CloudPtr full_view(new CloudT);
+        // pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
+        // pcl::visualization::CloudViewer viewer("Viewer");
+        // viewer.showCloud(full_view);
+        // while (!viewer.wasStopped()) {
 
-        }
-        cv::waitKey();
+        // }
+        // cv::waitKey();
     }
     if (kLidarFlatProcess) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
                 std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
@@ -259,22 +199,10 @@ int main(int argc, char** argv) {
                 lidar.PixLookUp(lidCartesianCloud);
             }
         }
-        else {
-            lidar.SetSpotIdx(kOneSpot);
-            lidar.SetViewIdx(lidar.fullview_idx);
-            std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
-            CloudPtr lidCartesianCloud;
-            CloudPtr lidPolarCloud;
-            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidar.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-            lidar.EdgeExtraction();
-            lidar.EdgeToPixel();
-            lidar.PixLookUp(lidCartesianCloud);
-        }
     }
     else if (kLidarEdgeProcess) {
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
                 std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
@@ -285,18 +213,6 @@ int main(int argc, char** argv) {
                 lidar.EdgeToPixel();
                 lidar.PixLookUp(lidCartesianCloud);
             }
-        }
-        else {
-            lidar.SetSpotIdx(kOneSpot);
-            lidar.SetViewIdx(lidar.fullview_idx);
-            std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
-            CloudPtr lidCartesianCloud;
-            CloudPtr lidPolarCloud;
-            std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-            lidar.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-            lidar.EdgeToPixel();
-            lidar.PixLookUp(lidCartesianCloud);
-
         }
     }
 
@@ -310,17 +226,26 @@ int main(int argc, char** argv) {
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         /** the two sensors are parallel on y axis **/
-        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
+        std::vector<const char*> name = {
+                "rx", "ry", "rz",
+                "tx", "ty", "tz",
+                "u0", "v0",
+                "a0", "a1", "a2", "a3", "a4",
+                "c", "d", "e"};
         std::vector<double> params_init = {
                 M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
-                0.27, 0.00, -0.03, /** tx ty tz **/
-                1023.0, 1201.0,
-                616.7214056132 * M_PI, -616.7214056132, -1.0, 1.0, -1.0
+                0.27, 0.00, 0.03, /** tx ty tz **/
+                1023.0, 1201.0, /** u0 v0 **/
+                616.7214056132 * M_PI, -616.7214056132, 0.0, 0.0, 0.0,
+                1, 0, 0 /** c, d, e **/
         }; /** initial parameters **/
-        std::vector<double> dev = {1e-1, 1e-1, 1e-1,
-                              3e-2, 3e-2, 5e-2,
-                              3e+0, 3e+0,
-                              50e+0, 100e+0, 100e+0, 80+0, 30e+0};
+        std::vector<double> dev = {
+                1e-1, 1e-1, 1e-1,
+                3e-2, 3e-2, 5e-2,
+                3e+0, 3e+0,
+                160e+0, 80e+0, 40e+0, 20+0, 10e+0,
+                1e-2, 1e-2, 1e-2
+                };
 
         /** a0, a1, a2, a3, a4; size of params = 13 **/
         // std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
@@ -343,37 +268,35 @@ int main(int argc, char** argv) {
         // std::vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
 
         std::vector<double> lb(dev.size()), ub(dev.size());
-        std::vector<double> bw = {32, 32, 16, 8, 4, 2};
+        std::vector<double> bw = {32, 24, 16, 8, 4, 2};
         // std::vector<double> bw = {32, 16, 8, 4, 2};
 
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
             lb[i] = params_init[i] - dev[i];
-            if (i == dev.size() - 1 || i == dev.size() - 3){
-                ub[i] = params_init[i];
-                lb[i] = params_init[i] - dev[i];
-            }
-            if (i == dev.size() - 2){
-                ub[i] = params_init[i] + dev[i];
-                lb[i] = params_init[i];
-            }
+            // if (i == dev.size() - 1 || i == dev.size() - 3){
+            //     ub[i] = params_init[i];
+            //     lb[i] = params_init[i] - dev[i];
+            // }
+            // if (i == dev.size() - 2){
+            //     ub[i] = params_init[i] + dev[i];
+            //     lb[i] = params_init[i];
+            // }
         }
 
         /********* Initial Visualization *********/
-        if (kOneSpot == -1) {
-            fisheye.SetSpotIdx(0);
-            lidar.SetSpotIdx(0);
-        }
-        else {
-            fisheye.SetSpotIdx(kOneSpot);
-            lidar.SetSpotIdx(kOneSpot);
-        }
+        std::vector<int> spot_vec{0, 2, 4};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
-        lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
-        fisheye.ReadEdge();
+        for (int &spot_idx : spot_vec)
+        {
+            fisheye.SetSpotIdx(spot_idx);
+            lidar.SetSpotIdx(spot_idx);
+            lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+            fisheye.ReadEdge();
+            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+        }
         
-        Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
 
         for (int i = 0; i < bw.size(); i++) {
             double bandwidth = bw[i];
@@ -384,41 +307,41 @@ int main(int argc, char** argv) {
              * kDisabledBlock = 2 -> enable extrinsics only
              * **/
             if (i == 0) {
-                int kDisabledBlock = 2;
-                params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_init, name, lb, ub, kDisabledBlock);
+                int kDisabledBlock = 0;
+                // params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_init, name, lb, ub, kDisabledBlock);
+                params_calib = ceresQuaternion(fisheye, lidar, bandwidth, spot_vec, params_init, name, lb, ub, kDisabledBlock);
             }
             else {
                 int kDisabledBlock = 0;
-                params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_calib, name, lb, ub, kDisabledBlock);
+                // params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_calib, name, lb, ub, kDisabledBlock);
+                params_calib = ceresQuaternion(fisheye, lidar, bandwidth, spot_vec, params_calib, name, lb, ub, kDisabledBlock);
             }
         }
     }
 
     if (kReconstruction) {
         cout << "----------------- RGB Reconstruction ---------------------" << endl;
-        if (kOneSpot == -1) {
-            for (int i = 0; i < lidar.num_spots; ++i) {
+        // params_calib = {
+        //     0.00826718, -3.12521, 1.55513, /** Rx Ry Rz **/
+        //     0.296866, -0.0180701, 0.02, /** tx ty tz **/
+        //     1026.0, 1204.0,
+        //     1893.58, -588.062, -8.63182, 4.43136, -1
+        // };
+        params_calib = {
+            0.00713431, -3.13089, 1.5521, /** Rx Ry Rz **/
+            0.296866, -0.0272627, 0.0571168, /** tx ty tz **/
+            1026.0, 1201.79, /** u0, v0 **/
+            1879.81, -550.701, -11.7394, -11.7073, 3.82408,
+            1, 0, 0 /** c, d, e **/
+        };
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);
                 lidar.SetSpotIdx(i);
                 fisheye.SetViewIdx(lidar.fullview_idx);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                std::vector<double> calib_params = {0.0, 0.0, M_PI/2, +0.25, 0.0, -0.05, 1026.0, 1200.0, 0.0, 616.7214056132, 1.0, -1.0, 1.0};
-                Visualization3D(fisheye, lidar, calib_params);
+                Visualization3D(fisheye, lidar, params_calib);
             }
-        }
-        else {
-            fisheye.SetSpotIdx(kOneSpot);
-            lidar.SetSpotIdx(kOneSpot);
-            fisheye.SetViewIdx(lidar.fullview_idx);
-            lidar.SetViewIdx(lidar.fullview_idx);
-            // std::vector<double> calib_params = {
-            //     M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
-            //     0.27, 0.00, -0.03, /** tx ty tz **/
-            //     1023.0, 1201.0,
-            //     616.7214056132 * M_PI, -616.7214056132, -1.0, 1.0, -1.0
-            // };
-            // Visualization3D(fisheye, lidar, calib_params);
-            Visualization3D(fisheye, lidar, params_calib);
         }
     }
     return 0;

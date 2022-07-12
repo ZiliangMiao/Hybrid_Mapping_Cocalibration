@@ -269,8 +269,8 @@ if __name__ == "__main__":
         cv2.imwrite(dir_cam_canny, edge_cam)
 
         # contour filter
-        cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
+        cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        cnt_cam = contour_filter(contour=cnt_cam, len_threshold=150)
         edge_cam = np.zeros(edge_cam.shape, np.uint8)
         cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
         cv2.imwrite(dir_cam_output, edge_cam)
@@ -282,7 +282,7 @@ if __name__ == "__main__":
         edge_lid = cv2.imread(dir_lid_original)
         edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
         # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
-        edge_lid = nlmeans(edge_lid, h_u=40, h_l=20)
+        edge_lid = nlmeans(edge_lid, h_u=30, h_l=15)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 
         # mask to remove the upper and lower bound noise
@@ -293,34 +293,11 @@ if __name__ == "__main__":
         
         # contour filter
         cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
+        cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
         edge_lid = np.zeros(edge_lid.shape, np.uint8)
         cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
         cv2.imwrite(dir_lid_output, edge_lid)
         print("done.")
-
-    # patch
-    # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
-    # edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=8, iter=2)
-
-    # edge_cam = fill_hole(img=edge_cam, hole_color=0, bkg_color=255)
-    # edge_lidar = fill_hole(img=edge_lidar, hole_color=0, bkg_color=255)
-
-    # cv2.imwrite(data_path + "edges/canny_outputs/lidar_3_canny_patch.png", edge_lidar)
-    # cv2.imwrite(data_path + "edges/canny_outputs/cam_3_canny_patch.png", edge_cam)
-
-    # # contour filter
-    # cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-    # cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
-    # edge_cam = np.zeros(edge_cam.shape, np.uint8)
-    # edge_lid = np.zeros(edge_lid.shape, np.uint8)
-    # cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-    # cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
-
-    # cv2.imwrite(dir_lid_output, edge_lid)
-    # cv2.imwrite(dir_cam_output, edge_cam)
 
     if (len(sys.argv) >= kArgs):
         print("Edge extraction completed.")

@@ -10,16 +10,23 @@
 // headings
 #include "spline.h"
 
-template <typename T>
-Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic, bool degree){
-    Eigen::Matrix<T, 6, 1> extrinsic_;
-    if (degree) {
-        Eigen::Matrix<T, 1, 1> deg2rad;
-        deg2rad << (T(M_PI) / T(180));
-        extrinsic_ = extrinsic * deg2rad;
+int CheckFolder(string spot_path) {
+    int md = 0; /** 0 means the folder is already exist or has been created successfully **/
+    if (0 != access(spot_path.c_str(), 0)) {
+        /** if this folder not exist, create a new one **/
+        md = mkdir(spot_path.c_str(), S_IRWXU);
     }
-    else { extrinsic_ = extrinsic; }
-    Eigen::Matrix<T, 4, 4> T_mat = ExtrinsicMat(extrinsic_);
+    return md;
+}
+
+template <typename T>
+Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 7, 1> &extrinsic){
+    Eigen::Matrix<T, 3, 3> R = Eigen::Quaternion<T>(extrinsic[3], extrinsic[0], extrinsic[1], extrinsic[2]).toRotationMatrix();
+    Eigen::Matrix<T, 4, 4> T_mat;
+    T_mat << R(0,0), R(0,1), R(0,2), extrinsic(4),
+        R(1,0), R(1,1), R(1,2), extrinsic(5),
+        R(2,0), R(2,1), R(2,2), extrinsic(6),
+        T(0.0), T(0.0), T(0.0), T(1.0);
     return T_mat;
 }
 
@@ -31,23 +38,36 @@ Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic){
         * Eigen::AngleAxis<T>(extrinsic(1), Eigen::Matrix<T, 3, 1>::UnitY())
         * Eigen::AngleAxis<T>(extrinsic(0), Eigen::Matrix<T, 3, 1>::UnitX());
 
-    Eigen::Matrix<T, 4, 4> T_matrix;
-    T_matrix << R(0,0), R(0,1), R(0,2), extrinsic(3),
+    Eigen::Matrix<T, 4, 4> T_mat;
+    T_mat << R(0,0), R(0,1), R(0,2), extrinsic(3),
         R(1,0), R(1,1), R(1,2), extrinsic(4),
         R(2,0), R(2,1), R(2,2), extrinsic(5),
         T(0.0), T(0.0), T(0.0), T(1.0);
-    return T_matrix;
+    return T_mat;
 }
 
 template <typename T>
 Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 7, 1> &intrinsic, Eigen::Matrix<T, 3, 1> &point){
     
+    Eigen::Matrix<T, 10, 1> intrinsic_;
+    intrinsic_.head(7) = intrinsic;
+    intrinsic_.tail(3) << T(0), T(0), T(0);
+    Eigen::Matrix<T, 2, 1> projection = IntrinsicTransform(intrinsic_, point);
+
+    return projection;
+}
+
+template <typename T>
+Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Eigen::Matrix<T, 3, 1> &point){
+    
     Eigen::Matrix<T, 2, 1> uv_0{intrinsic(0), intrinsic(1)};
     Eigen::Matrix<T, 5, 1> a_;
-    a_ << intrinsic(2), intrinsic(3), intrinsic(4), intrinsic(5), intrinsic(6);
-
+    Eigen::Matrix<T, 2, 2> affine;
     T theta, uv_radius, inv_uv_radius;
     Eigen::Matrix<T, 2, 1> projection;
+
+    a_ << intrinsic(2), intrinsic(3), intrinsic(4), intrinsic(5), intrinsic(6);
+    affine << intrinsic(7), intrinsic(8), intrinsic(9), T(0);
 
     theta = acos(point(2) / sqrt((point(0) * point(0)) + (point(1) * point(1)) + (point(2) * point(2))));
     inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4);
@@ -57,7 +77,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 7, 1> &intrinsic, Eig
     return projection;
 }
 
-void CeresOutput(std::vector<const char *> name, double *params, std::vector<double> params_init) {
+void CeresOutput(std::vector<const char *> name, std::vector<double> params, std::vector<double> params_init) {
     std::cout << "Initial ";
     for (unsigned int i = 0; i < name.size(); i++)
     {
