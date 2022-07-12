@@ -46,6 +46,8 @@ const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
 const bool kReconstruction = true;
+const bool kSpotRegistration = false;
+const bool kGlobalColoredRecon = true;
 const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
@@ -53,24 +55,10 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
 
-//    ros::param::get("~param_test", param_test_1);
-//    ros::NodeHandle nh("~");
-//    nh.getParam("param_test", param_test_1);
-//    /** get the parameters from ros parameters server **/
-//    bool param_get1 = ros::param::get("param_test", param_test_1);
-//    bool param_get = nh.getParam("param_test", param_test_1);
-//    /** set the value of parameter to ros parameters server **/
-//    ros::param::set("param_test", 520.00);
-//    if (param_get) {
-//        for (int i = 0; i < 10; ++i) {
-//            cout << param_test_1 << endl;
-//        }
-//    }
-
-    std::vector<double> init_proj_params = {
+    vector<double> init_proj_params = {
             M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
             0.27, 0.00, 0.03, /** tx ty tz **/
-            -606.16, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
+            606.16, -0.000558783, -2.70908E-09, -1.17573E-10, /** a0, a2, a3, a4 **/
             1, 0, 0, /** c, d, e **/
             1023, 1201 /** u0, v0 **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
@@ -344,5 +332,14 @@ int main(int argc, char** argv) {
             }
         }
     }
+    if (kSpotRegistration) {
+        cout << "----------------- Spot Registration ---------------------" << endl;
+        lidar.SpotRegistration();
+    }
+    if (kGlobalColoredRecon) {
+        cout << "----------------- Global Reconstruction ---------------------" << endl;
+        lidar.GlobalColoredRecon();
+    }
+
     return 0;
 }

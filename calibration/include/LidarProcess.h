@@ -73,8 +73,11 @@ public:
         PoseFilePath()= default;
         PoseFilePath(string& spot_path, string& pose_path) {
             this->fullview_recon_folder_path = spot_path + "/fullview_recon";
+            this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";
+            this->icp_spot_trans_mat_path = this->fullview_recon_folder_path + "/icp_spot_trans_mat.txt";
             this->fullview_dense_cloud_path = this->fullview_recon_folder_path + "/fullview_dense_cloud.pcd";
             this->fullview_sparse_cloud_path = this->fullview_recon_folder_path + "/fullview_sparse_cloud.pcd";
+            this->fullview_rgb_cloud_path = this->fullview_recon_folder_path + "/fullview_rgb_cloud.pcd";
             this->output_folder_path = pose_path + "/outputs/lidar_outputs";
             this->dense_pcds_folder_path = pose_path + "/dense_pcds";
             this->icp_pcds_folder_path = pose_path + "/icp_pcds";
@@ -111,6 +114,9 @@ public:
         string fullview_recon_folder_path;
         string fullview_dense_cloud_path;
         string fullview_sparse_cloud_path;
+        string fullview_rgb_cloud_path;
+        string lio_spot_trans_mat_path;
+        string icp_spot_trans_mat_path;
     };
     vector<vector<struct PoseFilePath>> poses_files_path_vec;
 
@@ -123,6 +129,9 @@ public:
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void CreateDensePcd();
     void ICP();
+    Eigen::Matrix4f ICP2(int view_idx_tgt);
+    void SpotRegistration();
+    void GlobalColoredRecon();
     void CreateFullviewPcd();
     void BagToPcd(string bag_file);
 
