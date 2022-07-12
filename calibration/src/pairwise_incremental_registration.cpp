@@ -203,7 +203,7 @@ void pairAlign (const PointCloud::Ptr cloud_src, const PointCloud::Ptr cloud_tgt
   //
   // Align
   pcl::IterativeClosestPointNonLinear<PointNormalT, PointNormalT> reg;
-  reg.setTransformationEpsilon (1e-6);
+  reg.setTransformationEpsilon (1e-10);
   // Set the maximum distance between two correspondences (src<->tgt) to 10cm
   // Note: adjust this based on the size of your datasets
   reg.setMaxCorrespondenceDistance (0.1);  
@@ -282,30 +282,29 @@ int main (int argc, char** argv)
     ros::init(argc, argv, "pairwise");
     ros::NodeHandle nh;
 
+    // Load data
+    std::vector<PCD, Eigen::aligned_allocator<PCD> > data;
+    loadData (argc, argv, data);
 
-  // Load data
-  std::vector<PCD, Eigen::aligned_allocator<PCD> > data;
-  loadData (argc, argv, data);
-
-  // Check user input
-  if (data.empty ())
-  {
+    // Check user input
+    if (data.empty ())
+    {
     PCL_ERROR ("Syntax is: %s <source.pcd> <target.pcd> [*]", argv[0]);
     PCL_ERROR ("[*] - multiple files can be added. The registration results of (i, i+1) will be registered against (i+2), etc");
     return (-1);
-  }
-  PCL_INFO ("Loaded %d datasets.", (int)data.size ());
-  
-  // Create a PCLVisualizer object
-  p = new pcl::visualization::PCLVisualizer (argc, argv, "Pairwise Incremental Registration example");
-  p->createViewPort (0.0, 0, 0.5, 1.0, vp_1);
-  p->createViewPort (0.5, 0, 1.0, 1.0, vp_2);
+    }
+    PCL_INFO ("Loaded %d datasets.", (int)data.size ());
 
-	PointCloud::Ptr result (new PointCloud), source, target;
-  Eigen::Matrix4f GlobalTransform = Eigen::Matrix4f::Identity (), pairTransform;
-  
-  for (std::size_t i = 1; i < data.size (); ++i)
-  {
+    // Create a PCLVisualizer object
+    p = new pcl::visualization::PCLVisualizer (argc, argv, "Pairwise Incremental Registration example");
+    p->createViewPort (0.0, 0, 0.5, 1.0, vp_1);
+    p->createViewPort (0.5, 0, 1.0, 1.0, vp_2);
+
+    PointCloud::Ptr result (new PointCloud), source, target;
+    Eigen::Matrix4f GlobalTransform = Eigen::Matrix4f::Identity (), pairTransform;
+
+    for (std::size_t i = 1; i < data.size (); ++i)
+    {
     source = data[i-1].cloud;
     target = data[i].cloud;
 
@@ -327,6 +326,6 @@ int main (int argc, char** argv)
     ss << "/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/src/" << i << ".pcd";
     pcl::io::savePCDFile (ss.str (), *result, true);
 
-  }
-}
-/* ]--- */
+    }
+    }
+    /* ]--- */

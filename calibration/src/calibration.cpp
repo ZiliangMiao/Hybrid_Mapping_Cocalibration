@@ -40,10 +40,12 @@ const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 const bool kCeresOptimization = false;
 const bool kCreateDensePcd = false;
-const bool kInitialIcp = true;
+const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = false;
 const bool kReconstruction = false;
-const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
+const bool kSpotRegistration = false;
+const bool kGlobalColoredRecon = true;
+const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
@@ -58,20 +60,6 @@ int main(int argc, char** argv) {
     /** ros initialization **/
     ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
-
-//    ros::param::get("~param_test", param_test_1);
-//    ros::NodeHandle nh("~");
-//    nh.getParam("param_test", param_test_1);
-//    /** get the parameters from ros parameters server **/
-//    bool param_get1 = ros::param::get("param_test", param_test_1);
-//    bool param_get = nh.getParam("param_test", param_test_1);
-//    /** set the value of parameter to ros parameters server **/
-//    ros::param::set("param_test", 520.00);
-//    if (param_get) {
-//        for (int i = 0; i < 10; ++i) {
-//            cout << param_test_1 << endl;
-//        }
-//    }
 
     vector<double> init_proj_params = {
             M_PI, 0.00, M_PI/2, /** Rx, Ry, Rz **/
@@ -157,7 +145,6 @@ int main(int argc, char** argv) {
             fisheye.SphereToPlane(fisheye_polar_cloud);
             fisheye.EdgeToPixel();
             fisheye.PixLookUp(fisheye_pixel_cloud);
-
         }
     }
 
@@ -203,6 +190,72 @@ int main(int argc, char** argv) {
                 lidar.SetViewIdx(j);
                 lidar.ICP();
             }
+
+//            vector <Eigen::Matrix4f> local_trans_vec(lidar.num_views);
+//            vector <Eigen::Matrix4f> global_trans_vec(lidar.num_views);
+//            Eigen::Matrix4f local_trans;
+//            Eigen::Matrix4f global_trans;
+//
+//            /** local pair transformation matrix **/
+//            for (int j = 0; j < lidar.num_views; ++j) {
+//                int view_idx_tgt;
+//                if (j == lidar.fullview_idx) {
+//                    local_trans_vec[j] = Eigen::Matrix4f::Identity();
+//                    continue;
+//                }
+//                else if (j < lidar.fullview_idx) {
+//                    view_idx_tgt = j + 1;
+//                    lidar.SetViewIdx(j);
+//                    local_trans = lidar.ICP2(view_idx_tgt);
+//                    local_trans_vec[j] = local_trans;
+//                }
+//                else if (j > lidar.fullview_idx) {
+//                    view_idx_tgt = j - 1;
+//                    lidar.SetViewIdx(j);
+//                    local_trans = lidar.ICP2(view_idx_tgt);
+//                    local_trans_vec[j] = local_trans;
+//                }
+//            }
+//
+//            /** global transformation matrix to target view **/
+//            for (int j = 0; j < lidar.num_views; ++j) {
+//                if (j == lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                    continue;
+//                }
+//                else if (j < lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    for (int k = j; k <= lidar.fullview_idx; ++k) {
+//                        /** note: take care of the matrix multiplication,  **/
+//                        global_trans = local_trans_vec[j] * global_trans;
+//                    }
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                }
+//                else if (j > lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    for (int k = j; k >= lidar.fullview_idx; --k) {
+//                        global_trans = local_trans_vec[j] * global_trans;
+//                    }
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                }
+//            }
+
         }
     }
     if (kCreateFullViewPcd) {
@@ -230,7 +283,6 @@ int main(int argc, char** argv) {
         pcl::visualization::CloudViewer viewer("Viewer");
         viewer.showCloud(full_view);
         while (!viewer.wasStopped()) {
-
         }
         cv::waitKey();
     }
@@ -397,5 +449,14 @@ int main(int argc, char** argv) {
             fusionViz3D(fisheye, lidar, calib_params);
         }
     }
+    if (kSpotRegistration) {
+        cout << "----------------- Spot Registration ---------------------" << endl;
+        lidar.SpotRegistration();
+    }
+    if (kGlobalColoredRecon) {
+        cout << "----------------- Global Reconstruction ---------------------" << endl;
+        lidar.GlobalColoredRecon();
+    }
+
     return 0;
 }

@@ -1,4 +1,13 @@
 <launch>
+  <param name="tx" type="double" value="0.5" />
+  <param name="ty" type="double" value="5.3" />
+  <param name="tz" type="double" value="0.0" />
+  <param name="rx" type="double" value="0.0" />
+  <param name="ry" type="double" value="0.0" />
+  <param name="rz" type="double" value="175.0" />
+  <param name="tgt_idx" type="int" value="3" />
+  <param name="src_idx" type="int" value="4" />
+  <param name="lio_mat_path" type="string" value="/lio_mid360/lio_spot_trans_mat_4_3.txt" />
   <node name="calibration" pkg="calibration" type="calibration" output="screen">
   </node>
 </launch>
