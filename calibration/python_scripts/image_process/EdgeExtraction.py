@@ -257,13 +257,13 @@ if __name__ == "__main__":
         edge_cam = cv2.imread(dir_cam_original)
         edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
 
-        edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1.5, sigmaY=1.5, ksize=(5, 5))
+        edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1, sigmaY=1, ksize=(5, 5))
         cv2.imwrite(dir_cam_filtered, edge_cam)
 
         # remove the black region
         # edge_cam = black_region_removal(edge_cam, pix_rows_bound=435)
 
-        edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
+        edge_cam = cv2.Canny(image=edge_cam, threshold1=25, threshold2=50)
         mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
         edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
         cv2.imwrite(dir_cam_canny, edge_cam)
@@ -282,11 +282,11 @@ if __name__ == "__main__":
         edge_lid = cv2.imread(dir_lid_original)
         edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
         # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
-        edge_lid = nlmeans(edge_lid, h_u=30, h_l=15)
+        edge_lid = nlmeans(edge_lid, h_u=20, h_l=10)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 
         # mask to remove the upper and lower bound noise
-        edge_lid = cv2.Canny(image=edge_lid, threshold1=30, threshold2=50)
+        edge_lid = cv2.Canny(image=edge_lid, threshold1=25, threshold2=50)
         mask_lid = cv2.imread(dir_lid_mask, cv2.IMREAD_GRAYSCALE)
         edge_lid = cv2.bitwise_and(edge_lid, mask_lid)
         cv2.imwrite(dir_lid_canny, edge_lid)

@@ -45,7 +45,7 @@ const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
-const bool kReconstruction = true;
+const bool kReconstruction = false;
 const bool kSpotRegistration = false;
 const bool kGlobalColoredRecon = true;
 const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
     vector<double> init_proj_params = {
             M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
             0.27, 0.00, 0.03, /** tx ty tz **/
-            606.16, -0.000558783, -2.70908E-09, -1.17573E-10, /** a0, a2, a3, a4 **/
+            -606.16, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
             1, 0, 0, /** c, d, e **/
             1023, 1201 /** u0, v0 **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
         }
     }
     cout << "----------------- Fisheye Processing ---------------------" << endl;
-    
+
     if (kFisheyeFlatProcess) {
         for (int i = 0; i < fisheye.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -110,24 +110,10 @@ int main(int argc, char** argv) {
             }
         }
     }
-    else if (kFisheyeEdgeProcess) {
-        for (int i = 0; i < fisheye.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                fisheye.SetSpotIdx(i); /** spot idx **/
-                fisheye.SetViewIdx(fisheye.fullview_idx); /** view idx **/
-                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_polar_cloud;
-                RGBCloudPtr fisheye_pixel_cloud;
-                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
-                fisheye.SphereToPlane(fisheye_polar_cloud);
-                fisheye.EdgeToPixel();
-                fisheye.PixLookUp(fisheye_pixel_cloud);
-            }
-        }
-    }
-
+    
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     /********* Create Dense Pcd for All Scenes *********/
+
     if (kCreateDensePcd) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -139,6 +125,7 @@ int main(int argc, char** argv) {
             }
         }
     }
+    
     if (kInitialIcp) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -152,7 +139,72 @@ int main(int argc, char** argv) {
                 }
             }
         }
+        //            vector <Eigen::Matrix4f> local_trans_vec(lidar.num_views);
+//            vector <Eigen::Matrix4f> global_trans_vec(lidar.num_views);
+//            Eigen::Matrix4f local_trans;
+//            Eigen::Matrix4f global_trans;
+//
+//            /** local pair transformation matrix **/
+//            for (int j = 0; j < lidar.num_views; ++j) {
+//                int view_idx_tgt;
+//                if (j == lidar.fullview_idx) {
+//                    local_trans_vec[j] = Eigen::Matrix4f::Identity();
+//                    continue;
+//                }
+//                else if (j < lidar.fullview_idx) {
+//                    view_idx_tgt = j + 1;
+//                    lidar.SetViewIdx(j);
+//                    local_trans = lidar.ICP2(view_idx_tgt);
+//                    local_trans_vec[j] = local_trans;
+//                }
+//                else if (j > lidar.fullview_idx) {
+//                    view_idx_tgt = j - 1;
+//                    lidar.SetViewIdx(j);
+//                    local_trans = lidar.ICP2(view_idx_tgt);
+//                    local_trans_vec[j] = local_trans;
+//                }
+//            }
+//
+//            /** global transformation matrix to target view **/
+//            for (int j = 0; j < lidar.num_views; ++j) {
+//                if (j == lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                    continue;
+//                }
+//                else if (j < lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    for (int k = j; k <= lidar.fullview_idx; ++k) {
+//                        /** note: take care of the matrix multiplication,  **/
+//                        global_trans = local_trans_vec[j] * global_trans;
+//                    }
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                }
+//                else if (j > lidar.fullview_idx) {
+//                    global_trans = Eigen::Matrix4f::Identity();
+//                    for (int k = j; k >= lidar.fullview_idx; --k) {
+//                        global_trans = local_trans_vec[j] * global_trans;
+//                    }
+//                    global_trans_vec[j] = global_trans;
+//                    std::ofstream mat_out;
+//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
+//                    mat_out << global_trans << endl;
+//                    mat_out.close();
+//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
+//                }
+//            }
     }
+        
     if (kCreateFullViewPcd) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -172,6 +224,7 @@ int main(int argc, char** argv) {
         // }
         // cv::waitKey();
     }
+    
     if (kLidarFlatProcess) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -188,31 +241,9 @@ int main(int argc, char** argv) {
             }
         }
     }
-    else if (kLidarEdgeProcess) {
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SetViewIdx(lidar.fullview_idx);
-                std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
-                CloudPtr lidCartesianCloud;
-                CloudPtr lidPolarCloud;
-                std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-                lidar.SphereToPlane(lidPolarCloud, lidCartesianCloud);
-                lidar.EdgeToPixel();
-                lidar.PixLookUp(lidCartesianCloud);
-            }
-        }
-    }
-
 
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
-        /** a0, a1, a2, a3, a4; size of params = 13 **/
-//         std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-//         std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
-//         std::vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 2e+0, 2e+1, 15e+0, 10e+0, 5e+0};
-
-        /** a0, a1, a2, a3, a4; size of params = 13 **/
         /** the two sensors are parallel on y axis **/
         std::vector<const char*> name = {
                 "rx", "ry", "rz",
@@ -234,30 +265,8 @@ int main(int argc, char** argv) {
                 160e+0, 80e+0, 40e+0, 20+0, 10e+0,
                 1e-2, 1e-2, 1e-2
                 };
-
-        /** a0, a1, a2, a3, a4; size of params = 13 **/
-        // std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a2", "a3", "a4"};
-        // std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.12, 1023.0, 1201.0, 0.80541495, 594.42999235, 44.92838635, -54.82428857, 20.81519032};
-        // std::vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 2e+0, 2e+0, 2e+0, 2e+1, 8e+0, 4e+0, 2e+0};
-
-        /** a0, a1, a3, a5; size of params = 12 **/
-//        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
-//        std::vector<double> params_init = {0.0, 0.0, 0.115, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 609.93645006, -7.48070567, 3.22415532};
-//        std::vector<double> dev = {2e-2, 2e-2, 4e-2, 1e-2, 1e-2, 3e-2, 5e+0, 5e+0, 1e+1, 2e+1, 4e+0, 2e+0};
-
-        /** a0, a1, a3, a5; size of params = 12 **/
-//        std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a0", "a1", "a3", "a5"};
-//        std::vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.09, 1023.0, 1201.0, 0.0, 616.7214056132, -1, 1};
-//        std::vector<double> dev = {5e-2, 5e-2, 2e-2, 1e-2, 1e-2, 3e-2, 2e+0, 2e+0, 5e+0, 2e+1, 10e+0, 5e+0};
-
-        /** a1, a3, a5; size of params = 11 **/
-        // std::vector<const char*> name = {"rx", "ry", "rz", "tx", "ty", "tz", "u0", "v0", "a1", "a3", "a5"};
-        // std::vector<double> params_init = {0.0, 0.0, 0.1175, 0.0, 0.0, 0.16, 1023.0, 1201.0, 609.93645006, -7.48070567, 3.22415532};
-        // std::vector<double> dev = {5e-2, 5e-2, M_PI/300, 1e-2, 1e-2, 5e-2, 5e+0, 5e+0, 2e+1, 6e+0, 2e+0};
-
         std::vector<double> lb(dev.size()), ub(dev.size());
         std::vector<double> bw = {32, 24, 16, 8, 4, 2};
-        // std::vector<double> bw = {32, 16, 8, 4, 2};
 
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
@@ -273,7 +282,7 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{0, 2, 4};
+        std::vector<int> spot_vec{1, 2, 3};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         for (int &spot_idx : spot_vec)
@@ -309,19 +318,21 @@ int main(int argc, char** argv) {
 
     if (kReconstruction) {
         cout << "----------------- RGB Reconstruction ---------------------" << endl;
-        // params_calib = {
-        //     0.00826718, -3.12521, 1.55513, /** Rx Ry Rz **/
-        //     0.296866, -0.0180701, 0.02, /** tx ty tz **/
-        //     1026.0, 1204.0,
-        //     1893.58, -588.062, -8.63182, 4.43136, -1
-        // };
         params_calib = {
-            0.00713431, -3.13089, 1.5521, /** Rx Ry Rz **/
-            0.296866, -0.0272627, 0.0571168, /** tx ty tz **/
-            1026.0, 1201.79, /** u0, v0 **/
-            1879.81, -550.701, -11.7394, -11.7073, 3.82408,
-            1, 0, 0 /** c, d, e **/
+            0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
+            0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
+            1020.0, 1198.0,
+            1888.37, -536.802, -19.6401, -17.8592, 6.34771,
+            0.996981, -0.00880807, 0.00981348
         };
+        // Final   rx: 0.00513968 ry: 3.13105 rz: 1.56417 tx: 0.250552 ty: 0.0264601 tz: 0.0765269 u0: 1020 v0: 1198 a0: 1888.37 a1: -536.802 a2: -19.6401 a3: -17.8592 a4: 6.34771 c: 0.996981 d: -0.00880807 e: 0.00981348 
+        // params_calib = {
+        //     0.00713431, -3.13089, 1.5521, /** Rx Ry Rz **/
+        //     0.296866, -0.0272627, 0.0571168, /** tx ty tz **/
+        //     1026.0, 1201.79, /** u0, v0 **/
+        //     1879.81, -550.701, -11.7394, -11.7073, 3.82408,
+        //     1, 0, 0 /** c, d, e **/
+        // };
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);
@@ -332,10 +343,12 @@ int main(int argc, char** argv) {
             }
         }
     }
+
     if (kSpotRegistration) {
         cout << "----------------- Spot Registration ---------------------" << endl;
         lidar.SpotRegistration();
     }
+
     if (kGlobalColoredRecon) {
         cout << "----------------- Global Reconstruction ---------------------" << endl;
         lidar.GlobalColoredRecon();

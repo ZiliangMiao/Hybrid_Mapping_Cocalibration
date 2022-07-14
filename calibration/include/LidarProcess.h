@@ -32,8 +32,8 @@ public:
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
-    const double kRadPerPix = (M_PI * 2) / 4000;
-    const bool kHiddenPtsFilter = false; /** hidden points filter of pixels' space in Func SphereToPlane **/
+    const float kRadPerPix = (M_PI * 2) / 4000;
+    const bool kHiddenPtsFilter = true; /** hidden points filter of pixels' space in Func SphereToPlane **/
 
     /** tags and maps **/
     typedef struct Tags {
@@ -138,7 +138,6 @@ public:
     /***** Edge Related *****/
     void EdgeToPixel();
     void ReadEdge();
-    vector<vector<double>> EdgeCloudProjectToFisheye(vector<double> _p);
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
     void EdgeExtraction();
 

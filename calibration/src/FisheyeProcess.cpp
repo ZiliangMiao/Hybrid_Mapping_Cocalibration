@@ -211,12 +211,12 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     return result;
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud) {
     cout << "----- Fisheye: SphereToPlane2 -----" << " Spot Index: " << this->spot_idx << endl;
     SphereToPlane(polar_cloud, -1.0);
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     double flat_rows = this->kFlatRows;
     double flat_cols = this->kFlatCols;
@@ -234,18 +234,15 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     int invalid_index = 0;
     double rad_per_pix = this->kRadPerPix;
     double search_radius = rad_per_pix / 2;
+    float theta_center, phi_center;
 
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flat_rows; ++u) {
         // upper bound and lower bound of the current theta unit
-        float theta_lb = - u * rad_per_pix + M_PI;
-        float theta_ub = - (u + 1) * rad_per_pix + M_PI;
-        float theta_center = (theta_ub + theta_lb) / 2;
+        theta_center = - rad_per_pix * u + M_PI;
         for (int v = 0; v < flat_cols; ++v) {
             // upper bound and lower bound of the current phi unit
-            float phi_lb = v * rad_per_pix - M_PI;
-            float phi_ub = (v + 1) * rad_per_pix - M_PI;
-            float phi_center = (phi_ub + phi_lb) / 2;
+            phi_center = rad_per_pix * v - M_PI;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB search_point;
             search_point.x = theta_center;
@@ -404,7 +401,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
-    const double relError = 0.05;
+    const double default_rel_error = 0.05;
     const int n_rows = scale * this->kFisheyeRows;
     const int n_cols = scale * this->kFisheyeCols;
     arma::mat query;
@@ -428,11 +425,10 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
         }
     }
 
-
     arma::vec kde_estimations;
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
     mlpack::metric::EuclideanDistance metric;
-    mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(relError, 0.00, kernel);
+    mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(default_rel_error, 0.00, kernel);
     kde.Train(reference);
     kde.Evaluate(query, kde_estimations);
 

@@ -103,7 +103,7 @@ struct QuaternionCalibration {
                         const double ref_val,
                         const double scale,
                         const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-                        : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(weight), kde_val_(ref_val), kde_scale_(std::move(scale)) {}
+                        : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(std::move(weight)), kde_val_(std::move(ref_val)), kde_scale_(std::move(scale)) {}
 
     static ceres::CostFunction *Create(const Eigen::Vector3d &lid_point,
                                        const double &weight,
@@ -111,7 +111,7 @@ struct QuaternionCalibration {
                                        const double &kde_scale,
                                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator) {
         return new ceres::AutoDiffCostFunction<QuaternionCalibration, 3, 4, 3, kIntrinsics>(
-            new QuaternionCalibration(lid_point, weight, kde_val, kde_scale, interpolator));
+                new QuaternionCalibration(lid_point, weight, kde_val, kde_scale, interpolator));
     }
 
     const Eigen::Vector3d lid_point_;
@@ -139,8 +139,8 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     string edge_proj_txt_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].edge_fisheye_projection_path;
     outfile.open(edge_proj_txt_path, ios::out);
     
-    Eigen::Matrix<double, kExtrinsics, 1> extrinsic = Eigen::Map<Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1>>(params.data()).head(kExtrinsics);
-    Eigen::Matrix<double, kIntrinsics, 1> intrinsic = Eigen::Map<Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1>>(params.data()).tail(kIntrinsics);
+    Eigen::Matrix<double, 6, 1> extrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).head(6);
+    Eigen::Matrix<double, kIntrinsics, 1> intrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).tail(kIntrinsics);
     
     CloudPtr edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
     CloudPtr edge_trans_cloud(new CloudT);
@@ -167,47 +167,42 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     /** generate fusion image **/
     tk::spline poly_spline = InverseSpline(params);
 
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> camResult =
+    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeResult =
         fisheye.FisheyeImageToSphere(raw_image, false, poly_spline);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPolarCloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr camOrgPixelCloud;
-    std::tie(camOrgPolarCloud, camOrgPixelCloud) = camResult;
-    fisheye.SphereToPlane(camOrgPolarCloud, bandwidth);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPolarCloud;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPixelCloud;
+    std::tie(fisheyeOrgPolarCloud, fisheyeOrgPixelCloud) = fisheyeResult;
+    fisheye.SphereToPlane(fisheyeOrgPolarCloud, bandwidth);
 }
 
 void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
  
     string fullview_cloud_path, pose_mat_path, fisheye_img_path;
-    Eigen::Matrix<float, kExtrinsics, 1> extrinsic;
+    Eigen::Matrix<float, 6, 1> extrinsic;
     Eigen::Matrix<float, kIntrinsics, 1> intrinsic;
 
     cv::Mat target_view_img;
     CloudPtr fullview_xyz_cloud(new CloudT);
     RGBCloudPtr input_cloud(new RGBCloudT), fullview_rgb_cloud(new RGBCloudT);
 
-    std::ifstream pose_mat_if;
     Eigen::Matrix4f T_mat, T_mat_inv;
     Eigen::Matrix4f pose_mat, pose_mat_inv;
     
     Eigen::Vector3f lidar_point;
     Eigen::Vector2f projection;
 
-    if (lidar.kDenseCloud) {
-        fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_dense_cloud_path;
-    }
-    else {
-        fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_sparse_cloud_path;
-    }
+    fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_dense_cloud_path;
+
     pcl::io::loadPCDFile(fullview_cloud_path, *fullview_xyz_cloud);
     pcl::VoxelGrid<pcl::PointXYZI> voxelgrid;
     voxelgrid.setInputCloud(fullview_xyz_cloud);
-    voxelgrid.setLeafSize(0.01f, 0.01f, 0.01f);
+    voxelgrid.setLeafSize(0.03f, 0.03f, 0.03f);
     voxelgrid.filter(*fullview_xyz_cloud);
     pcl::copyPointCloud(*fullview_xyz_cloud, *input_cloud);
 
     /** Loading optimized parameters and initial transform matrix **/
-    extrinsic = Eigen::Map<Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1>>(params.data()).head(kExtrinsics).cast<float>();
-    intrinsic = Eigen::Map<Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1>>(params.data()).tail(kIntrinsics).cast<float>();
+    extrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).head(6).cast<float>();
+    intrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).tail(kIntrinsics).cast<float>();
     T_mat = ExtrinsicMat(extrinsic);
     T_mat_inv = T_mat.inverse();
     pose_mat = Eigen::Matrix4f::Identity();
@@ -224,15 +219,9 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
         /** Loading transform matrix between different views **/
         pose_mat_path = lidar.poses_files_path_vec[lidar.spot_idx][fullview_idx].pose_trans_mat_path;
-        pose_mat_if.open(pose_mat_path);
-        for (int j = 0; j < 4; j++) {
-            for (int k = 0; k < 4; k++) {
-                pose_mat_if >> pose_mat(j, k);
-            }
-        }
+        pose_mat = LoadTransMat(pose_mat_path);
         cout << "View: " << " Spot Index: " << lidar.spot_idx << " View Index: " << fullview_idx << "\n"
             << "ICP Trans Mat:" << "\n " << pose_mat << endl;
-        pose_mat_if.close();
         pose_mat_inv = pose_mat.inverse();
 
         /** Loading transform matrix between different views **/
@@ -299,33 +288,31 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     //     viewer.spinOnce();
     // }
 
-    pcl::io::savePCDFileBinary(lidar.kDatasetPath + "/fullview_rgb_cloud_spot" + to_string(lidar.spot_idx) + ".pcd", *fullview_rgb_cloud);
-    pcl::io::savePCDFileBinary(lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].fullview_recon_folder_path + "/fullview_rgb_cloud_spot" + to_string(lidar.spot_idx) + ".pcd", *fullview_rgb_cloud);
+    pcl::io::savePCDFileBinary(lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].fullview_rgb_cloud_path, *fullview_rgb_cloud);
 }
 
-/**
- * @brief
- * custom callback to print something after every iteration (inner iteration is not included)
- */
-class OutputCallback : public ceres::IterationCallback
-{
-public:
-    OutputCallback(double *params)
-        : params_(params) {}
+// /**
+//  * @brief
+//  * custom callback to print something after every iteration (inner iteration is not included)
+//  */
+// class OutputCallback : public ceres::IterationCallback {
+// public:
+//     OutputCallback(double *params)
+//         : params_(params) {}
 
-    ceres::CallbackReturnType operator()(
-        const ceres::IterationSummary &summary) override {
-        for (int i = 0; i < kExtrinsics + kIntrinsics; i++) {
-            const double params_out = params_[i];
-            outfile << params_out << "\t";
-        }
-        outfile << "\n";
-        return ceres::SOLVER_CONTINUE;
-    }
+//     ceres::CallbackReturnType operator()(
+//         const ceres::IterationSummary &summary) override {
+//         for (int i = 0; i < kExtrinsics + kIntrinsics; i++) {
+//             const double params_out = params_[i];
+//             outfile << params_out << "\t";
+//         }
+//         outfile << "\n";
+//         return ceres::SOLVER_CONTINUE;
+//     }
 
-private:
-    const double *params_;
-};
+// private:
+//     const double *params_;
+// };
 
 std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
                                      LidarProcess &lidar,
@@ -415,7 +402,6 @@ std::vector<double> ceresMultiScenes(FisheyeProcess &fisheye,
     return result_vec;
 }
 
-
 std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
                                      LidarProcess &lidar,
                                      double bandwidth,
@@ -444,6 +430,29 @@ std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
     memcpy(params, &q_vector(0), q_vector.size() * sizeof(double));
 
     /********* Fisheye KDE *********/
+    std::vector<double> ref_vals;
+    std::vector<ceres::Grid2D<double>> grids;
+    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
+    for (int i = 0; i < spot_vec.size(); i++) {
+        fisheye.SetSpotIdx(spot_vec[i]);
+        lidar.SetSpotIdx(spot_vec[i]);
+        std::vector<double> fisheye_edge = fisheye.Kde(bandwidth, scale);
+        double *kde_val = new double[fisheye_edge.size()];
+        memcpy(kde_val, &fisheye_edge[0], fisheye_edge.size() * sizeof(double));
+        ceres::Grid2D<double> grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
+        grids.push_back(grid);
+        double ref_val = *max_element(fisheye_edge.begin(), fisheye_edge.end());
+        ref_vals.push_back(ref_val);
+    }
+    const std::vector<ceres::Grid2D<double>> kde_grids(grids);
+    for (int i = 0; i < spot_vec.size(); i++) {
+        fisheye.SetSpotIdx(spot_vec[i]);
+        lidar.SetSpotIdx(spot_vec[i]);
+        ceres::BiCubicInterpolator<ceres::Grid2D<double>> interpolator(kde_grids[i]);
+        interpolators.push_back(interpolator);
+    }
+    const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
+
     // vector<double> p_c = fisheye.Kde(bandwidth, scale);
     // double *kde_val = new double[p_c.size()];
     // memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
@@ -452,58 +461,37 @@ std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
     // const ceres::Grid2D<double> kde_grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
     // const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
 
-    std::vector<ceres::Grid2D<double>> grids;
-    std::vector<double> ref_vals;
-    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
-
-    for (int &idx : spot_vec) {
-        fisheye.SetSpotIdx(idx);
-        lidar.SetSpotIdx(idx);
-        vector<double> p_c = fisheye.Kde(bandwidth, scale);
-        double *kde_val = new double[p_c.size()];
-        memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
-        const ceres::Grid2D<double> kde_grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
-        grids.push_back(kde_grid);
-        ref_vals.push_back(*max_element(p_c.begin(), p_c.end()));
-    }
-    const std::vector<ceres::Grid2D<double>> img_grids(grids);
-    for (int &idx : spot_vec) {
-        fisheye.SetSpotIdx(idx);
-        lidar.SetSpotIdx(idx);
-        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(img_grids[idx]);
-        interpolators.push_back(kde_interpolator);
-    }
-    const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> img_interpolators(interpolators);
-
     /********* Initialize Ceres Problem *********/
     ceres::Problem problem;
-    problem.AddParameterBlock(params, 4, q_manifold);
-    problem.AddParameterBlock(params+4, 3);
-    problem.AddParameterBlock(params+kIntrinsics, kIntrinsics);
+    problem.AddParameterBlock(params, kExtrinsics-3, q_manifold);
+    problem.AddParameterBlock(params+(kExtrinsics-3), 3);
+    problem.AddParameterBlock(params+kExtrinsics, kIntrinsics);
     ceres::LossFunction *loss_function = new ceres::HuberLoss(0.05);
-    Eigen::Vector2d img_size = {fisheye.kFisheyeRows, fisheye.kFisheyeCols};
 
     /** a scene weight could be added here **/
-    CloudPtr &edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
-
-    for (int &idx : spot_vec) {
-        fisheye.SetSpotIdx(idx);
-        lidar.SetSpotIdx(idx);
-        for (auto &point : edge_cloud->points) {
+    for (int idx = 0; idx < spot_vec.size(); idx++) {
+        fisheye.SetSpotIdx(spot_vec[idx]);
+        lidar.SetSpotIdx(spot_vec[idx]);
+        
+        for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
             const double weight = point.intensity;
             Eigen::Vector3d lid_point = {point.x, point.y, point.z};
-            problem.AddResidualBlock(QuaternionCalibration::Create(lid_point, weight, ref_vals[idx], scale, img_interpolators[idx]), loss_function,
-                                    params, params+kExtrinsics-3, params+kIntrinsics);
+            problem.AddResidualBlock(QuaternionCalibration::Create(lid_point, weight, ref_vals[idx], scale, kde_interpolators[idx]),
+                                    loss_function,
+                                    params, params+(kExtrinsics-3), params+kExtrinsics);
+            // problem.AddResidualBlock(QuaternionCalibration::Create(lid_point, weight, ref_val, scale, kde_interpolator),
+            // loss_function,
+            // params, params+(kExtrinsics-3), params+kExtrinsics);
         }
     }
     
     switch (kDisabledBlock) {
     case 1:
         problem.SetParameterBlockConstant(params);
-        problem.SetParameterBlockConstant(params+4);
+        problem.SetParameterBlockConstant(params+(kExtrinsics-3));
         break;
     case 2:
-        problem.SetParameterBlockConstant(params+kIntrinsics);
+        problem.SetParameterBlockConstant(params+kExtrinsics);
         break;
     default:
         break;
@@ -515,8 +503,8 @@ std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
             problem.SetParameterUpperBound(params, i, (q_vector[i]+0.15));
         }
         if (i >= 4 && i < kExtrinsics && kDisabledBlock != 1) {
-            problem.SetParameterLowerBound(params+kExtrinsics-3, i-(kExtrinsics-3), lb[i-1]);
-            problem.SetParameterUpperBound(params+kExtrinsics-3, i-(kExtrinsics-3), ub[i-1]);
+            problem.SetParameterLowerBound(params+(kExtrinsics-3), i-(kExtrinsics-3), lb[i-1]);
+            problem.SetParameterUpperBound(params+(kExtrinsics-3), i-(kExtrinsics-3), ub[i-1]);
         }
         else if (i >= kExtrinsics && kDisabledBlock != 2) {
             problem.SetParameterLowerBound(params+kExtrinsics, i-kExtrinsics, lb[i-1]);
@@ -546,6 +534,11 @@ std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
     CeresOutput(name, result_vec, init_params_vec);
     extrinsic = result.head(6);
     cout << ExtrinsicMat(extrinsic) << endl;
-    Visualization2D(fisheye, lidar, result_vec, bandwidth);
+    for (int &spot_idx : spot_vec) {
+        fisheye.SetSpotIdx(spot_idx);
+        lidar.SetSpotIdx(spot_idx);
+        Visualization2D(fisheye, lidar, result_vec, bandwidth);
+    }
+    
     return result_vec;
 }

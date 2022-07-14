@@ -97,8 +97,8 @@ public:
     cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline);
-    void SphereToPlane(RGBCloudPtr sphere_polar_cloud);
-    void SphereToPlane(RGBCloudPtr sphere_polar_cloud, double bandwidth);
+    void SphereToPlane(RGBCloudPtr &sphere_polar_cloud);
+    void SphereToPlane(RGBCloudPtr &sphere_polar_cloud, double bandwidth);
 
     /** Edge Related **/
     void ReadEdge();
