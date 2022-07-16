@@ -34,14 +34,14 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = true;
+const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 
-const bool kCreateDensePcd = true;
-const bool kInitialIcp = true;
-const bool kCreateFullViewPcd = true;
+const bool kCreateDensePcd = false;
+const bool kInitialIcp = false;
+const bool kCreateFullViewPcd = false;
 
-const bool kLidarFlatProcess = true;
+const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
