@@ -282,7 +282,7 @@ int main(int argc, char** argv) {
         }
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{1, 2, 3};
+        std::vector<int> spot_vec{2, 3, 4};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         for (int &spot_idx : spot_vec)
@@ -318,13 +318,13 @@ int main(int argc, char** argv) {
 
     if (kReconstruction) {
         cout << "----------------- RGB Reconstruction ---------------------" << endl;
-        params_calib = {
-            0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
-            0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
-            1020.0, 1198.0,
-            1888.37, -536.802, -19.6401, -17.8592, 6.34771,
-            0.996981, -0.00880807, 0.00981348
-        };
+        // params_calib = {
+        //     0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
+        //     0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
+        //     1020.0, 1198.0,
+        //     1888.37, -536.802, -19.6401, -17.8592, 6.34771,
+        //     0.996981, -0.00880807, 0.00981348
+        // };
         // Final   rx: 0.00513968 ry: 3.13105 rz: 1.56417 tx: 0.250552 ty: 0.0264601 tz: 0.0765269 u0: 1020 v0: 1198 a0: 1888.37 a1: -536.802 a2: -19.6401 a3: -17.8592 a4: 6.34771 c: 0.996981 d: -0.00880807 e: 0.00981348 
         // params_calib = {
         //     0.00713431, -3.13089, 1.5521, /** Rx Ry Rz **/

@@ -472,9 +472,9 @@ std::vector<double> ceresQuaternion(FisheyeProcess &fisheye,
     for (int idx = 0; idx < spot_vec.size(); idx++) {
         fisheye.SetSpotIdx(spot_vec[idx]);
         lidar.SetSpotIdx(spot_vec[idx]);
-        
+        double normalize_weight = 1.0 / sqrt(spot_vec.size());
         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
-            const double weight = point.intensity;
+            double weight = point.intensity * normalize_weight;
             Eigen::Vector3d lid_point = {point.x, point.y, point.z};
             problem.AddResidualBlock(QuaternionCalibration::Create(lid_point, weight, ref_vals[idx], scale, kde_interpolators[idx]),
                                     loss_function,
