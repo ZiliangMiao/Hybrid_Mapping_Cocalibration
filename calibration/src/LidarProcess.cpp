@@ -305,27 +305,6 @@ Eigen::Matrix4f LidarProcess::ICP2(int view_idx_tgt) {
     outlier_filter.setInputCloud(cloud_source_filtered);
     outlier_filter.filter(*cloud_source_filtered);
 
-    /** initial rigid transformation **/
-//     Eigen::Affine3f initial_trans = Eigen::Affine3f::Identity();
-
-//     /** to be modified !!!!! **/
-// //    initial_trans.translation() << 0.15 * sin(v_degree/(float)180 * M_PI) - 0.15 * sin(0/(float)180 * M_PI),
-// //                                   0.0,
-// //                                   0.15 * cos(v_degree/(float)180 * M_PI) - 0.15 * cos(0/(float)180 * M_PI);
-// //    float rx = 0.0, ry = v_degree/(float)180, rz = 0.0;
-
-//     initial_trans.translation() << 0.0,
-//     0.15 * sin(this->view_angle_step/(float)180 * M_PI),
-//     0.15 - 0.15 * cos(this->view_angle_step/(float)180 * M_PI);
-//     float rx = 0.0, ry = this->view_angle_step/(float)180, rz = 0.0;
-
-//     Eigen::Matrix3f rotation_mat;
-//     rotation_mat = Eigen::AngleAxisf(rx*M_PI, Eigen::Vector3f::UnitX())
-//                    * Eigen::AngleAxisf(ry*M_PI, Eigen::Vector3f::UnitY())
-//                    * Eigen::AngleAxisf(rz*M_PI, Eigen::Vector3f::UnitZ());
-//     initial_trans.rotate(rotation_mat);
-//     cout << initial_trans.matrix() << endl;
-//     Eigen::Matrix4f initial_trans_mat = initial_trans.matrix();
     Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/180.0f*M_PI, 0.0f, 
@@ -404,6 +383,7 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     Eigen::Matrix<float, 6, 1> extrinsic_vec; 
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
                     (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
+                    // 0.0, 0.0, 0.0;
     Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
@@ -456,7 +436,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     float dis_std_min = 1;
     float theta_center;
     float phi_center;
-
+    int hidden_pt_cnt = 0;
     for (int u = 0; u < kFlatRows; ++u) {
         /** upper and lower bound of the current theta unit **/
         theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
@@ -479,68 +459,57 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
             if (search_num == 0) {
                 flat_img.at<float>(u, v) = 160; /** intensity **/
                 invalid_search_num = invalid_search_num + 1;
-                /** add tags **/
-                tags_map[u][v].label = 0;
-                tags_map[u][v].num_pts = 0;
+                /** Default tag with params = 0 **/
                 tags_map[u][v].pts_indices.push_back(0);
-                tags_map[u][v].mean = 0;
-                tags_map[u][v].sigma = 0;
-                tags_map[u][v].weight = 0;
-                tags_map[u][v].num_hidden_pts = 0;
             }
             else { /** corresponding points are found in the radius neighborhood **/
-                vector<double> intensity_vec;
-                vector<double> theta_vec;
-                vector<double> phi_vec;
-                for (int i = 0; i < search_num; ++i) {
-                    if (search_pt_idx_vec[i] > polar_cloud->points.size() - 1) {
-                        /** caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud **/
-                        flat_img.at<float>(u, v) = 160; /** intensity **/
-                        invalid_idx_num = invalid_idx_num + 1;
-                        continue;
-                    }
-                    intensity_vec.push_back((*polar_cloud)[search_pt_idx_vec[i]].intensity);
-                    theta_vec.push_back((*polar_cloud)[search_pt_idx_vec[i]].x);
-                    phi_vec.push_back((*polar_cloud)[search_pt_idx_vec[i]].y);
-                    
-                    /** add tags **/
-                    tags_map[u][v].num_pts = search_num;
-                    tags_map[u][v].pts_indices.push_back(search_pt_idx_vec[i]);
-                }
-
-                /** hidden points filter **/
+                vector<double> intensity_vec, theta_vec, phi_vec;
                 int hidden_pt_num = 0;
-                float dis_former = 0, dist = 0;
-                if (this->kHiddenPtsFilter) {
-                    for (int i = 0; i < search_num; ++i) {
-                        PointT &pt = (*cart_cloud)[tags_map[u][v].pts_indices[i - hidden_pt_num]];
-                        PointT &pt_former = (*cart_cloud)[tags_map[u][v].pts_indices[i - 1 - hidden_pt_num]];
-                        dis_former = dist;
-                        dist = abs(pt.x) + abs(pt.y) + abs(pt.z);
-                        if (dist > dis_former && i > 0) {
-                            float dis_diff_former = abs(pt.x - pt_former.x) + abs(pt.y - pt_former.y) + abs(pt.z - pt_former.z);
-                            if (dis_diff_former > 0.1 * dist) {
-                                /** Erase the hidden points **/
-                                auto intensity_iter = intensity_vec.begin() + i - hidden_pt_num;
-                                intensity_vec.erase(intensity_iter);
-                                auto theta_iter = theta_vec.begin() + i - hidden_pt_num;
-                                theta_vec.erase(theta_iter);
-                                auto phi_iter = phi_vec.begin() + i - hidden_pt_num;
-                                phi_vec.erase(phi_iter);
-                                auto idx_iter = tags_map[u][v].pts_indices.begin() + i - hidden_pt_num;
-                                tags_map[u][v].pts_indices.erase(idx_iter);
-                                tags_map[u][v].num_pts = tags_map[u][v].num_pts - 1;
-                                hidden_pt_num ++;
+                float dist = 0, dist_mean = 0, dist_0 = 0;
+                for (int i = 0; i < search_num; ++i) {
+                    bool skip = false;
+                    PointT &polar_pt = (*polar_cloud)[search_pt_idx_vec[i]];
+                    /** hidden points filter **/
+                    if (this->kHiddenPtsFilter) {
+                        PointT &cart_pt = (*cart_cloud)[search_pt_idx_vec[i]];
+                        const float sensitivity = 0.02;
+                        dist = sqrt(pow(cart_pt.x, 2) + pow(cart_pt.y, 2) + pow(cart_pt.z, 2));
+                        dist_mean = (i * dist_mean + dist) / (i + 1); 
+                        if (i > 0) {
+                            PointT &cart_pt_former = (*cart_cloud)[search_pt_idx_vec[i - 1]];
+                            if (dist < (1-2*sensitivity) * dist_mean && i == 1) {
+                                hidden_pt_num++;
+                                hidden_pt_cnt++;
+                                tags_map[u][v].pts_indices.erase(tags_map[u][v].pts_indices.begin());
+                                intensity_vec.erase(intensity_vec.begin());
+                                theta_vec.erase(theta_vec.begin());
+                                phi_vec.erase(phi_vec.begin());
+                                dist_mean = dist;
+                            }
+                            if (dist > (1+sensitivity) * dist_mean || dist < (1-sensitivity) * dist_mean) {
+                                hidden_pt_num++;
+                                hidden_pt_cnt++;
+                                skip = true;
+                                dist_mean = (dist_mean * (i + 1) - dist) / i;
                             }
                         }
                     }
+
+                    if (!skip) {
+                        intensity_vec.push_back(polar_pt.intensity);
+                        theta_vec.push_back(polar_pt.x);
+                        phi_vec.push_back(polar_pt.y);
+                        tags_map[u][v].pts_indices.push_back(search_pt_idx_vec[i]);
+                    }
                 }
+
+                /** add tags **/
+                tags_map[u][v].num_pts = search_num - hidden_pt_num;
+                tags_map[u][v].num_hidden_pts = hidden_pt_num;
 
                 /** check the size of vectors **/
                 ROS_ASSERT_MSG((theta_vec.size() == phi_vec.size()) && (phi_vec.size() == intensity_vec.size()) && (intensity_vec.size() == tags_map[u][v].pts_indices.size()) && (tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
-                // if (hidden_pt_num != 0) {
-                //     cout << "hidden points: " << hidden_pt_num << "/" << theta_vec.size() << endl;
-                // }
+
                 if (tags_map[u][v].num_pts == 1) {
                     /** only one point in the theta-phi sub-region of a pixel **/
                     tags_map[u][v].label = 1;
@@ -616,6 +585,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
             }
         }
     }
+    cout << "hidden points: " << hidden_pt_cnt << "/" << polar_cloud->points.size() << endl;
 
     /** add the tags_map of this specific pose to maps **/
     this->tags_map_vec[this->spot_idx][this->view_idx] = tags_map;
@@ -685,12 +655,10 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     EdgePts edge_pts;
     CloudPtr edge_cloud(new CloudT);
     RGBCloudPtr weight_rgb_cloud(new RGBCloudT);
-    int cnt = 0;
     for (auto &edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
         int num_pts = tags_map[u][v].num_pts;
-        cnt += 256;
         if (tags_map[u][v].label == 0) { /** invalid pixels **/
             invalid_pixel_space = invalid_pixel_space + 1;
             continue;
@@ -700,7 +668,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             RGBPointT colorPt;
             CloudPtr pixel_cloud(new CloudT);
             float x_avg = 0.0f, y_avg = 0.0f, z_avg = 0.0f;
-            int L_2 = edge_pixels.size() * 0.25;
+            int L_2 = 50;
             pcl::copyPointCloud(*cart_cloud, tags_map[u][v].pts_indices, *pixel_cloud);
             for (auto &pixel_pt : pixel_cloud->points) {
                 x_avg += pixel_pt.x;
@@ -710,14 +678,15 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
                 colorPt.x = pixel_pt.x;
                 colorPt.y = pixel_pt.y;
                 colorPt.z = pixel_pt.z;
-                if ((cnt) < L_2) {
+                int indicator = pixel_pt.intensity;
+                if ((indicator) < L_2) {
                     colorPt.r = 0;
-                    colorPt.g = int(255 * ((float)(int(cnt * 0.5) % L_2) / L_2));
-                    colorPt.b = int(255 * ((float)1 - ((float)(int(cnt * 0.5) % L_2) / L_2)));
+                    colorPt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
+                    colorPt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
                 }
                 else {
-                    colorPt.r = int(255 * (float)((int(cnt * 0.5) % L_2) - L_2) / L_2);
-                    colorPt.g = int(255 * ((float)1 - (float)((int(cnt * 0.5) % L_2) - L_2) / L_2));
+                    colorPt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
+                    colorPt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
                     colorPt.b = 0;
                 }
                 weight_rgb_cloud->points.push_back(colorPt);

@@ -210,10 +210,10 @@ def nlmeans(edge_lid, h_u, h_l):
     edge_lid = np.vstack((edge_lid_u, edge_lid_l))
     return edge_lid
 
-def black_region_removal(img, pix_rows_bound):
-    output = np.zeros((img.shape[0], img.shape[1]), np.uint8)
-    output[pix_rows_bound:, :] = img[pix_rows_bound:, :]
-    return output
+# def black_region_removal(img, pix_rows_bound):
+#     output = np.zeros((img.shape[0], img.shape[1]), np.uint8)
+#     output[pix_rows_bound:, :] = img[pix_rows_bound:, :]
+#     return output
 
 def check_folder():
     dir_list = [
@@ -261,8 +261,6 @@ if __name__ == "__main__":
         cv2.imwrite(dir_cam_filtered, edge_cam)
 
         # remove the black region
-        # edge_cam = black_region_removal(edge_cam, pix_rows_bound=435)
-
         edge_cam = cv2.Canny(image=edge_cam, threshold1=25, threshold2=50)
         mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
         edge_cam = cv2.bitwise_and(edge_cam, mask_cam)

@@ -3,14 +3,16 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 
 // eigen
 #include <Eigen/Core>
 
 // headings
 #include "spline.h"
+using namespace std;
 
-int CheckFolder(string spot_path) {
+int CheckFolder(std::string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
     if (0 != access(spot_path.c_str(), 0)) {
         /** if this folder not exist, create a new one **/
@@ -94,7 +96,13 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Ei
     return undistorted_projection;
 }
 
-void CeresOutput(std::vector<const char *> name, std::vector<double> params, std::vector<double> params_init) {
+void CeresOutput(std::vector<double> params, std::vector<double> params_init) {
+    std::vector<const char*> name = {
+            "rx", "ry", "rz",
+            "tx", "ty", "tz",
+            "u0", "v0",
+            "a0", "a1", "a2", "a3", "a4",
+            "c", "d", "e"};
     std::cout << "Initial ";
     for (unsigned int i = 0; i < name.size(); i++)
     {
@@ -114,8 +122,9 @@ static bool cmp(const vector<double>& a, const vector<double>& b) {
 }
 
 tk::spline InverseSpline(std::vector<double> &params) {
+    int idx = params.size() - 8;
     Eigen::Matrix<double, 5, 1> a_;
-    a_ << params[8], params[9], params[10], params[11], params[12];
+    a_ << params[idx], params[idx+1], params[idx+2], params[idx+3], params[idx+4];
     int theta_ub = 180;
     std::vector<std::vector<double>> point(2, std::vector<double>(theta_ub));
 

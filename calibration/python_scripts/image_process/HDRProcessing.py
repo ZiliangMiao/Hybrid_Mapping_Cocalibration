@@ -43,13 +43,11 @@ if __name__ == "__main__":
             data_path = root_path + "/data" + "/" + default_name + "/spot" + str(spot_idx) + "/" + str(view_angle) + "/images"
 
             # Loading exposure images into a list
-            exposure_times = np.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0,
-                1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200
-                ], dtype=np.float32)
-            # exposure_times = np.array([1.0, 2.0, 3.0, 4.0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-            #     20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100
+            # exposure_times = np.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0,
+            #     1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+            #     20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200
             #     ], dtype=np.float32)
+            exposure_times = np.array([0.5, 1.0, 5, 10, 20, 50, 100], dtype=np.float32)
             img_list = []
             
             for t in exposure_times:

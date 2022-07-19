@@ -27,7 +27,7 @@
 #include <mlpack/core/tree/cover_tree.hpp>
 /** headings **/
 #include "FisheyeProcess.h"
-#include "spline.h"
+#include "utils.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -129,8 +129,10 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     string fisheye_hdr_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat image = ReadFisheyeImage(fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    tk::spline spline;
-    result = FisheyeImageToSphere(image, false, spline);
+    std::vector<double> intrinsic_
+        {intrinsic.a0, intrinsic.a1, intrinsic.a2, intrinsic.a3, intrinsic.a4, intrinsic.c, intrinsic.d, intrinsic.e};
+    tk::spline spline = InverseSpline(intrinsic_);
+    result = FisheyeImageToSphere(image, true, spline);
     return result;
 }
 
@@ -140,10 +142,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     float x, y, z;
     float radius, theta, phi;
     /** intrinsic parameters **/
-    float a0, a2, a3, a4;
-    float c, d, e;
-    float u0, v0;
-    
+    float c, d, e, u0, v0;
     c = this->intrinsic.c;
     d = this->intrinsic.d;
     e = this->intrinsic.e;
@@ -165,21 +164,24 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             y = e * u + 1 * v - v0;
             radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                if (!enable_spline){
-                    a0 = this->intrinsic.a0;
-                    a2 = this->intrinsic.a2;
-                    a3 = this->intrinsic.a3;
-                    a4 = this->intrinsic.a4;
-                    z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                    /** spherical coordinates **/
-                    phi = atan2(y, x); // note that atan2 is defined as Y/X
-                    theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
-                }
-                else{
-                    /** spherical coordinates **/
-                    phi = atan2(y, x); // note that atan2 is defined as Y/X
-                    theta = spline(radius);
-                }
+                // if (!enable_spline){
+                //     // a0 = this->intrinsic.a0;
+                //     // a2 = this->intrinsic.a2;
+                //     // a3 = this->intrinsic.a3;
+                //     // a4 = this->intrinsic.a4;
+                //     // z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
+                //     // /** spherical coordinates **/
+                //     // phi = atan2(y, x); // note that atan2 is defined as Y/X
+                //     // theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+                //     cout << "abandoned" << endl;
+                // }
+                // else{
+                //     /** spherical coordinates **/
+                //     phi = atan2(y, x); // note that atan2 is defined as Y/X
+                //     theta = spline(radius);
+                // }
+                phi = atan2(y, x); // note that atan2 is defined as Y/X
+                theta = spline(radius);
 
                 /** point cloud with origin polar coordinates **/
                 polar_pt.x = theta;
@@ -232,17 +234,16 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
 
     int invalid_search = 0;
     int invalid_index = 0;
-    double rad_per_pix = this->kRadPerPix;
-    double search_radius = rad_per_pix / 2;
+    double search_radius = kRadPerPix / 2;
     float theta_center, phi_center;
 
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flat_rows; ++u) {
         // upper bound and lower bound of the current theta unit
-        theta_center = - rad_per_pix * u + M_PI;
+        theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
         for (int v = 0; v < flat_cols; ++v) {
             // upper bound and lower bound of the current phi unit
-            phi_center = rad_per_pix * v - M_PI;
+            phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB search_point;
             search_point.x = theta_center;

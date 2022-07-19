@@ -37,13 +37,13 @@ public:
 
     /** tags and maps **/
     typedef struct Tags {
-        int label; /** label = 0->empty pixel; label = 1->normal pixel **/
-        int num_pts; /** number of points **/
+        int label = 0; /** label = 0->empty pixel; label = 1->normal pixel **/
+        int num_pts = 0; /** number of points **/
         vector<int> pts_indices;
-        float mean;
-        float sigma; /** sigma is the standard deviation estimation of lidar edge distribution **/
-        float weight;
-        int num_hidden_pts;
+        float mean = 0;
+        float sigma = 0; /** sigma is the standard deviation estimation of lidar edge distribution **/
+        float weight = 0;
+        int num_hidden_pts = 0;
     }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
     typedef vector<vector<Tags>> TagsMap;
     vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
