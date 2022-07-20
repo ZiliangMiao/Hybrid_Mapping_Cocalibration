@@ -406,6 +406,30 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "min theta of the fullview cloud: " << theta_min << "\n"
          << " max theta of the fullview cloud: " << theta_max << endl;
 
+    if (kEdgeAnalysis) {
+        /** visualization for weight check**/ 
+        RGBCloudPtr polar_rgb_cloud(new RGBCloudT);
+        int L_2 = 50;
+        for (size_t i = 0; i < polar_cloud->points.size(); ++i) {
+            int indicator = cart_cloud->points[i].intensity;
+            RGBPointT polar_rgb_pt;
+            if ((indicator) < L_2) {
+                polar_rgb_pt.r = 0;
+                polar_rgb_pt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
+                polar_rgb_pt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
+            }
+            else {
+                polar_rgb_pt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
+                polar_rgb_pt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
+                polar_rgb_pt.b = 0;
+            }
+            polar_rgb_pt.x = polar_cloud->points[i].x;
+            polar_rgb_pt.y = polar_cloud->points[i].y;
+            polar_rgb_pt.z = polar_cloud->points[i].z;
+            polar_rgb_cloud->points.push_back(polar_rgb_pt);
+        }  
+        pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/fullview_polar_cloud.pcd", *polar_rgb_cloud);
+    }
     tuple<CloudPtr, CloudPtr> result;
     result = make_tuple(polar_cloud, cart_cloud);
     return result;
@@ -421,9 +445,6 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     /** caution: the point cloud need to be setted before the loop **/
     pcl::KdTreeFLANN<PointT> kdtree;
     kdtree.setInputCloud(polar_cloud);
-
-    /** for weight visualization only **/
-    RGBCloudPtr weight_rgb_cloud(new RGBCloudT);
 
     /** define the invalid search parameters **/
     int invalid_search_num = 0; /** search invalid count **/
@@ -654,6 +675,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     EdgePts edge_pts;
     CloudPtr edge_cloud(new CloudT);
+    /** visualization for weight check**/ 
     RGBCloudPtr weight_rgb_cloud(new RGBCloudT);
     for (auto &edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
@@ -674,22 +696,24 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
                 x_avg += pixel_pt.x;
                 y_avg += pixel_pt.y;
                 z_avg += pixel_pt.z;
+                if (kEdgeAnalysis) {
                 /** visualization for weight check**/ 
-                colorPt.x = pixel_pt.x;
-                colorPt.y = pixel_pt.y;
-                colorPt.z = pixel_pt.z;
-                int indicator = pixel_pt.intensity;
-                if ((indicator) < L_2) {
-                    colorPt.r = 0;
-                    colorPt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
-                    colorPt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
+                    colorPt.x = pixel_pt.x;
+                    colorPt.y = pixel_pt.y;
+                    colorPt.z = pixel_pt.z;
+                    int indicator = pixel_pt.intensity;
+                    if ((indicator) < L_2) {
+                        colorPt.r = 0;
+                        colorPt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
+                        colorPt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
+                    }
+                    else {
+                        colorPt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
+                        colorPt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
+                        colorPt.b = 0;
+                    }
+                    weight_rgb_cloud->points.push_back(colorPt);
                 }
-                else {
-                    colorPt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
-                    colorPt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
-                    colorPt.b = 0;
-                }
-                weight_rgb_cloud->points.push_back(colorPt);
             }
             /** average coordinates->unbiased estimation of center position **/
             x_avg = x_avg / num_pts;
@@ -709,14 +733,16 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             pt.intensity = weight; /** note: I is used to store the point weight **/
             edge_cloud->points.push_back(pt);
 
-            /** visualization for weight check**/ 
-            colorPt.x = x_avg;
-            colorPt.y = y_avg;
-            colorPt.z = z_avg;
-            colorPt.r = 255;
-            colorPt.g = 255;
-            colorPt.b = 255;
-            weight_rgb_cloud->points.push_back(colorPt);
+            if (kEdgeAnalysis) {
+                /** visualization for weight check**/ 
+                colorPt.x = x_avg;
+                colorPt.y = y_avg;
+                colorPt.z = z_avg;
+                colorPt.r = 255;
+                colorPt.g = 255;
+                colorPt.b = 255;
+                weight_rgb_cloud->points.push_back(colorPt);
+            }
         }
     }
     cout << "number of invalid lookups(lidar): " << invalid_pixel_space << endl;
@@ -738,31 +764,46 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     }
     outfile.close();
 
-    /** visualization for weight check**/ 
-    string cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].cart_pcd_path;
-    cout << cart_pcd_path << endl;
-    pcl::io::savePCDFileBinary(cart_pcd_path, *weight_rgb_cloud);
+    if (kEdgeAnalysis) {
+        /** visualization for weight check**/ 
+        string edge_cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_cart_pcd_path;
+        cout << edge_cart_pcd_path << endl;
+        pcl::io::savePCDFileBinary(edge_cart_pcd_path, *weight_rgb_cloud);
+    }
 
     float radius, phi, theta;
     RGBPointT polar_pt;
     RGBCloudPtr polar_rgb_cloud(new RGBCloudT);
-    for (auto &point : weight_rgb_cloud->points) {
+    const float half_pi = (float)M_PI / 2;
+    Eigen::Matrix<float, 6, 1> extrinsic_vec; 
+    extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
+                    (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
+    Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
+    pcl::transformPointCloud(*weight_rgb_cloud, *polar_rgb_cloud, T_mat);
+    for (auto &point : polar_rgb_cloud->points) {
         radius = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
         /** assign the polar coordinate to pcl point cloud **/
+        // phi = -atan2(point.y, point.x) - half_pi;
+        // if (phi > M_PI) {
+        //     phi -= 2 * M_PI;
+        // }
+        // if (phi < -M_PI) {
+        //     phi += 2 * M_PI;
+        // }
+        // theta = -acos(point.z / radius)+ M_PI;
         phi = atan2(point.y, point.x);
         theta = acos(point.z / radius);
-        polar_pt.x = theta;
-        polar_pt.y = phi;
-        polar_pt.z = 0;
-        polar_pt.r = point.r;
-        polar_pt.g = point.g;
-        polar_pt.b = point.b;
-        polar_rgb_cloud->points.push_back(polar_pt);
+        point.x = theta;
+        point.y = phi;
+        point.z = 0;
+        point.r = 200;
+        point.g = 200;
+        point.b = 200;
     }
 
-    string polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].polar_pcd_path;
-    cout << polar_pcd_path << endl;
-    pcl::io::savePCDFileBinary(polar_pcd_path, *polar_rgb_cloud);
+    string edge_polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_polar_pcd_path;
+    cout << edge_polar_pcd_path << endl;
+    pcl::io::savePCDFileBinary(edge_polar_pcd_path, *polar_rgb_cloud);
 
 }
 
@@ -1019,6 +1060,7 @@ void LidarProcess::SpotRegistration() {
     float cor_dis = 0.6;
     for (int i = 0; i < 3; ++i) {
         leaf_size = leaf_size - 0.01;
+        leaf_size = 0.01;
         cor_dis = cor_dis / 2;
         cout << "ICP round " << i << " " << " leaf size: " << leaf_size << endl;
         /** voxel grid down sampling **/

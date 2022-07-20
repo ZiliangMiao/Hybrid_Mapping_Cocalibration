@@ -119,9 +119,9 @@ public:
         this->intrinsic.a3 = parameters[11];
         this->intrinsic.a4 = parameters[12];
         /** expansion and distortion **/
-        this->intrinsic.c = parameters[11];
-        this->intrinsic.d = parameters[12];
-        this->intrinsic.e = parameters[13];
+        this->intrinsic.c = parameters[13];
+        this->intrinsic.d = parameters[14];
+        this->intrinsic.e = parameters[15];
     }
 
     void SetSpotIdx(int spot_idx) {

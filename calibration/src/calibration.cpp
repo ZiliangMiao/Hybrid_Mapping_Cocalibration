@@ -34,20 +34,22 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = true;
+const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 
 const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
+const bool kCreateFullViewPcd = false;
 
-const bool kLidarFlatProcess = true;
+const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = true;
 const bool kReconstruction = false;
-const bool kSpotRegistration = false;
-const bool kGlobalColoredRecon = true;
+const bool kSpotRegistration = true;
+const bool kGlobalColoredRecon = false;
+const bool kParamsAnalysis = true;
+
 const int kOneSpot = 2; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
@@ -55,13 +57,13 @@ int main(int argc, char** argv) {
     ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
 
-    // vector<double> init_proj_params = {
-    //         M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
-    //         0.27, 0.00, 0.03, /** tx ty tz **/
-    //         -606.16, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
-    //         1, 0, 0, /** c, d, e **/
-    //         1023, 1201 /** u0, v0 **/
-    // }; /** fisheye intrinsics here are calibrated by chessboard **/
+    vector<double> init_proj_params = {
+            M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
+            0.27, 0.00, 0.03, /** tx ty tz **/
+            1023, 1201, /** u0, v0 **/
+            -606.16, 0.0, 0.000558783, 2.70908E-09, 1.17573E-10, /** a0, a2, a3, a4 **/
+            1, 0, 0 /** c, d, e **/
+    }; /** fisheye intrinsics here are calibrated by chessboard **/
 
     std::vector<double> params_calib;
     /** the two sensors are parallel on y axis **/
@@ -281,7 +283,7 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{2, 3, 4};
+        std::vector<int> spot_vec{2};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         for (int &spot_idx : spot_vec)
@@ -302,26 +304,41 @@ int main(int argc, char** argv) {
              * kDisabledBlock = 1 -> enable intrinsics only
              * kDisabledBlock = 2 -> enable extrinsics only
              * **/
-            // if (i == 0) {
-            //     int kDisabledBlock = 0;
-            //     // params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_init, lb, ub, kDisabledBlock);
-            //     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_init, lb, ub, kDisabledBlock);
-            // }
-            // else {
-            //     int kDisabledBlock = 0;
-            //     // params_calib = ceresMultiScenes(fisheye, lidar, bandwidth, params_calib, lb, ub, kDisabledBlock);
-            //     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, kDisabledBlock);
-            // }
+            if (i == 0) {
+                int kDisabledBlock = 0;
+                params_calib = GradientCalib(fisheye, lidar, bandwidth, params_init);
+                // params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_init, lb, ub, kDisabledBlock);
+            }
+            else {
+                int kDisabledBlock = 0;
+                params_calib = GradientCalib(fisheye, lidar, bandwidth, params_calib);
+                // params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, kDisabledBlock);
+            }
 
-            params_init = {
-                0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
-                0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
-                1020.0, 1198.0,
-                1888.37, -536.802, -19.6401, -17.8592, 6.34771,
-                0.996981, -0.00880807, 0.00981348
-            };
-            CorrelationAnalysis(fisheye, lidar, spot_vec, bandwidth, params_init);
+            
         }
+    }
+
+    if (kParamsAnalysis) {
+        std::vector<int> spot_vec{2};
+        fisheye.SetViewIdx(fisheye.fullview_idx);
+        lidar.SetViewIdx(lidar.fullview_idx);
+        params_init = {
+            0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
+            0.250552, 0.0014601, 0.0765269, /** tx ty tz **/
+            1020.0, 1198.0,
+            1888.37, -536.802, -19.6401, -17.8592, 6.34771,
+            0.996981, -0.00880807, 0.00981348
+        };
+        for (int &spot_idx : spot_vec)
+        {
+            fisheye.SetSpotIdx(spot_idx);
+            lidar.SetSpotIdx(spot_idx);
+            lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
+            fisheye.ReadEdge();
+            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+        }
+        CorrelationAnalysis(fisheye, lidar, spot_vec, params_init);
     }
 
     if (kReconstruction) {

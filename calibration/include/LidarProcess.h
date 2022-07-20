@@ -34,6 +34,7 @@ public:
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / 4000;
     const bool kHiddenPtsFilter = true; /** hidden points filter of pixels' space in Func SphereToPlane **/
+    const bool kEdgeAnalysis = true; /** enable edge cloud output in polar/3D space for visualization **/
 
     /** tags and maps **/
     typedef struct Tags {
@@ -78,6 +79,8 @@ public:
             this->fullview_dense_cloud_path = this->fullview_recon_folder_path + "/fullview_dense_cloud.pcd";
             this->fullview_sparse_cloud_path = this->fullview_recon_folder_path + "/fullview_sparse_cloud.pcd";
             this->fullview_rgb_cloud_path = this->fullview_recon_folder_path + "/fullview_rgb_cloud.pcd";
+            this->edge_polar_pcd_path = this->fullview_recon_folder_path + "/edge_polar.pcd";
+            this->edge_cart_pcd_path = this->fullview_recon_folder_path + "/edge_cart.pcd";
             this->output_folder_path = pose_path + "/outputs/lidar_outputs";
             this->dense_pcds_folder_path = pose_path + "/dense_pcds";
             this->icp_pcds_folder_path = pose_path + "/icp_pcds";
@@ -87,8 +90,6 @@ public:
             this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
             this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
             this->flat_img_path = this->output_folder_path + "/flatLidarImage.bmp";
-            this->polar_pcd_path = this->output_folder_path + "/lidPolar.pcd";
-            this->cart_pcd_path = this->output_folder_path + "/lidCartesian.pcd";
             this->tags_map_path = this->output_folder_path + "/tags_map.txt";
             this->edge_pts_coordinates_path = this->output_folder_path + "/lid3dOut.txt";
             this->edge_fisheye_projection_path = this->output_folder_path + "/lidTrans.txt";
@@ -104,8 +105,8 @@ public:
         string icp_pcd_path;
         string pose_trans_mat_path;
         string flat_img_path;
-        string polar_pcd_path;
-        string cart_pcd_path;
+        string edge_polar_pcd_path;
+        string edge_cart_pcd_path;
         string tags_map_path;
         string edge_pts_coordinates_path;
         string edge_fisheye_projection_path;

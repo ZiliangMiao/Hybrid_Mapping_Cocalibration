@@ -10,7 +10,6 @@
 
 // headings
 #include "spline.h"
-using namespace std;
 
 int CheckFolder(std::string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
@@ -118,7 +117,7 @@ void CeresOutput(std::vector<double> params, std::vector<double> params_init) {
 }
 
 static bool cmp(const vector<double>& a, const vector<double>& b) {
-    return a.back() > b.back();
+    return a.back() < b.back();
 }
 
 tk::spline InverseSpline(std::vector<double> &params) {
@@ -126,17 +125,22 @@ tk::spline InverseSpline(std::vector<double> &params) {
     Eigen::Matrix<double, 5, 1> a_;
     a_ << params[idx], params[idx+1], params[idx+2], params[idx+3], params[idx+4];
     int theta_ub = 180;
-    std::vector<std::vector<double>> point(2, std::vector<double>(theta_ub));
+    // extend the range to get a stable cubic spline
+    int extend = 2;
+    std::vector<std::vector<double>> r_theta_pts(theta_ub + extend * 2, std::vector<double>(2));
 
-    for (double theta = 0; theta < theta_ub; ++theta)
-    {
-        point[0][theta] = (theta * M_PI / 180);
-        point[1][theta] = a_(0) + a_(1) * (theta * M_PI / 180) + a_(2) * pow((theta * M_PI / 180), 2) + a_(3) * pow((theta * M_PI / 180), 3) + a_(4) * pow((theta * M_PI / 180), 4);
+    for (double theta = 0; theta < theta_ub + extend * 2; ++theta) {
+        double theta_rad = (theta - extend) * M_PI / 180;
+        r_theta_pts[theta][0] = theta_rad;
+        r_theta_pts[theta][1] = a_(0) + a_(1) * theta_rad + a_(2) * pow(theta_rad, 2) + a_(3) * pow(theta_rad, 3) + a_(4) * pow(theta_rad, 4);
     }
-
-    sort(point.begin(), point.end(), cmp);
-
+    sort(r_theta_pts.begin(), r_theta_pts.end(), cmp);
+    std::vector<double> input_radius, input_theta;
+    for (int i = 0; i < r_theta_pts.size(); i++) {
+        input_theta.push_back(r_theta_pts[i][0]);
+        input_radius.push_back(r_theta_pts[i][1]);
+    }
     // default cubic spline (C^2) with natural boundary conditions (f''=0)
-    tk::spline spline(point[1], point[0]);			// X needs to be strictly increasing
+    tk::spline spline(input_radius, input_theta);			// X needs to be strictly increasing
     return spline;
 }

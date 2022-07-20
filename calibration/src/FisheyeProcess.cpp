@@ -129,8 +129,8 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     string fisheye_hdr_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat image = ReadFisheyeImage(fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    std::vector<double> intrinsic_
-        {intrinsic.a0, intrinsic.a1, intrinsic.a2, intrinsic.a3, intrinsic.a4, intrinsic.c, intrinsic.d, intrinsic.e};
+    std::vector<double> intrinsic_ = 
+        {intrinsic.u0, intrinsic.v0, intrinsic.a0, intrinsic.a1, intrinsic.a2, intrinsic.a3, intrinsic.a4, intrinsic.c, intrinsic.d, intrinsic.e};
     tk::spline spline = InverseSpline(intrinsic_);
     result = FisheyeImageToSphere(image, true, spline);
     return result;
@@ -142,7 +142,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     float x, y, z;
     float radius, theta, phi;
     /** intrinsic parameters **/
-    float c, d, e, u0, v0;
+    float c, d, e, u0, v0, a0, a1, a2, a3, a4;
     c = this->intrinsic.c;
     d = this->intrinsic.d;
     e = this->intrinsic.e;
@@ -164,24 +164,26 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             y = e * u + 1 * v - v0;
             radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                // if (!enable_spline){
-                //     // a0 = this->intrinsic.a0;
-                //     // a2 = this->intrinsic.a2;
-                //     // a3 = this->intrinsic.a3;
-                //     // a4 = this->intrinsic.a4;
-                //     // z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                //     // /** spherical coordinates **/
-                //     // phi = atan2(y, x); // note that atan2 is defined as Y/X
-                //     // theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
-                //     cout << "abandoned" << endl;
-                // }
-                // else{
-                //     /** spherical coordinates **/
-                //     phi = atan2(y, x); // note that atan2 is defined as Y/X
-                //     theta = spline(radius);
-                // }
-                phi = atan2(y, x); // note that atan2 is defined as Y/X
-                theta = spline(radius);
+                if (!enable_spline){
+                    a0 = this->intrinsic.a0;
+                    a1 = this->intrinsic.a1;
+                    a2 = this->intrinsic.a2;
+                    a3 = this->intrinsic.a3;
+                    a4 = this->intrinsic.a4;
+                    z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+
+                    /** spherical coordinates **/
+                    // phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    // theta = -a0/a1 + radius/a1;
+                }
+                else{
+                    /** spherical coordinates **/
+                    phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    theta = spline(radius);
+                }
 
                 /** point cloud with origin polar coordinates **/
                 polar_pt.x = theta;
@@ -294,14 +296,14 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
             else {
                 int B = 0, G = 0, R = 0; // mean value of RGB channels
                 for (int i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-                    if (pointIdxRadiusSearch[i] > polar_cloud->points.size() - 1) {
-                        // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
-                        flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
-                        flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
-                        flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
-                        invalid_index = invalid_index + 1;
-                        continue;
-                    }
+                    // if (pointIdxRadiusSearch[i] > polar_cloud->points.size() - 1) {
+                    //     // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
+                    //     flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
+                    //     flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
+                    //     flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
+                    //     invalid_index = invalid_index + 1;
+                    //     continue;
+                    // }
                     B = B + (*polar_cloud)[pointIdxRadiusSearch[i]].b;
                     G = G + (*polar_cloud)[pointIdxRadiusSearch[i]].g;
                     R = R + (*polar_cloud)[pointIdxRadiusSearch[i]].r;
