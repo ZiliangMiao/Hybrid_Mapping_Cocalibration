@@ -78,7 +78,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Ei
     Eigen::Matrix<T, 5, 1> a_;
     Eigen::Matrix<T, 2, 2> affine;
     Eigen::Matrix<T, 2, 2> affine_inv;
-    T theta, uv_radius, inv_uv_radius;
+    T theta, xy_radius, uv_radius;
     Eigen::Matrix<T, 2, 1> projection;
     Eigen::Matrix<T, 2, 1> undistorted_projection;
 
@@ -86,9 +86,9 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Ei
     affine << intrinsic(7), intrinsic(8), intrinsic(9), T(1);
 
     theta = acos(point(2) / sqrt((point(0) * point(0)) + (point(1) * point(1)) + (point(2) * point(2))));
-    inv_uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4);
-    uv_radius = sqrt(point(1) * point(1) + point(0) * point(0));
-    projection = {inv_uv_radius / uv_radius * point(0) + uv_0(0), inv_uv_radius / uv_radius * point(1) + uv_0(1)};
+    uv_radius = a_(0) + a_(1) * theta + a_(2) * pow(theta, 2) + a_(3) * pow(theta, 3) + a_(4) * pow(theta, 4);
+    xy_radius = sqrt(point(1) * point(1) + point(0) * point(0));
+    projection = {uv_radius / xy_radius * point(0) + uv_0(0), uv_radius / xy_radius * point(1) + uv_0(1)};
     affine_inv.row(0) << affine(1, 1) / (affine(0, 0) * affine(1, 1) - affine(1, 0) * affine(0, 1)), - affine(0, 1) / (affine(0, 0) * affine(1, 1) - affine(1, 0) * affine(0, 1));
     affine_inv.row(1) << - affine(1, 0) / (affine(0, 0) * affine(1, 1) - affine(1, 0) * affine(0, 1)), affine(0, 0) / (affine(0, 0) * affine(1, 1) - affine(1, 0) * affine(0, 1));
     undistorted_projection = affine_inv * projection;

@@ -1,7 +1,7 @@
 ﻿#include "gimbal.h"
 using namespace std;
 
-typedef struct GimbalSocket {
+struct GimbalSocket {
 	int fd;
 	struct sockaddr_in addr_my;
 	unsigned int addrlen_my;
