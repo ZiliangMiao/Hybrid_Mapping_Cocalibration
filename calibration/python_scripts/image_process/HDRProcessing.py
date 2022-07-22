@@ -2,31 +2,6 @@ import cv2 as cv2
 import numpy as np
 import os, sys
 
-def ACESToneMapping(hdr_image, exposure):
-    A = 2.51
-    B = 0.03
-    C = 2.43
-    D = 0.59
-    E = 0.14
-    for i in range(3):
-        channel = hdr_image[:, :, i] * exposure
-        channel = np.clip(channel, 0, 32.767)
-        channel2 = np.square(channel)
-        hdr_image[:, :, i] = cv2.divide((channel * A + channel2 * B), (channel * C + channel2 * D + E))
-    aces_8bit = np.clip(hdr_image * 255, 0, 255).astype(np.uint8)
-    return aces_8bit
-
-def adjust_gamma(imgs, gamma=1.0):
-    # build a lookup table mapping the pixel values [0, 255] to
-    # their adjusted gamma values
-    invGamma = 1.0 / gamma
-    table = np.array([((i / 255.0) ** invGamma) * 255 for i in np.arange(0, 256)]).astype("uint8")
-    # apply gamma correction using the lookup table
-    new_imgs = np.empty(imgs.shape)
-    for i in range(imgs.shape[0]):
-        new_imgs[i,:,:] = cv2.LUT(np.array(imgs[i,:,:], dtype = np.uint8), table)
-    return new_imgs
-
 if __name__ == "__main__":
 
     num_spots = 5

@@ -11,7 +11,6 @@ void CmdModeCallback(const geometry_msgs::Twist& msg) {
     if((msg.linear.x!=0) || (msg.angular.z!=0)) {
         rotation_mode = msg.linear.x ;
     }
-
 }
 
 int main(int argc, char **argv) {
