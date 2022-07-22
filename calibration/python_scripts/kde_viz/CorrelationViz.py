@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from scipy.interpolate import griddata, interpolate
+from scipy.interpolate import interpolate
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
