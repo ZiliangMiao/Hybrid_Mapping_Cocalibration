@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
     /** original icp **/
     pcl::IterativeClosestPoint <PointT, PointT> icp; //创建ICP对象，用于ICP配准
     icp.setMaximumIterations(500);
-    icp.setInputCloud(cloud_source_filtered); //设置输入点云
+    icp.setInputSource(cloud_source_filtered); //设置输入点云
     icp.setInputTarget(cloud_target_filtered); //设置目标点云（输入点云进行仿射变换，得到目标点云）
     icp.setMaxCorrespondenceDistance(0.01);
     icp.setTransformationEpsilon(1e-10); // 两次变化矩阵之间的差值

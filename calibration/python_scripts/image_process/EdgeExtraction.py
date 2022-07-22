@@ -210,10 +210,10 @@ def nlmeans(edge_lid, h_u, h_l):
     edge_lid = np.vstack((edge_lid_u, edge_lid_l))
     return edge_lid
 
-def black_region_removal(img, pix_rows_bound):
-    output = np.zeros((img.shape[0], img.shape[1]), np.uint8)
-    output[pix_rows_bound:, :] = img[pix_rows_bound:, :]
-    return output
+# def black_region_removal(img, pix_rows_bound):
+#     output = np.zeros((img.shape[0], img.shape[1]), np.uint8)
+#     output[pix_rows_bound:, :] = img[pix_rows_bound:, :]
+#     return output
 
 def check_folder():
     dir_list = [
@@ -232,98 +232,70 @@ if __name__ == "__main__":
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
     dataset_path = sys.argv[1]
     mode = sys.argv[2]
-    kSpots = sys.argv[3]
+    spot = sys.argv[3]
     
+    data_path = dataset_path + "/spot" + str(spot) + "/0"
+    print("Edge extraction in: " + data_path + " ... ", end="")
 
-    for spot in range(int(kSpots)):
+    dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
+    dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
+    dir_cam_filtered = data_path + "/edges/canny_outputs/cam_1_filtered.png"
+    dir_cam_canny = data_path + "/edges/canny_outputs/cam_2_canny.png"
+    dir_cam_output = data_path + "/edges/camEdge.png"
+
+    dir_lid_original = data_path + "/outputs/lidar_outputs/flatLidarImage.bmp"
+    dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask.png"
+    dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
+    dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
+    dir_lid_output = data_path + "/edges/lidEdge.png"
+
+    check_folder()
+
+    # -------- fisheye camera --------
+
+    if(mode == "fisheye"):
+        edge_cam = cv2.imread(dir_cam_original)
+        edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
+
+        edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1, sigmaY=1, ksize=(5, 5))
+        cv2.imwrite(dir_cam_filtered, edge_cam)
+
+        # remove the black region
+        edge_cam = cv2.Canny(image=edge_cam, threshold1=25, threshold2=50)
+        mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
+        edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
+        cv2.imwrite(dir_cam_canny, edge_cam)
+
+        # contour filter
+        cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        cnt_cam = contour_filter(contour=cnt_cam, len_threshold=150)
+        edge_cam = np.zeros(edge_cam.shape, np.uint8)
+        cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
+        cv2.imwrite(dir_cam_output, edge_cam)
+        print("done.")
+
+    # -------- Lidar --------
+
+    else:
+        edge_lid = cv2.imread(dir_lid_original)
+        edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
+        # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
+        edge_lid = nlmeans(edge_lid, h_u=20, h_l=10)
+        cv2.imwrite(dir_lid_filtered, edge_lid)
+
+        # mask to remove the upper and lower bound noise
+        edge_lid = cv2.Canny(image=edge_lid, threshold1=25, threshold2=50)
+        mask_lid = cv2.imread(dir_lid_mask, cv2.IMREAD_GRAYSCALE)
+        edge_lid = cv2.bitwise_and(edge_lid, mask_lid)
+        cv2.imwrite(dir_lid_canny, edge_lid)
         
-        data_path = dataset_path + "/spot" + str(spot) + "/0"
-        print("Edge extraction in: " + data_path + " ... ", end="")
-
-        dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
-        dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
-        dir_cam_filtered = data_path + "/edges/canny_outputs/cam_1_filtered.png"
-        dir_cam_canny = data_path + "/edges/canny_outputs/cam_2_canny.png"
-        dir_cam_output = data_path + "/edges/camEdge.png"
-
-        dir_lid_original = data_path + "/outputs/lidar_outputs/flatLidarImage.bmp"
-        dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask.png"
-        dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
-        dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
-        dir_lid_output = data_path + "/edges/lidEdge.png"
-
-        check_folder()
-
-        # -------- fisheye camera --------
-
-        if(mode == "fisheye"):
-            edge_cam = cv2.imread(dir_cam_original)
-            edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
-
-            edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1.5, sigmaY=1.5, ksize=(5, 5))
-            cv2.imwrite(dir_cam_filtered, edge_cam)
-
-            # remove the black region
-            # edge_cam = black_region_removal(edge_cam, pix_rows_bound=435)
-
-            edge_cam = cv2.Canny(image=edge_cam, threshold1=30, threshold2=50)
-            mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
-            edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
-            cv2.imwrite(dir_cam_canny, edge_cam)
-
-            # contour filter
-            cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-            cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-            edge_cam = np.zeros(edge_cam.shape, np.uint8)
-            cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-            cv2.imwrite(dir_cam_output, edge_cam)
-            print("done.")
-
-        # -------- Lidar --------
-
-        else:
-            edge_lid = cv2.imread(dir_lid_original)
-            edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
-            # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
-            edge_lid = nlmeans(edge_lid, h_u=40, h_l=20)
-            cv2.imwrite(dir_lid_filtered, edge_lid)
-
-            # mask to remove the upper and lower bound noise
-            edge_lid = cv2.Canny(image=edge_lid, threshold1=30, threshold2=50)
-            mask_lid = cv2.imread(dir_lid_mask, cv2.IMREAD_GRAYSCALE)
-            edge_lid = cv2.bitwise_and(edge_lid, mask_lid)
-            cv2.imwrite(dir_lid_canny, edge_lid)
-            
-            # contour filter
-            cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-            cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
-            edge_lid = np.zeros(edge_lid.shape, np.uint8)
-            cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
-            cv2.imwrite(dir_lid_output, edge_lid)
-            print("done.")
-
-    # patch
-    # edge_cam = patch_image(image=edge_cam, mode=cv2.MORPH_CLOSE, size=8, iter=2)
-    # edge_lid = patch_image(image=edge_lid, mode=cv2.MORPH_CLOSE, size=8, iter=2)
-
-    # edge_cam = fill_hole(img=edge_cam, hole_color=0, bkg_color=255)
-    # edge_lidar = fill_hole(img=edge_lidar, hole_color=0, bkg_color=255)
-
-    # cv2.imwrite(data_path + "edges/canny_outputs/lidar_3_canny_patch.png", edge_lidar)
-    # cv2.imwrite(data_path + "edges/canny_outputs/cam_3_canny_patch.png", edge_cam)
-
-    # # contour filter
-    # cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-    # cnt_cam = contour_filter(contour=cnt_cam, len_threshold=200)
-    # cnt_lid = contour_filter(contour=cnt_lid, len_threshold=200)
-    # edge_cam = np.zeros(edge_cam.shape, np.uint8)
-    # edge_lid = np.zeros(edge_lid.shape, np.uint8)
-    # cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-    # cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
-
-    # cv2.imwrite(dir_lid_output, edge_lid)
-    # cv2.imwrite(dir_cam_output, edge_cam)
+        # contour filter
+        cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
+        edge_lid = np.zeros(edge_lid.shape, np.uint8)
+        cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+        cv2.imwrite(dir_lid_output, edge_lid)
+        print("done.")
 
     if (len(sys.argv) >= kArgs):
         print("Edge extraction completed.")

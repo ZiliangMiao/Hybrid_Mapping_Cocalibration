@@ -1,10 +1,10 @@
 ﻿#include "gimbal.h"
 using namespace std;
 
-typedef struct GimbalSocket {
-    int fd;
-    struct sockaddr_in addr_my;
-    unsigned int addrlen_my;
+struct GimbalSocket {
+	int fd;
+	struct sockaddr_in addr_my;
+	unsigned int addrlen_my;
 };
 
 GimbalSocket gimbal_socket;

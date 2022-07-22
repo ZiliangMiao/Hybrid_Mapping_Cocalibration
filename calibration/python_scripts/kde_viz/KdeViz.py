@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-data_path = data_path = root_path + "/data/lh3/spot0/0/outputs"
+data_path = data_path = root_path + "/data/lh3_global/spot2/0/outputs"
 
 ########################################################################################################################
 # load files #
@@ -16,23 +16,24 @@ def load_data(sample_shape, mode):
         print("scale: " + str(1/auto_scale))
         _cam = _cam.reshape(((int)(sample_shape[0] / auto_scale), (int)(sample_shape[1] / auto_scale)))
         # _cam = np.loadtxt(data_path + mode + "Trans.txt", delimiter="\t")[:, 2].reshape(sample_shape)
-        return np.flip(_cam, axis=0)
+        return _cam
     elif mode == "cam":
         _cam = np.loadtxt(data_path + "/fisheye_outputs/camPixOut.txt", delimiter="\t").astype(int)
-        return np.flip(_cam, axis=0)
+        return _cam
     elif mode == "lid":
         _lid = np.loadtxt(data_path + "/lidar_outputs/lidTrans.txt", delimiter=",")[:100000]
         lid = np.zeros(sample_shape)
         for i in range(_lid.shape[0]):
-            lid[np.clip(int(_lid[i, 0]), 0, sample_shape[0]-1), np.clip(int(_lid[i, 1]), 0, sample_shape[1]-1)] = 0.1
-        return np.flip(lid, axis=0)
+            lid[np.clip(int(sample_shape[0] - 1 - _lid[i, 0]), 0, sample_shape[0]-1),
+             np.clip(int(_lid[i, 1]), 0, sample_shape[1]-1)] = 0.1
+        return lid
 
 ########################################################################################################################
 # visualization #
 def visualization(img_rows, img_cols, cam):
 
     fig, ax = plt.subplots(figsize=(42, 10))
-    ax.scatter(cam[:, 0], cam[:, 1])
+    ax.scatter(cam[:, 1], img_cols-cam[:, 0])
     ax.set_xlim([0, img_cols-1])
     ax.set_ylim([0, img_rows-1])
     plt.show()
@@ -84,10 +85,10 @@ if __name__=="__main__":
     cam_mode = "cam"
     lid_mode = "lid"
     # load and visualize
+    
+    # cam = load_data(cam_sample_shape, "cam")
+    # visualization(img_rows, img_cols, cam)
+
     lid = load_data(lid_sample_shape, "lid")
     kde = load_data(cam_sample_shape, "kde")
-    cam = load_data(cam_sample_shape, "cam")
-    # visualization(img_rows, img_cols, cam)
-    # visualization(img_rows, img_cols, lid)
     joint_visualization(img_rows, img_cols, lid, kde)
-    visualization(img_rows, img_cols, cam)
