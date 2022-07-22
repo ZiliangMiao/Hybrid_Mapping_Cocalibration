@@ -34,15 +34,15 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = false;
-const bool kFisheyeEdgeProcess = false;
-const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = false;
+const bool kFisheyeFlatProcess = true;
+const bool kFisheyeEdgeProcess = true;
+const bool kLidarFlatProcess = true;
+const bool kLidarEdgeProcess = true;
 const bool kCeresOptimization = true;
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = false;
-const bool kReconstruction = false;
+const bool kCreateDensePcd = true;
+const bool kInitialIcp = true;
+const bool kCreateFullViewPcd = true;
+const bool kReconstruction = true;
 const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
