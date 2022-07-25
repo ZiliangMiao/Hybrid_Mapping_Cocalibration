@@ -41,7 +41,8 @@ public:
     Gimbal();   //构造函数
     ~Gimbal();  //析构函数
     void SetResetPosition(); //设置复位位置
-    void SetRotationMode(int rotate_angle); //设置旋转数据                                                               //设置旋转数据
+    void SetRotationMode(int rotation_mode); //设置旋转数据                                                               
+    void SetRotationMode(int direction, int rotate_angle); //设置旋转数据
     void ZeroPosition();
     void SendData(unsigned char *pdata, int data_len);                                                              //发送一次数据
     int SocketInitialization();                                                                                                 //初始化网络节点
