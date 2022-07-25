@@ -50,13 +50,34 @@ if __name__=="__main__":
             "u0", "v0",
             "a0", "a1", "a2", "a3", "a4",
             "c", "d", "e"]
+    init_value = [
+        0.00513968, 3.13105, 1.56417,
+        0.250552, 0.0014601, 0.0765269,
+        1020.0, 1198.0,
+        1888.37, -536.802, -19.6401, -17.8592, 6.34771,
+        0.996981, -0.00880807, 0.00981348
+    ]
     idx1 = 0
     idx2 = None
-    if (len(sys.argv) > 1):
-        idx1 = sys.argv[1]
-        data = load_data(tag1=names[int(idx1)])
+
+    np.set_printoptions(precision=5)
+    if (len(sys.argv) > 1 and len(sys.argv) <= 2):
+        idx1 = int(sys.argv[1])
+        data = load_data(tag1=names[idx1])
+        if (np.any(data[:, 0] == 0)):
+            print("Converting ... ")
+            data[:, 0] = data[:, 0] + init_value[idx1]
+            np.savetxt(names[idx1] + "_result.txt",
+                        data, delimiter="\t")
+        visualization(data)
     if (len(sys.argv) > 2):
-        idx1 = sys.argv[1]
-        idx2 = sys.argv[2]
-        data = load_data(tag1=names[int(idx1)], tag2=names[int(idx2)])
-    visualization3D(data, cubic_interp=True)
+        idx1 = int(sys.argv[1])
+        idx2 = int(sys.argv[2])
+        data = load_data(tag1=names[idx1], tag2=names[idx2])
+        if (np.any(data[:, 0] == 0)):
+            print("Converting ... ")
+            data[:, 0] = data[:, 0] + init_value[idx1]
+            data[:, 1] = data[:, 1] + init_value[idx2]
+            np.savetxt(names[idx1] + "_" + names[idx2] + "_result.txt",
+                        data, delimiter="\t")
+        visualization3D(data, cubic_interp=True)
