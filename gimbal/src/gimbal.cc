@@ -116,10 +116,10 @@ void Gimbal::SetRotationMode(int rotation_mode) {
             break;
         }
         case 3: {
-            /** 'q' - vertical 60 **/
+            /** 'q' - vertical 50 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(60 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(60 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(50 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(50 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
@@ -127,8 +127,8 @@ void Gimbal::SetRotationMode(int rotation_mode) {
         case 4: {
             /** 'w' - vertical 40 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(40 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(40 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(50 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(50 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
@@ -136,8 +136,8 @@ void Gimbal::SetRotationMode(int rotation_mode) {
         case 5: {
             /** 'e' - vertical 20 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(20 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(20 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(25 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(25 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
@@ -154,8 +154,8 @@ void Gimbal::SetRotationMode(int rotation_mode) {
         case 7: {
             /** 'z' - vertical -20 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(-20 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(-20 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(-25 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-25 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
@@ -163,17 +163,17 @@ void Gimbal::SetRotationMode(int rotation_mode) {
         case 8: {
             /** 'x' - vertical -40 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(-40 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(-40 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(-50 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-50 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
         }
         case 9: {
-            /** 'c' - vertical -60 **/
+            /** 'c' - vertical -50 **/
             data[3] = 0x4d;
-            data[4] = ((short int)(-60 * 100)) >> 8;					  //low 8 bit
-            data[5] = ((short int)(-60 * 100)) & 0x00ff;				  //high 8 bit
+            data[4] = ((short int)(-50 * 100)) >> 8;					  //low 8 bit
+            data[5] = ((short int)(-50 * 100)) & 0x00ff;				  //high 8 bit
             data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
             SendData(data, 7);
             break;
@@ -183,13 +183,44 @@ void Gimbal::SetRotationMode(int rotation_mode) {
     }
 }
 
+void Gimbal::SetRotationMode(int direction, int rotate_angle) {
+    unsigned char data[7] = {0xff, 0x01, 0x00, 0x00, 0X00, 0x00, 0x00};
+    /***** Rotation Speed Control Mode *****/
+    /**
+     * data[0] - 0xff - static start bit
+     * data[1] - 0x01 - default address
+     * data[2] - 0x00 - default
+     * data[3] - ???? - rotation direction
+     * data[4] -  ??  - z-axis (horizontal) rotation speed
+     * data[5] -  ??  - x-axis (vertical) rotation speed
+     * data[6] - cycle redundancy check (crc) code
+    **/
+
+    /***** Rotation Angle Control Mode *****/
+    /**
+     * data[0] - 0xff - static start bit
+     * data[1] - 0x01 - default address
+     * data[2] - 0x00 - default
+     * data[3] - 0x4b/0x4d - horizontal angle/vertical angle
+     * data[4] -  ??  - higher eight bits of the angle (100 times + integer)
+     * data[5] -  ??  - lower eight bits of the angle (100 times + integer)
+     * data[6] - cycle redundancy check (crc) code
+    **/
+
+    /** Set direction 
+     * direction=0 -> horizontal
+     * direction=1 ->vertical
+     */
+    
+    data[3] = (direction == 0) ? 0x4d : 0x4b;
+    data[4] = ((short int)(rotate_angle * 100)) >> 8;					  //low 8 bit
+    data[5] = ((short int)(rotate_angle * 100)) & 0x00ff;				  //high 8 bit
+    data[6] = (data[1] + data[2] + data[3] + data[4] + data[5]) & 0x00ff; //Check code: crc
+    SendData(data, 7);
+}
+
 void Gimbal::SendData(unsigned char *pdata, int data_len) {
     GimbalSocket *destsock = (GimbalSocket *)& m_destsock;
     sendto(destsock->fd, pdata, data_len, 0,
            (struct sockaddr *)&destsock->addr_my, destsock->addrlen_my);
 }
-
-
-
-	
-
