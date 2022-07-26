@@ -44,8 +44,8 @@ const bool kCreateFullViewPcd = false;
 const bool kLidarFlatProcess = false;
 const bool kLidarEdgeProcess = false;
 
-const bool kCeresOptimization = true;
-const bool kParamsAnalysis = false;
+const bool kCeresOptimization = false;
+const bool kParamsAnalysis = true;
 const bool kReconstruction = false;
 const bool kSpotRegistration = true;
 const bool kGlobalColoredRecon = false;
@@ -313,13 +313,13 @@ int main(int argc, char** argv) {
              * **/
             if (i == 0) {
                 int kDisabledBlock = 0;
-                params_calib = GradientCalib(fisheye, lidar, bandwidth, params_init);
-                // params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_init, lb, ub, kDisabledBlock);
+                // params_calib = GradientCalib(fisheye, lidar, bandwidth, params_init);
+                params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_init, lb, ub, kDisabledBlock);
             }
             else {
                 int kDisabledBlock = 0;
-                params_calib = GradientCalib(fisheye, lidar, bandwidth, params_calib);
-                // params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, kDisabledBlock);
+                // params_calib = GradientCalib(fisheye, lidar, bandwidth, params_calib);
+                params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, kDisabledBlock);
             }
 
             
@@ -343,7 +343,7 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(spot_idx);
             lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye.ReadEdge();
-            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            // Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
         }
         CorrelationAnalysis(fisheye, lidar, spot_vec, params_init);
     }

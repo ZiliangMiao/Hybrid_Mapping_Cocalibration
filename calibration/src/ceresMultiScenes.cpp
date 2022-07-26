@@ -37,6 +37,15 @@ ofstream outfile;
 static const int kExtrinsics = 7;
 static const int kIntrinsics = 10;
 
+inline double getDouble(double x) {
+    return static_cast<double>(x);
+}
+
+template <typename SCALAR, int N>
+inline double getDouble(const ceres::Jet<SCALAR, N> &x) {
+    return static_cast<double>(x.a);
+}
+
 struct GradientFunctor {
     template <typename T>
     bool operator()(const T *const p_, T *cost) const {
@@ -120,15 +129,6 @@ struct QuaternionFunctor {
     const double kde_scale_;
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
 };
-
-double getDouble(double x) {
-    return static_cast<double>(x);
-}
-
-template <typename SCALAR, int N>
-double getDouble(const ceres::Jet<SCALAR, N> &x) {
-    return static_cast<double>(x.a);
-}
 
 void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
     string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.view_idx].fisheye_hdr_img_path;
@@ -535,42 +535,31 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
     Eigen::Matrix<double, 6, 1> extrinsic = params_mat.head(6);
     Eigen::Matrix<double, kIntrinsics, 1> intrinsic = params_mat.tail(kIntrinsics);
     std::vector<double> results;
-    std::vector<double> inputs1, inputs2;
+    std::vector<double> input_x, input_y;
     std::vector<const char*> name = {
             "rx", "ry", "rz",
             "tx", "ty", "tz",
             "u0", "v0",
             "a0", "a1", "a2", "a3", "a4",
             "c", "d", "e"};
-    const int steps = 40;
-    const double step_size1 = 0.5;
-    const int modified_idx1 = 2;
-    double offset1;
-    const double step_size2 = 0.005;
-    const int modified_idx2 = 3;
-    double offset2;
+    const int steps[2] = {41, 1};
+    const int param_idx[2] = {1, 3};
+    const double step_size[2] = {0.01, 0.015};
+    const double deg2rad = M_PI / 180;
+    double offset[2] = {0, 0};
 
-    for (int param1 = 0; param1 <= steps; param1++) {
-        if (modified_idx1 < 3) {
-            offset1 = double(step_size1 * (param1 - (steps/2)) * M_PI / 180);
-        }
-        else {
-            offset1 = step_size1 * (param1 - (steps/2));
-        }
-        extrinsic(modified_idx1) = params_mat(modified_idx1) + offset1;
+    /** update evaluate points in 2D grid **/
+    for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
+        offset[0] = i * step_size[0];
+        extrinsic(param_idx[0]) = params_mat(param_idx[0]) + offset[0];
 
-        for (int param2 = 0; param2 <= steps; param2++) {
-            double total_res = 0;
-            if (modified_idx2 < 3) {
-                offset2 = double(step_size2 * (param2 - (steps/2)) * M_PI / 180);
-            }
-            else {
-                offset2 = step_size2 * (param2 - (steps/2));
-            }
-            extrinsic(modified_idx2) = params_mat(modified_idx2) + offset2;
+        for (int j = -int((steps[1]-1)/2); j < int((steps[1]-1)/2)+1; j++) {
+            offset[1] = j * step_size[1];
+            extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
+            input_x.push_back(offset[0]);
+            input_y.push_back(offset[1]);
 
-            inputs1.push_back(offset1);
-            inputs2.push_back(offset2);
+            double step_res = 0;
             /** Evaluate cost funstion **/
             for (int i = 0; i < spot_vec.size(); i++) {
                 lidar.SetSpotIdx(spot_vec[i]);
@@ -586,16 +575,30 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                     kde_interpolators[i].Evaluate(projection(0) * scale, projection(1) * scale, &val);
                     scene_res += weight * val;
                 }
-                total_res += scene_res;
-                cout << "spot: " << spot_vec[i] << ", " << name[modified_idx1]<< ": " << offset1 << ", " << name[modified_idx2]<< ": " << offset2 << endl;
+                step_res += scene_res;
+                cout << "spot: " << spot_vec[i] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
             }
-            results.push_back(total_res);
+            results.push_back(step_res);
         }
     }
-    outfile.open(lidar.kDatasetPath + "/log/" + name[modified_idx1] + "_" + name[modified_idx2] + "_result.txt", ios::out);
-    for (int i = 0; i < (steps + 1) * (steps + 1); i++) {
-        cout << inputs1[i] << "," << inputs2[i] << "," << results[i] << endl;
-        outfile << inputs1[i] << "\t" << inputs2[i] << "\t" << results[i] << endl;
+
+    /** Save & terminal output **/
+    string analysis_filepath = lidar.kDatasetPath + "/log/";
+    if (steps[0] > 1) {
+        analysis_filepath = analysis_filepath + name[param_idx[0]] + "_";
+    }
+    if (steps[1] > 1) {
+        analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
+    }
+    outfile.open(analysis_filepath + "result.txt", ios::out);
+    for (int i = 0; i < (steps[0] * steps[1]); i++) {
+        if (steps[0] > 1) {
+            outfile << input_x[i] + params_mat(param_idx[0]) << "\t";
+        }
+        if (steps[1] > 1) {
+            outfile << input_y[i] + params_mat(param_idx[1]) << "\t";
+        }
+        outfile << results[i] << endl;
     }
     outfile.close();
     

@@ -1005,8 +1005,9 @@ void LidarProcess::CreateFullviewPcd() {
     CloudPtr sparse_cloud(new CloudT);
     pcl::UniformSampling<PointT> us_tgt;
     us_tgt.setInputCloud(radius_outlier_cloud);
-    us_tgt.setRadiusSearch(0.02f);
+    us_tgt.setRadiusSearch(0.05f);
     us_tgt.filter(*sparse_cloud);
+    us_tgt.getIndices();
     string sparse_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].fullview_sparse_cloud_path;
     pcl::io::savePCDFileBinary(sparse_cloud_path, *sparse_cloud);
     cout << "Create sparse fullview pointcloud successfully!" << endl;
