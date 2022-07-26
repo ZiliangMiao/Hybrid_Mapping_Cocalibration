@@ -8,10 +8,6 @@ import serial
 
 ttl_ser   = serial.Serial('/dev/ttyUSB0')	# 右边板子的串口号, 用到RTS或者DTR引脚, 模拟PPS
 # rs232_ser = serial.Serial(port="COM14", baudrate=9600)	# 左边板子的串口号, 用到TXD, 9600波特率, 模拟GPRMC
-
-hCamera = 0
-pFrameBuffer = 0
-image_output_path = "/home/isee/software/fisheyeSDK/demo/python_demo/data/auto_capture_test"
 encoding = "ascii"
 
 def GPRMC_Simulator():
@@ -65,24 +61,25 @@ def PPS_SetLow():
 def PPS_Init():
     PPS_SetLow()	# 初始低电平
 
-def gprmc_out():
+def GPRMC_Output():
     output = GPRMC_Simulator().encode(encoding) + b'\r\n'
-    print(output)
+    # print(output)
     ttl_ser.write(output)	# 发出GPRMC信息, 结尾加上\r\n
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-    print('gprmc_out :', ts, ts[-3:])
-    print()
+    # ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+    # print('gprmc_out :', ts, ts[-3:])
 
-def pps_out():
+def Null_Function():
+    pass
+
+def PPS_Output():
     PPS_SetHigh()
     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]	# 精确到ms
-    Timer(1 - int(ts[-3:])/1000, print, "").start()	# 每次都进行补偿
+    Timer(1 - int(ts[-3:])/1000, Null_Function).start()	# 每次都进行补偿
     Timer(0.02, PPS_Init).start()   # PPS高电平持续时间20ms, 示波器实测约32ms
-    Timer(0.10, gprmc_out).start()  # PPS上升沿后100ms, 发出GPRMC
-    Timer(2 - int(ts[-3:])/1000, pps_out).start()  # 每次都进行补偿
-    print(ts)
+    Timer(0.10, GPRMC_Output).start()  # PPS上升沿后100ms, 发出GPRMC
+    Timer(2 - int(ts[-3:])/1000, PPS_Output).start()  # 每次都进行补偿
 
 if __name__ == "__main__":
     PPS_Init()
-    pps_out()
+    PPS_Output()
     
