@@ -43,8 +43,8 @@ const bool kCreateDensePcd = false;
 const bool kInitialIcp = false;
 const bool kCreateFullViewPcd = false;
 const bool kReconstruction = false;
-const bool kSpotRegistration = false;
-const bool kGlobalColoredRecon = true;
+const bool kSpotRegistration = true;
+const bool kGlobalColoredRecon = false;
 const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
 
 int CheckFolder(string spot_path) {
