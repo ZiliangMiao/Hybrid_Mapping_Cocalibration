@@ -161,9 +161,9 @@ void LidarProcess::ICP() {
     Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/180.0f*M_PI, 0.0f, 
-                0.15f * sin((float)v_degree/180.0f * M_PI) - 0.15f * sin(0.0f/180.0f * M_PI),
+                - 0.15f * sin((float)v_degree/180.0f * M_PI) + 0.15f * sin(0.0f/180.0f * M_PI),
                 0.0f,
-                0.15f * cos((float)v_degree/180.0f * M_PI) - 0.15f * cos(0.0f/180.0f * M_PI);
+                - 0.15f * cos((float)v_degree/180.0f * M_PI) + 0.15f * cos(0.0f/180.0f * M_PI);
     Eigen::Matrix4f init_trans_mat = ExtrinsicMat(ext_init);
     pcl::transformPointCloud(*view_cloud_vg_src, *view_cloud_init_trans_src, init_trans_mat);
     Eigen::Matrix4f icp_trans_mat = init_trans_mat;
@@ -309,9 +309,9 @@ Eigen::Matrix4f LidarProcess::ICP2(int view_idx_tgt) {
     Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/180.0f*M_PI, 0.0f, 
-                0.15f * sin((float)v_degree/180.0f * M_PI) - 0.15f * sin(0.0f/180.0f * M_PI),
+                - 0.15f * sin((float)v_degree/180.0f * M_PI) + 0.15f * sin(0.0f/180.0f * M_PI),
                 0.0f,
-                0.15f * cos((float)v_degree/180.0f * M_PI) - 0.15f * cos(0.0f/180.0f * M_PI);
+                - 0.15f * cos((float)v_degree/180.0f * M_PI) + 0.15f * cos(0.0f/180.0f * M_PI);
     Eigen::Matrix4f initial_trans_mat = ExtrinsicMat(ext_init);
     pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans_mat);
 
@@ -383,19 +383,20 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     CloudPtr polar_cloud(new CloudT);
     Eigen::Matrix<float, 6, 1> extrinsic_vec; 
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
-                    (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
-                    // 0.0, 0.0, 0.0;
+                    // (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
+                    0.0, 0.0, 0.0;
     Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
     for (auto &point : polar_cloud->points) {
-        if (!projByIntensity) {
-            radius = proj_param;
-        }
-        else {
-            radius = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
-        }
+        // if (!projByIntensity) {
+        //     radius = proj_param;
+        // }
+        // else {
+        //     radius = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
+        // }
         /** assign the polar coordinate to pcl point cloud **/
+        radius = point.getVector3fMap().norm();
         phi = atan2(point.y, point.x);
         theta = acos(point.z / radius);
         point.x = theta;
@@ -407,30 +408,6 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     cout << "min theta of the fullview cloud: " << theta_min << "\n"
          << " max theta of the fullview cloud: " << theta_max << endl;
 
-    if (kEdgeAnalysis) {
-        /** visualization for weight check**/ 
-        RGBCloudPtr polar_rgb_cloud(new RGBCloudT);
-        int L_2 = 50;
-        for (size_t i = 0; i < polar_cloud->points.size(); ++i) {
-            int indicator = cart_cloud->points[i].intensity;
-            RGBPointT polar_rgb_pt;
-            if ((indicator) < L_2) {
-                polar_rgb_pt.r = 0;
-                polar_rgb_pt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
-                polar_rgb_pt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
-            }
-            else {
-                polar_rgb_pt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
-                polar_rgb_pt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
-                polar_rgb_pt.b = 0;
-            }
-            polar_rgb_pt.x = polar_cloud->points[i].x;
-            polar_rgb_pt.y = polar_cloud->points[i].y;
-            polar_rgb_pt.z = polar_cloud->points[i].z;
-            polar_rgb_cloud->points.push_back(polar_rgb_pt);
-        }  
-        pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/fullview_polar_cloud.pcd", *polar_rgb_cloud);
-    }
     tuple<CloudPtr, CloudPtr> result;
     result = make_tuple(polar_cloud, cart_cloud);
     return result;
@@ -443,7 +420,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     vector<vector<Tags>> tags_map (kFlatRows, vector<Tags>(kFlatCols));
 
     /** construct kdtrees and load the point clouds **/
-    /** caution: the point cloud need to be setted before the loop **/
+    /** caution: the point cloud need to be set before the loop **/
     pcl::KdTreeFLANN<PointT> kdtree;
     kdtree.setInputCloud(polar_cloud);
 
@@ -459,6 +436,9 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     float theta_center;
     float phi_center;
     int hidden_pt_cnt = 0;
+
+    vector<int> removed_indices;
+
     for (int u = 0; u < kFlatRows; ++u) {
         /** upper and lower bound of the current theta unit **/
         theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
@@ -487,7 +467,9 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
             else { /** corresponding points are found in the radius neighborhood **/
                 vector<double> intensity_vec, theta_vec, phi_vec;
                 int hidden_pt_num = 0;
-                float dist = 0, dist_mean = 0, dist_0 = 0;
+                float dist = 0, dist_mean = 0;
+                CloudPtr local_cloud(new CloudT);
+                pcl::copyPointCloud(*polar_cloud, search_pt_idx_vec, *local_cloud);
                 for (int i = 0; i < search_num; ++i) {
                     bool skip = false;
                     PointT &polar_pt = (*polar_cloud)[search_pt_idx_vec[i]];
@@ -495,11 +477,11 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                     if (this->kHiddenPtsFilter) {
                         PointT &cart_pt = (*cart_cloud)[search_pt_idx_vec[i]];
                         const float sensitivity = 0.02;
-                        dist = sqrt(pow(cart_pt.x, 2) + pow(cart_pt.y, 2) + pow(cart_pt.z, 2));
+                        dist = cart_pt.getVector3fMap().norm();
                         dist_mean = (i * dist_mean + dist) / (i + 1); 
                         if (i > 0) {
                             PointT &cart_pt_former = (*cart_cloud)[search_pt_idx_vec[i - 1]];
-                            if (dist < (1-2*sensitivity) * dist_mean && i == 1) {
+                            if ((dist < (1-2*sensitivity) * dist_mean && i == 1) ) {
                                 hidden_pt_num++;
                                 hidden_pt_cnt++;
                                 tags_map[u][v].pts_indices.erase(tags_map[u][v].pts_indices.begin());
@@ -508,7 +490,8 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                                 phi_vec.erase(phi_vec.begin());
                                 dist_mean = dist;
                             }
-                            if (dist > (1+sensitivity) * dist_mean || dist < (1-sensitivity) * dist_mean) {
+                            if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && cart_pt.intensity < 20)) {
+                            // if ((abs(dist_mean - dist) > dist * sensitivity)) {
                                 hidden_pt_num++;
                                 hidden_pt_cnt++;
                                 skip = true;
@@ -523,11 +506,13 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                         phi_vec.push_back(polar_pt.y);
                         tags_map[u][v].pts_indices.push_back(search_pt_idx_vec[i]);
                     }
+                    else {
+                        removed_indices.push_back(search_pt_idx_vec[i]);
+                    }
                 }
 
                 /** add tags **/
                 tags_map[u][v].num_pts = search_num - hidden_pt_num;
-                tags_map[u][v].num_hidden_pts = hidden_pt_num;
 
                 /** check the size of vectors **/
                 ROS_ASSERT_MSG((theta_vec.size() == phi_vec.size()) && (phi_vec.size() == intensity_vec.size()) && (intensity_vec.size() == tags_map[u][v].pts_indices.size()) && (tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
@@ -538,9 +523,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                     tags_map[u][v].mean = 0;
                     tags_map[u][v].sigma = 0;
                     tags_map[u][v].weight = 1;
-                    tags_map[u][v].num_hidden_pts = hidden_pt_num;
-                    double intensity_mean = intensity_vec[0];
-                    flat_img.at<float>(u, v) = intensity_mean;
+                    flat_img.at<float>(u, v) = intensity_vec[0];
                 }
                 else if (tags_map[u][v].num_pts == 0) {
                     /** no points in a pixel **/
@@ -548,7 +531,6 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                     tags_map[u][v].mean = 99;
                     tags_map[u][v].sigma = 99;
                     tags_map[u][v].weight = 0;
-                    tags_map[u][v].num_hidden_pts = hidden_pt_num;
                     flat_img.at<float>(u, v) = 160;
                 }
                 else if (tags_map[u][v].num_pts >= 2) {
@@ -590,8 +572,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
                     tags_map[u][v].label = 1;
                     tags_map[u][v].mean = dis_mean;
                     tags_map[u][v].sigma = dis_std;
-                    tags_map[u][v].num_hidden_pts = hidden_pt_num;
-                    double intensity_mean = accumulate(std::begin(intensity_vec), std::end(intensity_vec), 0.0) / tags_map[u][v].num_pts;
+                    double intensity_mean = accumulate(std::begin(intensity_vec), std::end(intensity_vec), 0.0) / intensity_vec.size();
                     flat_img.at<float>(u, v) = intensity_mean;
                 }
             }
@@ -639,11 +620,16 @@ void LidarProcess::SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& ca
     }
     outfile.close();
 
-    cout << "number of invalid searches:" << invalid_search_num << endl;
-    cout << "number of invalid indices:" << invalid_idx_num << endl;
     string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
     cout << "LiDAR flat image path: " << flat_img_path << endl;
     cv::imwrite(flat_img_path, flat_img);
+
+    if (kEdgeAnalysis) {
+        /** visualization for weight check**/ 
+        CloudPtr cart_rgb_cloud(new CloudT);
+        pcl::copyPointCloud(*cart_cloud, removed_indices, *cart_rgb_cloud);
+        pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/removed_cart_cloud.pcd", *cart_rgb_cloud);
+    }
 
 }
 
@@ -677,7 +663,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     EdgePts edge_pts;
     CloudPtr edge_cloud(new CloudT);
     /** visualization for weight check**/ 
-    RGBCloudPtr weight_rgb_cloud(new RGBCloudT);
+    CloudPtr weight_rgb_cloud(new CloudT);
     for (auto &edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
@@ -688,33 +674,18 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
         }
         else { /** normal pixels **/
             /** center of lidar edge distribution **/
-            RGBPointT colorPt;
+
             CloudPtr pixel_cloud(new CloudT);
             float x_avg = 0.0f, y_avg = 0.0f, z_avg = 0.0f;
-            int L_2 = 50;
             pcl::copyPointCloud(*cart_cloud, tags_map[u][v].pts_indices, *pixel_cloud);
             for (auto &pixel_pt : pixel_cloud->points) {
                 x_avg += pixel_pt.x;
                 y_avg += pixel_pt.y;
                 z_avg += pixel_pt.z;
-                if (kEdgeAnalysis) {
-                /** visualization for weight check**/ 
-                    colorPt.x = pixel_pt.x;
-                    colorPt.y = pixel_pt.y;
-                    colorPt.z = pixel_pt.z;
-                    int indicator = pixel_pt.intensity;
-                    if ((indicator) < L_2) {
-                        colorPt.r = 0;
-                        colorPt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
-                        colorPt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
-                    }
-                    else {
-                        colorPt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
-                        colorPt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
-                        colorPt.b = 0;
-                    }
-                    weight_rgb_cloud->points.push_back(colorPt);
-                }
+                // if (kEdgeAnalysis) {
+                // /** visualization for weight check**/ 
+                //     weight_rgb_cloud->points.push_back(pixel_pt);
+                // }
             }
             /** average coordinates->unbiased estimation of center position **/
             x_avg = x_avg / num_pts;
@@ -736,13 +707,8 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
 
             if (kEdgeAnalysis) {
                 /** visualization for weight check**/ 
-                colorPt.x = x_avg;
-                colorPt.y = y_avg;
-                colorPt.z = z_avg;
-                colorPt.r = 255;
-                colorPt.g = 255;
-                colorPt.b = 255;
-                weight_rgb_cloud->points.push_back(colorPt);
+                pt.intensity = 255;
+                weight_rgb_cloud->points.push_back(pt);
             }
         }
     }
@@ -772,8 +738,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
         pcl::io::savePCDFileBinary(edge_cart_pcd_path, *weight_rgb_cloud);
 
         float radius, phi, theta;
-        RGBPointT polar_pt;
-        RGBCloudPtr polar_rgb_cloud(new RGBCloudT);
+        CloudPtr polar_rgb_cloud(new CloudT);
         const float half_pi = (float)M_PI / 2;
         Eigen::Matrix<float, 6, 1> extrinsic_vec; 
         extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
@@ -787,9 +752,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             point.x = theta;
             point.y = phi;
             point.z = 0;
-            point.r = 200;
-            point.g = 200;
-            point.b = 200;
+            point.intensity = 200;
         }
 
         string edge_polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_polar_pcd_path;
@@ -990,8 +953,8 @@ void LidarProcess::CreateFullviewPcd() {
     CloudPtr radius_outlier_cloud(new CloudT);
     pcl::RadiusOutlierRemoval<PointT> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(cond_filtered_cloud);
-    radius_outlier_filter.setRadiusSearch(0.1);
-    radius_outlier_filter.setMinNeighborsInRadius(5);
+    radius_outlier_filter.setRadiusSearch(0.05);
+    radius_outlier_filter.setMinNeighborsInRadius(20);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
 
@@ -1007,7 +970,6 @@ void LidarProcess::CreateFullviewPcd() {
     us_tgt.setInputCloud(radius_outlier_cloud);
     us_tgt.setRadiusSearch(0.05f);
     us_tgt.filter(*sparse_cloud);
-    us_tgt.getIndices();
     string sparse_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].fullview_sparse_cloud_path;
     pcl::io::savePCDFileBinary(sparse_cloud_path, *sparse_cloud);
     cout << "Create sparse fullview pointcloud successfully!" << endl;

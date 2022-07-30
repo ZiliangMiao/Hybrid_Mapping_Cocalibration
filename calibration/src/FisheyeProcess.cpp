@@ -320,7 +320,6 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     cout << "number of invalid indices:" << invalid_index << endl;
 
     string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
-    string fusion_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
     string result_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
@@ -328,7 +327,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
         cv::imwrite(flat_img_path, flat_image); /** flat image generation **/
     }
     else {
-        fusion_img_path = result_path + "/view_" + to_string(this->view_idx) +
+        string fusion_img_path = result_path + "/spot_" + to_string(this->spot_idx) +
                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
@@ -432,25 +431,25 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
     mlpack::metric::EuclideanDistance metric;
     mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(default_rel_error, 0.00, kernel);
-    kde.Train(reference);
+    kde.Train(std::move(reference));
     kde.Evaluate(query, kde_estimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
-    string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
-    ofstream outfile;
-    outfile.open(kde_txt_path, ios::out);
-    if (!outfile.is_open()) {
-        cout << "Open file failure" << endl;
-    }
-    for (int i = 0; i < n_rows; ++i) {
-        for (int j = 0; j < n_cols; j++) {
-            int index = i * n_cols + j;
-            outfile << query.at(0, index) << "\t"
-                    << query.at(1, index) << "\t"
-                    << kde_estimations(index) << endl;
-        }
-    }
-    outfile.close();
+    // string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
+    // ofstream outfile;
+    // outfile.open(kde_txt_path, ios::out);
+    // if (!outfile.is_open()) {
+    //     cout << "Open file failure" << endl;
+    // }
+    // for (int i = 0; i < n_rows; ++i) {
+    //     for (int j = 0; j < n_cols; j++) {
+    //         int index = i * n_cols + j;
+    //         outfile << query.at(0, index) << "\t"
+    //                 << query.at(1, index) << "\t"
+    //                 << kde_estimations(index) << endl;
+    //     }
+    // }
+    // outfile.close();
     cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
          <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
     return img;

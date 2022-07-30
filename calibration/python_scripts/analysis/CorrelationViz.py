@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from numpy import size
 from scipy.interpolate import interpolate
 import os, sys
 
@@ -17,8 +18,9 @@ def load_data(tag1, tag2=None):
 
 # visualization #
 def visualization(data):
-    # print(data)
+    center = int(round((np.size(data[:, 0]) - 1) / 2))
     plt.plot(data[:, 0], data[:, 1])
+    plt.scatter(data[center, 0], data[center, 1])
     plt.show()
     plt.close()
 
@@ -37,10 +39,13 @@ def visualization3D(data, cubic_interp=False):
         x = x_dense
         y = y_dense
         print(z.size)
-        
+    
+    center_x = int(round((np.size(x) - 1) / 2))
+    center_y = int(round((np.size(y) - 1) / 2))
     X, Y = np.meshgrid(x, y)
     Z = z.reshape(int(np.sqrt(z.size)), int(np.sqrt(z.size)))
     ax.plot_surface(X, Y, -Z, rstride=1, cstride=1, cmap=plt.get_cmap('viridis'))
+    ax.scatter3D(x[center_x], y[center_y], z[(center_x + 1) * (center_y + 1) - 1])
     plt.show()
     plt.close()
 
