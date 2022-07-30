@@ -39,16 +39,16 @@ const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 
 const bool kCreateDensePcd = false;
-const bool kInitialIcp = false;
-const bool kCreateFullViewPcd = true;
+const bool kViewRegistration = true;
+const bool kCreateFullViewPcd = false;
 
 const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 
-const bool kCeresOptimization = true;
+const bool kCeresOptimization = false;
 const bool kParamsAnalysis = false;
-const bool kReconstruction = true;
-const bool kSpotRegistration = false;
+const bool kReconstruction = false;
+const bool kSpotRegistration = true;
 const bool kGlobalColoredRecon = false;
 
 const int kOneSpot = 1; /** -1 means run all the spots, other means run a specific spot **/
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
         }
     }
     
-    if (kInitialIcp) {
+    if (kViewRegistration) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
@@ -156,7 +156,7 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     lidar.SetViewIdx(j);
-                    lidar.ICP();
+                    lidar.ViewRegistration();
                 }
             }
         }

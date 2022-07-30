@@ -128,14 +128,16 @@ public:
     LidarProcess();
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
-    void CreateDensePcd();
-    void ICP();
-    Eigen::Matrix4f ICP2(int view_idx_tgt);
-    void SpotRegistration();
-    void GlobalColoredRecon();
-    void CreateFullviewPcd();
     void BagToPcd(string bag_file);
+    /** registration **/
+    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz);
+    double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
+    void ViewRegistration();
+    void SpotRegistration();
 
+    void CreateDensePcd();
+    void CreateFullviewPcd();
+    void GlobalColoredRecon();
     /***** Edge Related *****/
     void EdgeToPixel();
     void ReadEdge();

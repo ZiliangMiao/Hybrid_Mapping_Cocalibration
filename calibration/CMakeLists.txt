@@ -6,6 +6,9 @@ set(CMAKE_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
+
+# set(PCL_DIR "/usr/local/share/pcl-1.12")
+
 # set(Open3D_DIR "/usr/local/lib/cmake/Open3D")
 
 find_package(mlpack REQUIRED)
@@ -29,6 +32,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -std=c++17")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
+
+# set(PCL_INCLUDE_DIRS /usr/local/include/pcl-1.12)
 set(PCL_INCLUDE_DIRS /usr/include/pcl-1.8)
 # set(Open3D_INCLUDE_DIRS /usr/local/include/open3d)
 message(${PCL_LIBRARIES})
