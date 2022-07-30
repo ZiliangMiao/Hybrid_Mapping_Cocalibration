@@ -56,7 +56,7 @@ def GetFolderPath(spot_idx, view_idx=None, return_angle=False):
 
 def GetFisheyeCmd(spot_idx, view_idx):
     cmd = "python3" + " " + os.path.abspath(os.path.join(os.path.abspath(__file__), "../ExposureFusion.py")) \
-                + " " + GetFolderPath(spot_idx, view_idx) + "/images"
+        + " " + GetFolderPath(spot_idx, view_idx) + "/images"
     return cmd
 
 def GetFisheyeCapturePath(spot_idx, view_idx):
@@ -79,10 +79,10 @@ def GetLidarLioBagCmd(source_spot_idx, target_spot_idx, duration=30):
 def Capture(image_output_path):
 
 	exposure_times = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
-				 1.5, 2, 2.5, 3, 3.5, 4, 4.5,
-				 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-				 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
-				 120, 140, 160, 180, 200]
+                    1.5, 2, 2.5, 3, 3.5, 4, 4.5,
+                    5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                    20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
+                    120, 140, 160, 180, 200]
 
 	pre_sample_size = 10
 	target_median_exp = 20 * 1e3

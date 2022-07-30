@@ -10,6 +10,13 @@ gimbal/cmake-build-debug/*
 gimbal/.idea/*
 gimbal/.vscode/*
 
+fast_lio/build/*
+fast_lio/data/*
+fast_lio/PCD/*
+fast_lio/cmake-build-debug/*
+fast_lio/.idea/*
+fast_lio/.vscode/*
+
 build/*
 .idea/*
 .vscode/*
