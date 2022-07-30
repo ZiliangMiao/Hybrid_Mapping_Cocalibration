@@ -27,7 +27,7 @@
 #include <mlpack/core/tree/cover_tree.hpp>
 /** headings **/
 #include "FisheyeProcess.h"
-#include "spline.h"
+#include "utils.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -129,8 +129,10 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     string fisheye_hdr_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fisheye_hdr_img_path;
     cv::Mat image = ReadFisheyeImage(fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    tk::spline spline;
-    result = FisheyeImageToSphere(image, false, spline);
+    std::vector<double> intrinsic_ = 
+        {intrinsic.u0, intrinsic.v0, intrinsic.a0, intrinsic.a1, intrinsic.a2, intrinsic.a3, intrinsic.a4, intrinsic.c, intrinsic.d, intrinsic.e};
+    tk::spline spline = InverseSpline(intrinsic_);
+    result = FisheyeImageToSphere(image, true, spline);
     return result;
 }
 
@@ -140,10 +142,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     float x, y, z;
     float radius, theta, phi;
     /** intrinsic parameters **/
-    float a0, a2, a3, a4;
-    float c, d, e;
-    float u0, v0;
-    
+    float c, d, e, u0, v0, a0, a1, a2, a3, a4;
     c = this->intrinsic.c;
     d = this->intrinsic.d;
     e = this->intrinsic.e;
@@ -157,6 +156,8 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
 
+    float theta_min = M_PI, theta_max = -M_PI;
+
     for (int u = 0; u < this->kFisheyeRows; u++) {
         for (int v = 0; v < this->kFisheyeCols; v++) {
             x = c * u + d * v - u0;
@@ -165,6 +166,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             if (radius != 0) {
                 if (!enable_spline){
                     a0 = this->intrinsic.a0;
+                    a1 = this->intrinsic.a1;
                     a2 = this->intrinsic.a2;
                     a3 = this->intrinsic.a3;
                     a4 = this->intrinsic.a4;
@@ -172,6 +174,10 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                     /** spherical coordinates **/
                     phi = atan2(y, x); // note that atan2 is defined as Y/X
                     theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
+
+                    /** spherical coordinates **/
+                    // phi = atan2(y, x); // note that atan2 is defined as Y/X
+                    // theta = -a0/a1 + radius/a1;
                 }
                 else{
                     /** spherical coordinates **/
@@ -196,20 +202,25 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 pixel_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 pixel_pt.r = image.at<cv::Vec3b>(u, v)[2];
                 fisheye_pixel_cloud->points.push_back(pixel_pt);
+                if (theta > theta_max) { theta_max = theta; }
+                else if (theta < theta_min) { theta_min = theta; }
             }
         }
     }
+    cout << "min theta of the fisheye cloud: " << theta_min << "\n"
+         << " max theta of the fisheye cloud: " << theta_max << endl;
+
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
     result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
     return result;
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud) {
     cout << "----- Fisheye: SphereToPlane2 -----" << " Spot Index: " << this->spot_idx << endl;
     SphereToPlane(polar_cloud, -1.0);
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     double flat_rows = this->kFlatRows;
     double flat_cols = this->kFlatCols;
@@ -225,20 +236,16 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
 
     int invalid_search = 0;
     int invalid_index = 0;
-    double rad_per_pix = this->kRadPerPix;
-    double search_radius = rad_per_pix / 2;
+    double search_radius = kRadPerPix / 2;
+    float theta_center, phi_center;
 
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < flat_rows; ++u) {
         // upper bound and lower bound of the current theta unit
-        float theta_lb = u * rad_per_pix;
-        float theta_ub = (u + 1) * rad_per_pix;
-        float theta_center = (theta_ub + theta_lb) / 2;
+        theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
         for (int v = 0; v < flat_cols; ++v) {
             // upper bound and lower bound of the current phi unit
-            float phi_lb = M_PI - v * rad_per_pix;
-            float phi_ub = M_PI - (v + 1) * rad_per_pix;
-            float phi_center = (phi_ub + phi_lb) / 2;
+            phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
             // assign the theta and phi center to the searchPoint
             pcl::PointXYZRGB search_point;
             search_point.x = theta_center;
@@ -249,6 +256,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
             std::vector<float> pointRadiusSquaredDistance;
             // radius search
             int num_RNN = kdtree.radiusSearch(search_point, search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance); // number of the radius nearest neighbors
+            float scale = 1.0f;
             // if the corresponding points are found in the radius neighborhood
             if (num_RNN == 0) {
                 // assign the theta and phi center to the searchPoint
@@ -259,11 +267,11 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
                 std::vector<int> pointIdxRadiusSearch;
                 std::vector<float> pointRadiusSquaredDistance;
                 int numSecondSearch = 0;
-                float scale = 1;
+                scale = 2.0f - ((float)u / flat_rows);
                 while (numSecondSearch == 0) {
-                    scale = scale + 0.05;
+                    scale = scale + 0.1f;
                     numSecondSearch = kdtree2.radiusSearch(searchPoint, scale * search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance);
-                    if (scale > 2) {
+                    if (scale > 3) {
                         flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
                         flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
                         flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
@@ -288,14 +296,14 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
             else {
                 int B = 0, G = 0, R = 0; // mean value of RGB channels
                 for (int i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-                    if (pointIdxRadiusSearch[i] > polar_cloud->points.size() - 1) {
-                        // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
-                        flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
-                        flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
-                        flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
-                        invalid_index = invalid_index + 1;
-                        continue;
-                    }
+                    // if (pointIdxRadiusSearch[i] > polar_cloud->points.size() - 1) {
+                    //     // caution: a bug is hidden here, index of the searched point is bigger than size of the whole point cloud
+                    //     flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
+                    //     flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
+                    //     flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
+                    //     invalid_index = invalid_index + 1;
+                    //     continue;
+                    // }
                     B = B + (*polar_cloud)[pointIdxRadiusSearch[i]].b;
                     G = G + (*polar_cloud)[pointIdxRadiusSearch[i]].g;
                     R = R + (*polar_cloud)[pointIdxRadiusSearch[i]].r;
@@ -396,7 +404,7 @@ void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pi
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
-    const double relError = 0.05;
+    const double default_rel_error = 0.05;
     const int n_rows = scale * this->kFisheyeRows;
     const int n_cols = scale * this->kFisheyeCols;
     arma::mat query;
@@ -420,11 +428,10 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
         }
     }
 
-
     arma::vec kde_estimations;
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
     mlpack::metric::EuclideanDistance metric;
-    mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(relError, 0.00, kernel);
+    mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(default_rel_error, 0.00, kernel);
     kde.Train(reference);
     kde.Evaluate(query, kde_estimations);
 
@@ -451,7 +458,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
 
 void FisheyeProcess::EdgeExtraction() {
     std::string script_path = this->kPkgPath + "/python_scripts/image_process/EdgeExtraction.py";
-    std::string kSpots = to_string(this->num_spots);
+    std::string kSpots = to_string(this->spot_idx);
     std::string cmd_str = "python3 " 
         + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
     system(cmd_str.c_str());

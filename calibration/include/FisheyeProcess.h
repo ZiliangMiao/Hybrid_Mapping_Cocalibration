@@ -52,16 +52,16 @@ public:
 
     /***** Intrinsic Parameters *****/
     struct Intrinsic {
+        double a0 = 0;
         double a1 = 0;
-        double a0 = 6.073762e+02;
-        double a2 = -5.487830e-04;
-        double a3 = -2.809080e-09;
-        double a4 = -1.175734e-10;
-        double c = 1.000143;
-        double d = -0.000177;
-        double e = 0.000129;
-        double u0 = 1022.973079;
-        double v0 = 1200.975472;
+        double a2 = 0;
+        double a3 = 0;
+        double a4 = 0;
+        double c = 1;
+        double d = 0;
+        double e = 0;
+        double u0 = 1024;
+        double v0 = 1224;
     } intrinsic;
 
     /********* File Path of the Specific Pose *********/
@@ -97,8 +97,8 @@ public:
     cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline);
-    void SphereToPlane(RGBCloudPtr sphere_polar_cloud);
-    void SphereToPlane(RGBCloudPtr sphere_polar_cloud, double bandwidth);
+    void SphereToPlane(RGBCloudPtr &sphere_polar_cloud);
+    void SphereToPlane(RGBCloudPtr &sphere_polar_cloud, double bandwidth);
 
     /** Edge Related **/
     void ReadEdge();
@@ -108,19 +108,20 @@ public:
     void EdgeExtraction();
 
     /** Get and Set Methods **/
-    void SetIntrinsic(vector<double> parameters) {
-        /** polynomial params **/
-        this->intrinsic.a0 = parameters[6];
-        this->intrinsic.a2 = parameters[7];
-        this->intrinsic.a3 = parameters[8];
-        this->intrinsic.a4 = parameters[9];
-        /** expansion and distortion **/
-        this->intrinsic.c = parameters[10];
-        this->intrinsic.d = parameters[11];
-        this->intrinsic.e = parameters[12];
+    void SetIntrinsic(vector<double> &parameters) {
         /** center **/
-        this->intrinsic.u0 = parameters[13];
-        this->intrinsic.v0 = parameters[14];
+        this->intrinsic.u0 = parameters[6];
+        this->intrinsic.v0 = parameters[7];
+        /** polynomial params **/
+        this->intrinsic.a0 = parameters[8];
+        this->intrinsic.a1 = parameters[9];
+        this->intrinsic.a2 = parameters[10];
+        this->intrinsic.a3 = parameters[11];
+        this->intrinsic.a4 = parameters[12];
+        /** expansion and distortion **/
+        this->intrinsic.c = parameters[13];
+        this->intrinsic.d = parameters[14];
+        this->intrinsic.e = parameters[15];
     }
 
     void SetSpotIdx(int spot_idx) {

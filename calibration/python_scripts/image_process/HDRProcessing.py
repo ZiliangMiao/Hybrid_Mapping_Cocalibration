@@ -4,49 +4,69 @@ import os, sys
 
 if __name__ == "__main__":
 
-    num_spots = 4
-    num_views = 3
-    default_name = "floor5"
-
+    num_spots = 5
+    num_views = 5
+    default_name = "lh3_global"
+    response = []
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
 
     for spot_idx in range(num_spots):
         for view_idx in range(num_views):
-            skip = False
             # view_angle = -int(sys.argv[3]) + int(sys.argv[3]) * view_idx
-            view_angle = -50 + 50 * view_idx
+            view_angle = -50 + 25 * view_idx
             # data_path = sys.argv[2] + "/spot" + str(spot_idx) + "/" + view_angle + "/images/"
-            data_path = root_path + "/data" + "/" + default_name + "/spot" + str(spot_idx) + "/" + str(view_angle) + "/images/"
+            data_path = root_path + "/data" + "/" + default_name + "/spot" + str(spot_idx) + "/" + str(view_angle) + "/images"
 
             # Loading exposure images into a list
-            exposure_times = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
-                1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200
-                ], dtype=np.float32)
+            # exposure_times = np.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.8, 1.0,
+            #     1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+            #     20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200
+            #     ], dtype=np.float32)
+            exposure_times = np.array([0.5, 1.0, 5, 10, 20, 50, 100], dtype=np.float32)
             img_list = []
-            f = os.walk(data_path)
-            for dirpath, dirnames, filenames in f:
-                for filename in filenames:
-                    if not filename.__contains__("grab_0.bmp"):
-                        img_list.append(cv2.imread(data_path + filename))
-                    else:
-                        skip = True
-            if skip:
-                continue
+            
+            for t in exposure_times:
+                if (t >= 5):
+                    num = int(t)
+                else:
+                    num = t
+                img_list.append(cv2.imread(data_path + "/grab_" + str(num) + ".bmp"))
+            
+            # Obtain Camera Response Function (CRF)
+            # print("Calculating Camera Response Function (CRF) ... ")
+            if (spot_idx == 0 and view_idx == 0):
+                calibrate = cv2.createCalibrateDebevec()
+                response = calibrate.process(img_list, exposure_times)
+
             # Merge exposures to HDR image
-            # merge_debevec = cv2.createMergeDebevec()
-            # hdr_debevec = merge_debevec.process(img_list, times=exposure_times.copy())
-            merge_robertson = cv2.createMergeRobertson()
-            hdr_robertson = merge_robertson.process(img_list, times=exposure_times.copy())
-            # Tonemap HDR image
-            # tonemap1 = cv2.createTonemap(gamma=2.2)
-            # res_debevec = tonemap1.process(hdr_debevec.copy())
-            # Exposure fusion using Mertens
+            print("Merging images into one HDR image ... ")
             merge_mertens = cv2.createMergeMertens()
-            res_mertens = merge_mertens.process(img_list)
-            # Convert datatype to 8-bit and save
-            # res_debevec_8bit = np.clip(res_debevec*255, 0, 255).astype('uint8')
+            res_mertens = merge_mertens.process(img_list, exposure_times, response)
             res_mertens_8bit = np.clip(res_mertens*255, 0, 255).astype('uint8')
-            # cv2.imwrite(data_path + "grab_0.bmp", res_debevec_8bit)
-            cv2.imwrite(data_path + "grab_0.bmp", res_mertens_8bit)
+            # cv2.imwrite(data_path + "/grab_0_mertens.bmp", res_mertens_8bit)
+            clahe = cv2.createCLAHE(clipLimit=1, tileGridSize=(8, 8))
+            res_gamma = res_mertens_8bit
+            weight = 0.25
+            for i in range(3):
+                res_gamma[:, :, i] = clahe.apply(res_mertens_8bit[:, :, i]) * weight + res_mertens_8bit[:, :, i] * (1 - weight)
+            cv2.imwrite(data_path + "/grab_0.bmp", res_gamma)
+
+            
+            # mergeDebevec = cv2.createMergeDebevec()
+            # hdrDebevec = mergeDebevec.process(img_list, exposure_times, response)
+            
+            ############# Tone map ###############
+            # # Tonemap using Reinhard's method to obtain 24-bit color image
+            # print("Tonemaping using Reinhard's method ... ")
+            # tonemapReinhard = cv2.createTonemapReinhard(1.5, 0, 0, 1)
+            # ldrReinhard = tonemapReinhard.process(hdrDebevec)
+            # ldrReinhard_8bit = np.clip(ldrReinhard * 255, 0, 255).astype('uint8')
+            # # cv2.imwrite(data_path + "/grab_0.bmp", ldrReinhard_8bit)
+            # # print("saved ldr-Reinhard.bmp")
+            # res_gamma = ldrReinhard_8bit
+            # for i in range(3):
+            #     res_gamma[:, :, i] = clahe.apply(res_gamma[:, :, i])
+            # cv2.imwrite(data_path + "/grab_0_reinhard.bmp", res_gamma)
+
+
             print("Spot Index: " + str(spot_idx) + " View Index: " + str(view_idx) + " HDR Finished!")

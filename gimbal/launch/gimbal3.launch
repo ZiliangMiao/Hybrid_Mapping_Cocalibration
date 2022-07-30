@@ -1,5 +1,0 @@
-<launch>
-	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
-		<param name="rotation_mode" type="int" value="3" /> 
-	</node>
-</launch>

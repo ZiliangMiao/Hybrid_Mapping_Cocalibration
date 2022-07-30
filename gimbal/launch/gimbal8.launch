@@ -1,0 +1,7 @@
+<launch>
+	<node name="gimbal_publisher" pkg="gimbal" type="GimbalPublisher.py" 		output="screen">
+		<param name="rotation_mode" type="int" value="8" /> 
+  		</node>	
+	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
+	</node>
+</launch>

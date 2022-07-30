@@ -14,7 +14,7 @@ using namespace std;
 
 string getDataPath(){
     std::string currPkgDir = ros::package::getPath("calibration");
-    std::string dataPath = currPkgDir + "/data/sanjiao_pose0/0";
+    std::string dataPath = currPkgDir + "/data/bs3_global/spot0/0";
     return dataPath;
 }
 const string dataPath = getDataPath();
