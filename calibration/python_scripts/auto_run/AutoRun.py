@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os, sys, time, atexit
+import os, sys, time, signal, atexit
 import rospy
 from geometry_msgs.msg import Twist
 import mvsdk
-from Subprocess import CreateProcess, Exiting
+import subprocess
+import numpy as np
+from threading import Timer
 
-dataset_name = "ceres"
+dataset_name = "test"
 num_gimbal_step = 25
 num_views = 5
 num_spots = 5
@@ -17,9 +19,12 @@ data_path = script_path.split("/catkin_ws/src")[0] + "/catkin_ws/data"
 root_path = data_path + "/" + dataset_name
 
 lidar_broadcast_cmd = "roslaunch livox_ros_driver livox_lidar_rviz.launch"
-lidar_liomsg_cmd = "roslaunch livox_ros_driver livox_lidar_msg.launch"
-lidar_sync_cmd = "python3 sync.py"
+lidar_msg_cmd = "roslaunch livox_ros_driver livox_lidar_msg.launch"
+lidar_sync_cmd = "roslaunch calibration lidar_sync.launch"
 fisheye_auto_capture_cmd = "roslaunch mindvision mindvision.launch"
+
+process_pids = []
+hCamera = 0
 
 def _checkFolder(dir):
     if not os.path.exists(dir):
@@ -54,10 +59,6 @@ def GetFisheyeCmd(spot_idx, view_idx):
                 + " " + GetFolderPath(spot_idx, view_idx) + "/images"
     return cmd
 
-def GetSyncCmd():
-    cmd = "python3" + " " + os.path.abspath(os.path.join(os.path.abspath(__file__), "../Sync.py"))
-    return cmd
-
 def GetFisheyeCapturePath(spot_idx, view_idx):
     return GetFolderPath(spot_idx, view_idx) + "/images"
 
@@ -83,6 +84,11 @@ def Capture(image_output_path):
 				 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
 				 120, 140, 160, 180, 200]
 
+	pre_sample_size = 10
+	target_median_exp = 20 * 1e3
+	isp_auto_exp = 20 * 1e3
+	real_exposure_time = []
+
 	DevList = mvsdk.CameraEnumerateDevice()
 	nDev = len(DevList)
 	if nDev < 1:
@@ -93,10 +99,9 @@ def Capture(image_output_path):
 		print("{}: {} {}".format(i, DevInfo.GetFriendlyName(), DevInfo.GetPortType()))
 	i = 0 if nDev == 1 else int(input("Select camera: "))
 	DevInfo = DevList[i]
-	# print(DevInfo)
 
 	# 打开相机
-	hCamera = 0
+	global hCamera
 	try:
 		hCamera = mvsdk.CameraInit(DevInfo, -1, -1)
 	except mvsdk.CameraException as e:
@@ -115,21 +120,41 @@ def Capture(image_output_path):
 
 	# 相机模式切换成连续采集
 	mvsdk.CameraSetTriggerMode(hCamera, 0)
-	mvsdk.CameraSetAeState(hCamera, 0)
+	mvsdk.CameraSetAeState(hCamera, 1)
+	mvsdk.CameraSetAeTarget(hCamera, 10)
 
 	# 让SDK内部取图线程开始工作
 	mvsdk.CameraPlay(hCamera)
 
+	for t in range(pre_sample_size):
+		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
+		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
+
+		try:
+			pRawData, FrameHead = mvsdk.CameraGetImageBuffer(hCamera, 2000)
+			mvsdk.CameraImageProcess(hCamera, pRawData, pFrameBuffer, FrameHead)
+			mvsdk.CameraReleaseImageBuffer(hCamera, pRawData)
+			isp_auto_exp = mvsdk.CameraGetExposureTime(hCamera)
+
+		except mvsdk.CameraException as e:
+			print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
+
+	mvsdk.CameraSetAeState(hCamera, 0)
+	print("Auto exposure time = " + str(isp_auto_exp))
+	scale = isp_auto_exp / target_median_exp
+
 	for t in exposure_times:
+
 		# 计算RGB buffer所需的大小，这里直接按照相机的最大分辨率来分配
+		exp_time = int(t * scale) if ( t - int(t * scale) == 0) else t * scale
 		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
 
 		# 分配RGB buffer，用来存放ISP输出的图像
 		# 备注：从相机传输到PC端的是RAW数据，在PC端通过软件ISP转为RGB数据（如果是黑白相机就不需要转换格式，但是ISP还有其它处理，所以也需要分配这个buffer）
 		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
 
-		# 手动曝光，曝光时间30ms
-		mvsdk.CameraSetExposureTime(hCamera, t * 1000)
+		# 曝光时间
+		mvsdk.CameraSetExposureTime(hCamera, exp_time * 1000)
 
 		# 从相机取一帧图片
 		try:
@@ -141,7 +166,8 @@ def Capture(image_output_path):
 			# 该示例中我们只是把图片保存到硬盘文件中
 			status = mvsdk.CameraSaveImage(hCamera, image_output_path + "/grab_" + str(t) + ".bmp", pFrameBuffer, FrameHead, mvsdk.FILE_BMP, 100)
 			if status == mvsdk.CAMERA_STATUS_SUCCESS:
-				# print("Save image successfully. image_size = {}X{}".format(FrameHead.iWidth, FrameHead.iHeight) )
+				# print("Save image successfully. image_size = {}X{}".format(FrameHead.iWidth, FrameHead.iHeight) )\
+				real_exposure_time.append(mvsdk.CameraGetExposureTime(hCamera))
 				pass
 			else:
 				print("Save image failed. err={}".format(status) )
@@ -150,6 +176,11 @@ def Capture(image_output_path):
 
 	# 关闭相机
 	mvsdk.CameraUnInit(hCamera)
+
+	exposure_output = np.vstack((np.array(exposure_times), np.array(real_exposure_time))).T
+	np.savetxt(image_output_path + '/exposure.txt', exposure_output, delimiter='\t')
+
+	print("Capture terminated.")
 
 	# 释放帧缓存
 	mvsdk.CameraAlignFree(pFrameBuffer)
@@ -175,12 +206,50 @@ def GimbalPublisher(view_idx=6, time_interval=15, send_interval=0.1):
         pub.publish(twist)
         time.sleep(send_interval)
 
+def CreateProcess(cmd, t_process=0, t_output=1):
+    proc = subprocess.Popen(cmd, shell=True,
+    # proc = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid, 
+                        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print("New subprocess (pid = %d) is created, terminate in %d seconds." %(proc.pid, t_process))
+    print("Command: %s" %(cmd))
+    process_pids.append(proc.pid)
+    if (t_process > 0):
+        proc_timer = Timer(t_process, KillProcess, [proc.pid])
+        proc_timer.start()
+    if (t_output > 0):
+        output_timer = Timer(t_output, Output, [proc])
+        output_timer.start()
+
+def Output(proc):
+    outs, _ = proc.communicate()
+    # print('== subprocess exited with rc =', proc.returncode)
+    print(outs.decode('utf-8'))
+
+def KillProcess(proc_pid):
+    try:
+        os.killpg(proc_pid, signal.SIGTERM)
+        os.killpg(proc_pid, signal.SIGKILL)
+        print("Subprocess %d terminated." %(proc_pid))
+    except OSError as e:
+        print("Subprocess %d is already terminated." %(proc_pid))
+    process_pids.remove(proc_pid)
+
+def Exiting():
+	# Cleanup subprocess is important!
+	print("Cleaning ... ")
+	for pid in process_pids:
+		KillProcess(proc_pid=pid)
+	try:
+		mvsdk.CameraUnInit(hCamera)
+	except:
+		pass
+
 atexit.register(Exiting)
 
 if __name__ == "__main__":
     rospy.init_node('auto_run')
     CheckFolders()
-    CreateProcess(cmd=GetSyncCmd(),
+    CreateProcess(cmd=lidar_sync_cmd,
                                     t_process=num_spots * num_views * 150, t_output=3)
     # reset gimbal to center position (maximum 20s)
     GimbalPublisher(view_idx='center', time_interval=20)
@@ -199,8 +268,8 @@ if __name__ == "__main__":
                                             t_process=10)
             time.sleep(70)
         # broadcast LiDAR messages to ROS (delay 20s)
-        CreateProcess(cmd=lidar_liomsg_cmd, t_process=60)
         CreateProcess(cmd=fisheye_auto_capture_cmd, t_process=60)
+        CreateProcess(cmd=lidar_msg_cmd, t_process=60)
         # reset gimbal to center position (maximum 20s)
         GimbalPublisher(view_idx='center', time_interval=20)
         # record rosbag (default 30s + delay 10s)

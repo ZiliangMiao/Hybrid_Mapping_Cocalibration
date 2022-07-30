@@ -1,7 +1,6 @@
 import os, sys
-import re
 
-from Subprocess import CreateProcess
+from AutoRun import CreateProcess
 
 def ReformatBags(path, filename):
     if ("spot" in filename) and (".bag" in filename):
@@ -25,8 +24,10 @@ def BagToPcd(input_file, path):
     cmd = cmd_prefix + " " + input_file + " " + topic + " " + output_path
     CreateProcess(cmd, t_process=20)
 
-def DataCleaner(dir):
-    dir = os.path.abspath("/home/isee/catkin_ws/data/ceres")
+def DataCleaner():
+    dir = os.path.abspath("/home/isee/catkin_ws/data/hesuan")
     for path, _, files in os.walk(dir):
         for filename in files:
             ReformatBags(path, filename)
+
+DataCleaner()

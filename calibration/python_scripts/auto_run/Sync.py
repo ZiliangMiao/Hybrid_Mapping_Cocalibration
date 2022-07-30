@@ -1,13 +1,15 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 
 # python3 -m pip install pyserial
 
 from threading import Timer
 from datetime import datetime
 import serial
+import rospy
 
-ttl_ser   = serial.Serial('/dev/ttyUSB0')	# 右边板子的串口号, 用到RTS或者DTR引脚, 模拟PPS
-# rs232_ser = serial.Serial(port="COM14", baudrate=9600)	# 左边板子的串口号, 用到TXD, 9600波特率, 模拟GPRMC
+ttl_ser   = serial.Serial('/dev/ttyUSB0')
+# rs232_ser = serial.Serial(port="COM14", baudrate=9600)
 encoding = "ascii"
 
 def GPRMC_Simulator():
@@ -30,6 +32,7 @@ def GPRMC_Simulator():
     # ['$GPRMC,123457.000,A,0000.000,N,00000.000,E,0.0,0.0,010120,,,A*6A']
     # ['$GPRMC,123458.000,A,0000.000,N,00000.000,E,0.0,0.0,010120,,,A*65']
     # ['$GPRMC,123459.000,A,0000.000,N,00000.000,E,0.0,0.0,010120,,,A*64']
+
     __utc = datetime.now().astimezone()
     result = __utc.strftime("%H%M%S")
     fractional = __utc.strftime("%f")[:3]
@@ -53,18 +56,18 @@ def GPRMC_Simulator():
     return "$"+ sentence + "*" +suffix
 
 def PPS_SetHigh():
-    ttl_ser.setRTS(False)	# -9V, 3.3V, PPS输出高, 如果用DTR引脚就setDTR
+    ttl_ser.setRTS(False)
 
 def PPS_SetLow():
-    ttl_ser.setRTS(True)	# 9V, 0V, PPS输出低
+    ttl_ser.setRTS(True)
 
 def PPS_Init():
-    PPS_SetLow()	# 初始低电平
+    PPS_SetLow()
 
 def GPRMC_Output():
     output = GPRMC_Simulator().encode(encoding) + b'\r\n'
     # print(output)
-    ttl_ser.write(output)	# 发出GPRMC信息, 结尾加上\r\n
+    ttl_ser.write(output)	# <GPRMC message> + '\r\n'
     # ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
     # print('gprmc_out :', ts, ts[-3:])
 
@@ -73,13 +76,14 @@ def Null_Function():
 
 def PPS_Output():
     PPS_SetHigh()
-    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]	# 精确到ms
-    Timer(1 - int(ts[-3:])/1000, Null_Function).start()	# 每次都进行补偿
-    Timer(0.02, PPS_Init).start()   # PPS高电平持续时间20ms, 示波器实测约32ms
-    Timer(0.10, GPRMC_Output).start()  # PPS上升沿后100ms, 发出GPRMC
-    Timer(2 - int(ts[-3:])/1000, PPS_Output).start()  # 每次都进行补偿
+    ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]	# ms
+    Timer(1 - int(ts[-3:])/1000, Null_Function).start()	# correction
+    Timer(0.02, PPS_Init).start()   # PPS high for 20ms
+    Timer(0.10, GPRMC_Output).start()  # send GPRMC after 100ms
+    Timer(2 - int(ts[-3:])/1000, PPS_Output).start()  # correction
 
 if __name__ == "__main__":
+    rospy.init_node('sync')
     PPS_Init()
     PPS_Output()
     

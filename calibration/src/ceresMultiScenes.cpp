@@ -427,7 +427,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     for (int idx = 0; idx < spot_vec.size(); idx++) {
         fisheye.SetSpotIdx(spot_vec[idx]);
         lidar.SetSpotIdx(spot_vec[idx]);
-        double normalize_weight = 1.0 / sqrt(spot_vec.size());
+        double normalize_weight = 1.0 / sqrt(lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
             double weight = point.intensity * normalize_weight;
             Eigen::Vector3d lid_point = {point.x, point.y, point.z};

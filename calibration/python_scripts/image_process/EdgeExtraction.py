@@ -184,11 +184,10 @@ def principal_component_filter(img, orien, block_size):
 def contour_filter(contour, len_threshold=200):
     invalid_cam = 0
     for i in range(len(contour) - invalid_cam):
-        dist = len(contour[i - invalid_cam])
+        dist = np.size(contour[i - invalid_cam])
         # dist = np.sum(np.abs(contour[i - invalid_cam][1:, 0, :] - contour[i - invalid_cam][:-1, 0, :]))
         end_dist = np.sum(np.abs(contour[i - invalid_cam][0, 0, :] - contour[i - invalid_cam][-1, 0, :]))
-        # area = cv2.contourArea(contour[i - invalid_cam])
-        if (dist < len_threshold and 8 * end_dist < dist) or (dist < len_threshold / 4):
+        if (dist < len_threshold and 8 * end_dist < dist) or (dist < len_threshold / 8):
             contour = contour[:(i - invalid_cam)] + contour[(i - invalid_cam) + 1:]
             invalid_cam += 1
         if i - invalid_cam == len(contour) - 2:
@@ -254,17 +253,17 @@ if __name__ == "__main__":
     # -------- fisheye camera --------
 
     if(mode == "fisheye"):
-        edge_cam = cv2.imread(dir_cam_original)
-        edge_cam = cv2.cvtColor(edge_cam, cv2.COLOR_BGR2GRAY)
+        edge_cam_raw = cv2.imread(dir_cam_original)
+        edge_cam_raw = cv2.cvtColor(edge_cam_raw, cv2.COLOR_BGR2GRAY)
 
-        edge_cam = cv2.GaussianBlur(edge_cam, sigmaX=1, sigmaY=1, ksize=(5, 5))
+        edge_cam = cv2.GaussianBlur(edge_cam_raw, sigmaX=1, sigmaY=1, ksize=(5, 5))
         cv2.imwrite(dir_cam_filtered, edge_cam)
 
         # remove the black region
         edge_cam = cv2.Canny(image=edge_cam, threshold1=25, threshold2=50)
         mask_cam = cv2.imread(dir_cam_mask, cv2.IMREAD_GRAYSCALE)
         edge_cam = cv2.bitwise_and(edge_cam, mask_cam)
-        cv2.imwrite(dir_cam_canny, edge_cam)
+        cv2.imwrite(dir_cam_canny, cv2.bitwise_or(edge_cam_raw, edge_cam))
 
         # contour filter
         cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
@@ -277,17 +276,17 @@ if __name__ == "__main__":
     # -------- Lidar --------
 
     else:
-        edge_lid = cv2.imread(dir_lid_original)
-        edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_BGR2GRAY)
+        edge_lid_raw = cv2.imread(dir_lid_original)
+        edge_lid_raw = cv2.cvtColor(edge_lid_raw, cv2.COLOR_BGR2GRAY)
         # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
-        edge_lid = nlmeans(edge_lid, h_u=20, h_l=10)
+        edge_lid = nlmeans(edge_lid_raw, h_u=20, h_l=10)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 
         # mask to remove the upper and lower bound noise
         edge_lid = cv2.Canny(image=edge_lid, threshold1=25, threshold2=50)
         mask_lid = cv2.imread(dir_lid_mask, cv2.IMREAD_GRAYSCALE)
         edge_lid = cv2.bitwise_and(edge_lid, mask_lid)
-        cv2.imwrite(dir_lid_canny, edge_lid)
+        cv2.imwrite(dir_lid_canny, cv2.bitwise_or(edge_lid_raw, edge_lid))
         
         # contour filter
         cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)

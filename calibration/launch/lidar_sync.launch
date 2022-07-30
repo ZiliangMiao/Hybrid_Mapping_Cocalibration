@@ -1,0 +1,4 @@
+<launch>
+  <node name="sync" pkg="calibration" type="Sync.py" output="screen">
+  </node>
+</launch>

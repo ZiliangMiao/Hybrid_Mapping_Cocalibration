@@ -161,9 +161,9 @@ void LidarProcess::ICP() {
     Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/180.0f*M_PI, 0.0f, 
-                0.15f * sin((float)v_degree/180.0f * M_PI) - 0.15f * sin(0.0f/180.0f * M_PI),
+                -0.15f * sin((float)v_degree/180.0f * M_PI) + 0.15f * sin(0.0f/180.0f * M_PI),
                 0.0f,
-                0.15f * cos((float)v_degree/180.0f * M_PI) - 0.15f * cos(0.0f/180.0f * M_PI);
+                -0.15f * cos((float)v_degree/180.0f * M_PI) + 0.15f * cos(0.0f/180.0f * M_PI);
     Eigen::Matrix4f init_trans_mat = ExtrinsicMat(ext_init);
     pcl::transformPointCloud(*view_cloud_vg_src, *view_cloud_init_trans_src, init_trans_mat);
     Eigen::Matrix4f icp_trans_mat = init_trans_mat;
@@ -309,9 +309,9 @@ Eigen::Matrix4f LidarProcess::ICP2(int view_idx_tgt) {
     Eigen::Matrix<float, 6, 1> ext_init;
     int v_degree = this -> degree_map.at(this->view_idx);
     ext_init << 0.0f, (float)v_degree/180.0f*M_PI, 0.0f, 
-                0.15f * sin((float)v_degree/180.0f * M_PI) - 0.15f * sin(0.0f/180.0f * M_PI),
+                -0.15f * sin((float)v_degree/180.0f * M_PI) + 0.15f * sin(0.0f/180.0f * M_PI),
                 0.0f,
-                0.15f * cos((float)v_degree/180.0f * M_PI) - 0.15f * cos(0.0f/180.0f * M_PI);
+                -0.15f * cos((float)v_degree/180.0f * M_PI) + 0.15f * cos(0.0f/180.0f * M_PI);
     Eigen::Matrix4f initial_trans_mat = ExtrinsicMat(ext_init);
     pcl::transformPointCloud(*cloud_source_filtered, *cloud_source_initial_trans, initial_trans_mat);
 
@@ -383,8 +383,8 @@ std::tuple<CloudPtr, CloudPtr> LidarProcess::LidarToSphere() {
     CloudPtr polar_cloud(new CloudT);
     Eigen::Matrix<float, 6, 1> extrinsic_vec; 
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz, 
-                    (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
-                    // 0.0, 0.0, 0.0;
+                    // (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
+                    0.0, 0.0, 0.0;
     Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 

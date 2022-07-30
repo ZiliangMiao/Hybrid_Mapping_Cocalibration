@@ -320,7 +320,6 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     cout << "number of invalid indices:" << invalid_index << endl;
 
     string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
-    string fusion_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_img_path;
     string result_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].fusion_result_folder_path;
 
     /********* Image Generation *********/
@@ -328,7 +327,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
         cv::imwrite(flat_img_path, flat_image); /** flat image generation **/
     }
     else {
-        fusion_img_path = result_path + "/view_" + to_string(this->view_idx) +
+         string fusion_img_path = result_path + "/spot_" + to_string(this->spot_idx) +
                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
