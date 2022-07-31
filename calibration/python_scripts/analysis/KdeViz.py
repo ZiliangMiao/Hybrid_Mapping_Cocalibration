@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-data_path = data_path = root_path + "/data/lh3_global/spot2/0/outputs"
+data_path = data_path = root_path + "/data/lh3_global/spot1/0/outputs"
 
 ########################################################################################################################
 # load files #

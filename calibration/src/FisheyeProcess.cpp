@@ -327,7 +327,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
         cv::imwrite(flat_img_path, flat_image); /** flat image generation **/
     }
     else {
-         string fusion_img_path = result_path + "/spot_" + to_string(this->spot_idx) +
+        string fusion_img_path = result_path + "/spot_" + to_string(this->spot_idx) +
                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
@@ -354,30 +354,30 @@ void FisheyeProcess::EdgeToPixel() {
     this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pixel_cloud) {
+void FisheyeProcess::PixLookUp(RGBCloudPtr &fisheye_pixel_cloud) {
     cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
     EdgePixels edge_pixels = this -> edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this -> tags_map_vec[this->spot_idx][this->view_idx];
     for (auto &edge_pixel : edge_pixels) {
-        int u = edge_pixel[0];
-        int v = edge_pixel[1];
+        int u = round(edge_pixel[0]);
+        int v = round(edge_pixel[1]);
         double x = 0;
         double y = 0;
 
-        int size = tags_map[u][v].pts_indices.size();
-        if (size == 0) {
+        int indice_size = tags_map[u][v].pts_indices.size();
+        if (indice_size == 0) {
             invalid_edge_pix++;
         }
         else {
-            for (int j = 0; j < size; ++j) {
-                pcl::PointXYZRGB pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
-                x = x + pt.x;
-                y = y + pt.y;
+            for (int j = 0; j < indice_size; ++j) {
+                pcl::PointXYZRGB &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
+                x += pt.x;
+                y += pt.y;
             }
-            x = x / tags_map[u][v].pts_indices.size();
-            y = y / tags_map[u][v].pts_indices.size();
+            x = x / indice_size;
+            y = y / indice_size;
             vector<double> pixel{x, y};
             edge_fisheye_pixels.push_back(pixel);
         }
@@ -431,25 +431,25 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     mlpack::kernel::EpanechnikovKernel kernel(bandwidth);
     mlpack::metric::EuclideanDistance metric;
     mlpack::kde::KDE<EpanechnikovKernel, mlpack::metric::EuclideanDistance, arma::mat> kde(default_rel_error, 0.00, kernel);
-    kde.Train(reference);
+    kde.Train(std::move(reference));
     kde.Evaluate(query, kde_estimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
-    string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
-    ofstream outfile;
-    outfile.open(kde_txt_path, ios::out);
-    if (!outfile.is_open()) {
-        cout << "Open file failure" << endl;
-    }
-    for (int i = 0; i < n_rows; ++i) {
-        for (int j = 0; j < n_cols; j++) {
-            int index = i * n_cols + j;
-            outfile << query.at(0, index) << "\t"
-                    << query.at(1, index) << "\t"
-                    << kde_estimations(index) << endl;
-        }
-    }
-    outfile.close();
+    // string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
+    // ofstream outfile;
+    // outfile.open(kde_txt_path, ios::out);
+    // if (!outfile.is_open()) {
+    //     cout << "Open file failure" << endl;
+    // }
+    // for (int i = 0; i < n_rows; ++i) {
+    //     for (int j = 0; j < n_cols; j++) {
+    //         int index = i * n_cols + j;
+    //         outfile << query.at(0, index) << "\t"
+    //                 << query.at(1, index) << "\t"
+    //                 << kde_estimations(index) << endl;
+    //     }
+    // }
+    // outfile.close();
     cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
          <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
     return img;

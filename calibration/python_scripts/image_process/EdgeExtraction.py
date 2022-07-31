@@ -181,7 +181,7 @@ def principal_component_filter(img, orien, block_size):
     direct = np.arctan2(g_row, g_col)
     principal_direct = np.argmax(hog_blocks, axis=2)
 
-def contour_filter(contour, len_threshold=200):
+def contour_filter(contour, len_threshold=100):
     invalid_cam = 0
     for i in range(len(contour) - invalid_cam):
         dist = np.size(contour[i - invalid_cam])
@@ -194,7 +194,7 @@ def contour_filter(contour, len_threshold=200):
             break
     return contour
 
-def patch_image(image, mode=cv2.MORPH_OPEN, size=3, iter=1):
+def patch_image(image, mode=cv2.MORPH_CLOSE, size=3, iter=1):
     kernel = np.ones((size, size), dtype=np.uint8)
     image = cv2.morphologyEx(image, mode, kernel, iter)
     return image
@@ -267,10 +267,10 @@ if __name__ == "__main__":
 
         # contour filter
         cnt_cam, hierarchy_cam = cv2.findContours(edge_cam, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        cnt_cam = contour_filter(contour=cnt_cam, len_threshold=150)
-        edge_cam = np.zeros(edge_cam.shape, np.uint8)
-        cv2.drawContours(edge_cam, cnt_cam, -1, 255, 1)
-        cv2.imwrite(dir_cam_output, edge_cam)
+        cnt_cam_out = contour_filter(contour=cnt_cam, len_threshold=150)
+        edge_cam_out = np.zeros(np.shape(edge_cam), np.uint8)
+        cv2.drawContours(edge_cam_out, cnt_cam_out, -1, 255, 1)
+        cv2.imwrite(dir_cam_output, edge_cam_out)
         print("done.")
 
     # -------- Lidar --------
@@ -293,6 +293,14 @@ if __name__ == "__main__":
         cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
         edge_lid = np.zeros(edge_lid.shape, np.uint8)
         cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+
+        # edge_lid = patch_image(edge_lid)
+
+        # cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        # cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
+        # edge_lid = np.zeros(edge_lid.shape, np.uint8)
+        # cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
+
         cv2.imwrite(dir_lid_output, edge_lid)
         print("done.")
 

@@ -25,8 +25,9 @@ public:
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud,
- * otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
+
+    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud, 
+                                        otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
@@ -128,14 +129,16 @@ public:
     LidarProcess();
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
-    void CreateDensePcd();
-    void ICP();
-    Eigen::Matrix4f ICP2(int view_idx_tgt);
-    void SpotRegistration();
-    void GlobalColoredRecon();
-    void CreateFullviewPcd();
     void BagToPcd(string bag_file);
+    /** registration **/
+    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz);
+    double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
+    void ViewRegistration();
+    void SpotRegistration();
 
+    void CreateDensePcd();
+    void CreateFullviewPcd();
+    void GlobalColoredRecon();
     /***** Edge Related *****/
     void EdgeToPixel();
     void ReadEdge();
@@ -143,8 +146,8 @@ public:
     void EdgeExtraction();
 
     /***** LiDAR Pre-Processing *****/
-    std::tuple<CloudPtr, CloudPtr> LidarToSphere();
-    void SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& cart_cloud);
+    void LidarToSphere(CloudPtr& cart_cloud, CloudPtr& polar_cloud);
+    void SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& polar_cloud);
     void PixLookUp(const CloudPtr& cart_cloud);
 
     /***** Get and Set Methods *****/

@@ -18,6 +18,7 @@
 #include <pcl/filters/conditional_removal.h>
 /** heading **/
 #include "ceresMultiScenes.cpp"
+
 using namespace std;
 using namespace cv;
 typedef pcl::PointXYZI PointT;
@@ -43,20 +44,20 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 const bool kFisheyeFlatProcess = false;
 const bool kFisheyeEdgeProcess = false;
 
-const bool kCreateDensePcd = false;
-const bool kInitialIcp = true;
-const bool kCreateFullViewPcd = false ;
+const bool kCreateDensePcd = true;
+const bool kViewRegistration = false;
+const bool kCreateFullViewPcd = true;
 
-const bool kLidarFlatProcess = false;
-const bool kLidarEdgeProcess = false; 
+const bool kLidarFlatProcess = true;
+const bool kLidarEdgeProcess = false;
 
 const bool kCeresOptimization = false;
 const bool kParamsAnalysis = false;
 const bool kReconstruction = true;
-const bool kSpotRegistration = false;
+const bool kSpotRegistration = true;
 const bool kGlobalColoredRecon = true;
 
-const int kOneSpot = -1; /** -1 means run all the spots, other means run a specific spot **/
+const int kOneSpot = 1; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
     /** ros initialization **/
@@ -82,8 +83,8 @@ int main(int argc, char** argv) {
     }; /** initial parameters **/
     std::vector<double> dev = {
             1e-1, 1e-1, 1e-1,
-            3e-2, 3e-2, 5e-2,
-            3e+0, 3e+0,
+            5e-2, 5e-2, 5e-2,
+            5e+0, 5e+0,
             160e+0, 80e+0, 40e+0, 20+0, 10e+0,
             1e-2, 1e-2, 1e-2
             };
@@ -93,6 +94,7 @@ int main(int argc, char** argv) {
     fisheye.SetIntrinsic(params_init);
     LidarProcess lidar;
     lidar.SetExtrinsic(params_init);
+
     /** data folder check **/
     for (int i = 0; i < lidar.num_spots; ++i) {
         string spot_path = lidar.kDatasetPath + "/spot" + to_string(i);
@@ -117,53 +119,6 @@ int main(int argc, char** argv) {
             CheckFolder(fullview_path);
         }
     }
-
-    std::string tgt_pcd_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].dense_pcd_path;
-    std::string src_pcd_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].dense_pcd_path;
-    CloudPtr view_cloud_tgt(new CloudT);
-    CloudPtr view_cloud_src(new CloudT);
-    if (pcl::io::loadPCDFile<PointT>(tgt_pcd_path, *view_cloud_tgt) == -1) {
-        PCL_ERROR("Could Not Load Target File!\n");
-    }
-    cout << "Loaded " << view_cloud_tgt->size() << " points from target file" << endl;
-    if (pcl::io::loadPCDFile<PointT>(src_pcd_path,*view_cloud_src) == -1) {
-        PCL_ERROR("Could Not Load Source File!\n");
-    }
-    cout << "Loaded " << view_cloud_src->size() << " points from source file" << endl;
-
-    pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.05)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.05)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, 0.05)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, -0.05)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.05)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.05)));
-    pcl::ConditionalRemoval<PointT> cond_filter;
-    cond_filter.setCondition(range_cond);
-    cond_filter.setInputCloud(view_cloud_src);
-    cond_filter.filter(*view_cloud_src);
-    cond_filter.setInputCloud(view_cloud_tgt);
-    cond_filter.filter(*view_cloud_tgt);
-    cout << "Size of target view cloud after condition filter: " << view_cloud_tgt->size() << endl;
-    cout << "Size of source view cloud after condition filter: " << view_cloud_src->size() << endl;
-
-    /** radius outlier filter **/
-    CloudPtr view_cloud_tgt_filtered(new CloudT);
-    pcl::RadiusOutlierRemoval<PointT> outlier_filter;
-    outlier_filter.setRadiusSearch(1);
-    outlier_filter.setMinNeighborsInRadius(100);
-    outlier_filter.setInputCloud(view_cloud_tgt);
-    outlier_filter.filter(*view_cloud_tgt_filtered);
-    outlier_filter.setInputCloud(view_cloud_src);
-    outlier_filter.filter(*view_cloud_src);
-
-    cout << "Size of target view cloud after outlier filter: " << view_cloud_tgt_filtered->size() << endl;
-    cout << "Size of source view cloud after outlier filter: " << view_cloud_src->size() << endl;
-
-
-
-
-
 
     cout << "----------------- Fisheye Processing ---------------------" << endl;
 
@@ -199,7 +154,7 @@ int main(int argc, char** argv) {
         }
     }
     
-    if (kInitialIcp) {
+    if (kViewRegistration) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
@@ -208,7 +163,7 @@ int main(int argc, char** argv) {
                         continue;
                     }
                     lidar.SetViewIdx(j);
-                    lidar.ICP();
+                    lidar.ViewRegistration();
                 }
             }
         }
@@ -285,17 +240,6 @@ int main(int argc, char** argv) {
                 lidar.CreateFullviewPcd(); /** generate full view pcds **/
             }
         }
-        /** pcl viewer visualization **/
-        // string fullview_cloud_path;
-        // fullview_cloud_path = lidar.poses_files_path_vec[0][0].fullview_sparse_cloud_path;
-        // CloudPtr full_view(new CloudT);
-        // pcl::io::loadPCDFile(fullview_cloud_path, *full_view);
-        // pcl::visualization::CloudViewer viewer("Viewer");
-        // viewer.showCloud(full_view);
-        // while (!viewer.wasStopped()) {
-
-        // }
-        // cv::waitKey();
     }
     
     if (kLidarFlatProcess) {
@@ -303,14 +247,13 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                std::tuple<CloudPtr, CloudPtr> lidResult = lidar.LidarToSphere();
-                CloudPtr lidCartesianCloud;
-                CloudPtr lidPolarCloud;
-                std::tie(lidPolarCloud, lidCartesianCloud) = lidResult;
-                lidar.SphereToPlane(lidPolarCloud, lidCartesianCloud);
+                CloudPtr cart_cloud(new CloudT);
+                CloudPtr polar_cloud(new CloudT);
+                lidar.LidarToSphere(cart_cloud, polar_cloud);
+                lidar.SphereToPlane(polar_cloud, cart_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
-                lidar.PixLookUp(lidCartesianCloud);
+                lidar.PixLookUp(cart_cloud);
             }
         }
     }
@@ -318,18 +261,10 @@ int main(int argc, char** argv) {
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
         std::vector<double> lb(dev.size()), ub(dev.size());
-        std::vector<double> bw = {32, 24, 16, 8, 4, 2};
+        std::vector<double> bw = {32, 16, 8, 4, 2};
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
             lb[i] = params_init[i] - dev[i];
-            // if (i == dev.size() - 1 || i == dev.size() - 3){
-            //     ub[i] = params_init[i];
-            //     lb[i] = params_init[i] - dev[i];
-            // }
-            // if (i == dev.size() - 2){
-            //     ub[i] = params_init[i] + dev[i];
-            //     lb[i] = params_init[i];
-            // }
         }
         Eigen::Matrix<double, 3, 17> params_mat;
         params_mat.row(0) = Eigen::Map<Eigen::Matrix<double, 1, 17>>(params_init.data());
@@ -337,16 +272,10 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{2, 4};
+        std::vector<int> spot_vec{1};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
-        // params_init = {
-        //     0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
-        //     0.250552, 0.0014601, 0.0765269, /** tx ty tz **/
-        //     1020.0, 1198.0,
-        //     1888.37, -536.802, -19.6401, -17.8592, 6.34771,
-        //     0.996981, -0.00880807, 0.00981348
-        // };
+
         for (int &spot_idx : spot_vec)
         {
             fisheye.SetSpotIdx(spot_idx);
@@ -381,7 +310,7 @@ int main(int argc, char** argv) {
     }
 
     if (kParamsAnalysis) {
-        std::vector<int> spot_vec{2};
+        std::vector<int> spot_vec{0, 1, 2, 3, 4};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         params_init = {
@@ -411,12 +340,13 @@ int main(int argc, char** argv) {
         //     1888.37, -536.802, -19.6401, -17.8592, 6.34771,
         //     0.996981, -0.00880807, 0.00981348
         // };
+        // Current Best:
         params_calib = {
-             0.00153403, -3.14028, 1.56361, /** Rx Ry Rz **/
-            0.272474, 0.00557229, 0.0367206, /** tx ty tz **/
-            1020, 1198, /** u0, v0 **/
-            1942.94, -619.889, -6.66278, 4.80131, -0.779403,
-            0.999258, -0.00946326, 0.00780667 /** c, d, e **/
+            0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+            0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+            1022.53, 1198.45, /** u0, v0 **/
+            1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+            1.00176, -0.00863924, 0.00846056
         };
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {

@@ -7,6 +7,10 @@ import cv2 as cv2
 def ExposureFusion(image_output_path):
 	exposure_times = np.array([0.5, 1, 5, 10, 20, 50, 100], dtype=np.float32)
 	real_exp_time = np.loadtxt(image_output_path + "/exposure.txt", delimiter="\t")
+	try:
+		real_exp_time = np.loadtxt(image_output_path + "/exposure.txt", delimiter="\t")
+	except:
+		print("Exposure time record missing, set to default values")
 	img_list = []
 	time_list = []
 	
