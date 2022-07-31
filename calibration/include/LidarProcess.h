@@ -25,8 +25,9 @@ public:
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud,
- * otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
+
+    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud, 
+                                        otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
@@ -145,8 +146,8 @@ public:
     void EdgeExtraction();
 
     /***** LiDAR Pre-Processing *****/
-    std::tuple<CloudPtr, CloudPtr> LidarToSphere();
-    void SphereToPlane(const CloudPtr& polar_cloud, const CloudPtr& cart_cloud);
+    void LidarToSphere(CloudPtr& cart_cloud, CloudPtr& polar_cloud);
+    void SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& polar_cloud);
     void PixLookUp(const CloudPtr& cart_cloud);
 
     /***** Get and Set Methods *****/

@@ -164,51 +164,6 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     
     outfile.close();
 
-    // /***** Visualization *****/
-    // CloudPtr fullview_cloud(new CloudT);
-    // RGBCloudPtr fullview_rgb_cloud(new RGBCloudT);
-    // string fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_sparse_cloud_path;
-    // pcl::io::loadPCDFile(fullview_cloud_path, *fullview_cloud);
-    // pcl::transformPointCloud(*fullview_cloud, *fullview_cloud, T_mat);
-
-    // for (auto &point : fullview_cloud->points) {
-    //     lidar_point << point.x, point.y, point.z;
-    //     projection = IntrinsicTransform(intrinsic, lidar_point);
-    //     rgb_pt.x = projection(0);
-    //     rgb_pt.y = projection(1);
-    //     rgb_pt.z = 0;
-    //     int L_2 = 50;
-    //     int indicator = point.intensity;
-    //     if ((indicator) < L_2) {
-    //         rgb_pt.r = 0;
-    //         rgb_pt.g = int(255 * ((float)(int(indicator * 0.5) % L_2) / L_2));
-    //         rgb_pt.b = int(255 * ((float)1 - ((float)(int(indicator * 0.5) % L_2) / L_2)));
-    //     }
-    //     else {
-    //         rgb_pt.r = int(255 * (float)((int(indicator * 0.5) % L_2) - L_2) / L_2);
-    //         rgb_pt.g = int(255 * ((float)1 - (float)((int(indicator * 0.5) % L_2) - L_2) / L_2));
-    //         rgb_pt.b = 0;
-    //     }
-    //     fullview_rgb_cloud->points.push_back(rgb_pt);
-    // }
-
-    // pcl::visualization::PCLVisualizer viewer("Reconstruction");
-    // int v1(0); /** create two view point **/
-    // viewer.createViewPort(0.0, 0.0, 1.0, 1.0, v1);
-    // float bkg_grayscale = 150;  /** black **/
-
-    // int point_size = 3;
-    // viewer.addPointCloud(fullview_rgb_cloud, "fullview_rgb_cloud", v1);
-    // viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, point_size, "fullview_rgb_cloud");
-    // viewer.addCoordinateSystem();
-    // viewer.setBackgroundColor(bkg_grayscale, bkg_grayscale, bkg_grayscale, v1);
-    // viewer.setCameraPosition(-3.68332, 2.94092, 5.71266, 0.289847, 0.921947, -0.256907, 0);
-    // viewer.setSize(1280, 1024);  /** viewer size **/  
-
-    // while (!viewer.wasStopped()) {
-    //     viewer.spinOnce();
-    // }
-
     /** generate fusion image **/
     tk::spline poly_spline = InverseSpline(params);
 
@@ -238,12 +193,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
     fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_dense_cloud_path;
 
-    pcl::io::loadPCDFile(fullview_cloud_path, *fullview_xyz_cloud);
-    pcl::VoxelGrid<pcl::PointXYZI> voxelgrid;
-    voxelgrid.setInputCloud(fullview_xyz_cloud);
-    voxelgrid.setLeafSize(0.03f, 0.03f, 0.03f);
-    voxelgrid.filter(*fullview_xyz_cloud);
-    pcl::copyPointCloud(*fullview_xyz_cloud, *input_cloud);
+    pcl::io::loadPCDFile(fullview_cloud_path, *input_cloud);
 
     /** Loading optimized parameters and initial transform matrix **/
     extrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).head(6).cast<float>();

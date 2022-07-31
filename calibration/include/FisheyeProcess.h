@@ -103,7 +103,7 @@ public:
     /** Edge Related **/
     void ReadEdge();
     void EdgeToPixel();
-    void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
+    void PixLookUp(RGBCloudPtr &fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale);
     void EdgeExtraction();
 

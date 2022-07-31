@@ -354,30 +354,30 @@ void FisheyeProcess::EdgeToPixel() {
     this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void FisheyeProcess::PixLookUp(pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheye_pixel_cloud) {
+void FisheyeProcess::PixLookUp(RGBCloudPtr &fisheye_pixel_cloud) {
     cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
     EdgePixels edge_pixels = this -> edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this -> tags_map_vec[this->spot_idx][this->view_idx];
     for (auto &edge_pixel : edge_pixels) {
-        int u = edge_pixel[0];
-        int v = edge_pixel[1];
+        int u = round(edge_pixel[0]);
+        int v = round(edge_pixel[1]);
         double x = 0;
         double y = 0;
 
-        int size = tags_map[u][v].pts_indices.size();
-        if (size == 0) {
+        int indice_size = tags_map[u][v].pts_indices.size();
+        if (indice_size == 0) {
             invalid_edge_pix++;
         }
         else {
-            for (int j = 0; j < size; ++j) {
-                pcl::PointXYZRGB pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
-                x = x + pt.x;
-                y = y + pt.y;
+            for (int j = 0; j < indice_size; ++j) {
+                pcl::PointXYZRGB &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
+                x += pt.x;
+                y += pt.y;
             }
-            x = x / tags_map[u][v].pts_indices.size();
-            y = y / tags_map[u][v].pts_indices.size();
+            x = x / indice_size;
+            y = y / indice_size;
             vector<double> pixel{x, y};
             edge_fisheye_pixels.push_back(pixel);
         }
