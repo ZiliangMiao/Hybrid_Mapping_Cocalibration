@@ -1,5 +1,5 @@
 switch:
-    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
+    kFisheyeFlatProcess: true  # true: use the fisheye flat image process method 
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     kCreateDensePcd: false

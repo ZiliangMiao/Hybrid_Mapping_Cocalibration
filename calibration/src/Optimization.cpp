@@ -125,10 +125,10 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     /** generate fusion image **/
     tk::spline poly_spline = InverseSpline(params);
 
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeResult =
+    std::tuple<RGBCloudPtr, RGBCloudPtr> fisheyeResult =
         fisheye.FisheyeImageToSphere(raw_image, poly_spline);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPolarCloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPixelCloud;
+    RGBCloudPtr fisheyeOrgPolarCloud;
+    RGBCloudPtr fisheyeOrgPixelCloud;
     std::tie(fisheyeOrgPolarCloud, fisheyeOrgPixelCloud) = fisheyeResult;
     fisheye.SphereToPlane(fisheyeOrgPolarCloud, bandwidth);
 }
@@ -478,7 +478,6 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                 param_idx[0] = 0;
                 param_idx[1] = m;
             }
-        
 
             for (int k = 0; k < spot_vec.size(); k++) {
                 lidar.SetSpotIdx(spot_vec[k]);
