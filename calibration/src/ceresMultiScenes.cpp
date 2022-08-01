@@ -167,10 +167,10 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     /** generate fusion image **/
     tk::spline poly_spline = InverseSpline(params);
 
-    std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeResult =
+    std::tuple<RGBCloudPtr, RGBCloudPtr> fisheyeResult =
         fisheye.FisheyeImageToSphere(raw_image, poly_spline);
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPolarCloud;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPixelCloud;
+    RGBCloudPtr fisheyeOrgPolarCloud;
+    RGBCloudPtr fisheyeOrgPixelCloud;
     std::tie(fisheyeOrgPolarCloud, fisheyeOrgPixelCloud) = fisheyeResult;
     fisheye.SphereToPlane(fisheyeOrgPolarCloud, bandwidth);
 }
@@ -523,7 +523,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
         for (int k = 0; k < spot_vec.size(); k++) {
             lidar.SetSpotIdx(spot_vec[k]);
-            double normalize_weight = (double)1 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+            double normalize_weight = (double)30000 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
 
             for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
                 offset[0] = i * step_size[0];
@@ -545,7 +545,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                         Eigen::Matrix<double, 3, 1> lidar_point = (T_mat * lidar_point4).head(3);
                         Eigen::Matrix<double, 2, 1> projection = IntrinsicTransform(intrinsic, lidar_point);
                         kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
-                        step_res += weight * val;
+                        step_res += 3 * pow(weight * val, 2);
                     }
                     cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
                     

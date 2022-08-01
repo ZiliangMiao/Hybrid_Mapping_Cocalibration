@@ -16,7 +16,7 @@ class FisheyeProcess{
 public:
     /** essential params **/
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/ug";
+    const string kDatasetPath = this->kPkgPath + "/data/lh3_global";
     int spot_idx = 0;
     int view_idx = 0;
     int num_spots = 5;

@@ -201,9 +201,6 @@ double LidarProcess::GetIcpFitnessScore(CloudPtr &cloud_tgt, CloudPtr &cloud_src
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
     kdtree.setInputCloud(cloud_tgt);
 
-    pcl::StopWatch timer;
-    timer.reset(); /** timing **/
-
     #pragma omp parallel for num_threads(16)
     for (auto &point : cloud_src->points) {
         // Find its nearest neighbor in the target
@@ -216,7 +213,6 @@ double LidarProcess::GetIcpFitnessScore(CloudPtr &cloud_tgt, CloudPtr &cloud_src
         }
     }
 
-    cout << "ICP fitness score evaluation time: " << timer.getTimeSeconds() << endl;
     if (nr > 0)
         return (fitness_score / nr);
     return (std::numeric_limits<double>::max());
