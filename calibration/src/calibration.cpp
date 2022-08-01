@@ -41,23 +41,23 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = false;
 
-const bool kCreateDensePcd = true;
+const bool kCreateDensePcd = false;
 const bool kViewRegistration = false;
-const bool kCreateFullViewPcd = true;
+const bool kCreateFullViewPcd = false;
 
 const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 
-const bool kCeresOptimization = false;
+const bool kCeresOptimization = true;
 const bool kParamsAnalysis = false;
-const bool kReconstruction = true;
-const bool kSpotRegistration = true;
-const bool kGlobalColoredRecon = true;
+const bool kReconstruction = false;
+const bool kSpotRegistration = false;
+const bool kGlobalColoredRecon = false;
 
-const int kOneSpot = 1; /** -1 means run all the spots, other means run a specific spot **/
+const int kOneSpot = 4; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
     /** ros initialization **/
@@ -250,7 +250,7 @@ int main(int argc, char** argv) {
                 CloudPtr cart_cloud(new CloudT);
                 CloudPtr polar_cloud(new CloudT);
                 lidar.LidarToSphere(cart_cloud, polar_cloud);
-                lidar.SphereToPlane(polar_cloud, cart_cloud);
+                lidar.SphereToPlane(cart_cloud, polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
                 lidar.PixLookUp(cart_cloud);
@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{1};
+        std::vector<int> spot_vec{4};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
 
@@ -282,7 +282,10 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(spot_idx);
             lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye.ReadEdge();
-            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
+            string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
+                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
+            SaveResults(record_path, params_init, 0, 0, 0);
         }
         
 
@@ -341,13 +344,13 @@ int main(int argc, char** argv) {
         //     0.996981, -0.00880807, 0.00981348
         // };
         // Current Best:
-        params_calib = {
-            0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
-            0.277415, -0.0112217, 0.046939, /** tx ty tz **/
-            1022.53, 1198.45, /** u0, v0 **/
-            1880.36, -536.721, -12.9298, -18.0154, 5.6414,
-            1.00176, -0.00863924, 0.00846056
-        };
+        // params_calib = {
+        //     0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+        //     0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+        //     1022.53, 1198.45, /** u0, v0 **/
+        //     1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+        //     1.00176, -0.00863924, 0.00846056
+        // };
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);

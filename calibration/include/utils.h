@@ -95,25 +95,39 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Ei
     return undistorted_projection;
 }
 
-void CeresOutput(std::vector<double> params, std::vector<double> params_init) {
-    std::vector<const char*> name = {
+void SaveResults(std::string &record_path, std::vector<double> params, double bandwidth, double initial_cost, double final_cost) {
+    const std::vector<const char*> name = {
             "rx", "ry", "rz",
             "tx", "ty", "tz",
             "u0", "v0",
             "a0", "a1", "a2", "a3", "a4",
             "c", "d", "e"};
-    std::cout << "Initial ";
-    for (unsigned int i = 0; i < name.size(); i++)
-    {
-        std::cout << name[i] << ": " << params_init[i] << " ";
+
+    ofstream write;
+    const bool title = (bandwidth <= 0);
+
+    std::string output = title ? ("Parameters:\n") : ("Bandwidth = " + to_string(int(bandwidth)) + ":\n");
+    ios_base::openmode mode = title ? (ios::out) : (ios::app);
+    
+    output += "Result:\n[";
+    for (int i = 0; i < name.size(); i++) {
+        if (i > 0) {
+            output += ", ";
+        }
+        output += title ? (name[i]) : (to_string(params[i]));
     }
-    std::cout << "\n";
-    std::cout << "Final   ";
-    for (unsigned int i = 0; i < name.size(); i++)
-    {
-        std::cout << name[i] << ": " << params[i] << " ";
+    output += "]\n";
+    if (!title) {
+        output += "Initial cost: " + to_string(initial_cost) + "\n" +
+                "Final cost: " + to_string(final_cost) + "\n";
     }
-    std::cout << "\n";
+    
+    
+    write.open(record_path, mode);
+    write << output << endl;
+    write.close();
+    
+    cout << output << endl;
 }
 
 static bool cmp(const vector<double>& a, const vector<double>& b) {
