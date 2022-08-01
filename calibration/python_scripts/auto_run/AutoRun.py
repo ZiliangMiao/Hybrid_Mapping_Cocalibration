@@ -247,10 +247,10 @@ def Exiting():
 atexit.register(Exiting)
 
 if __name__ == "__main__":
+    enable_real_time_fast_lio = True
     rospy.init_node('auto_run')
     CheckFolders()
-    CreateProcess(cmd=lidar_sync_cmd,
-                                    t_process=num_spots * num_views * 150, t_output=3)
+    CreateProcess(cmd=lidar_sync_cmd, t_process=num_spots * num_views * 150)
     # reset gimbal to center position (maximum 20s)
     GimbalPublisher(view_idx='center', time_interval=20)
     for spot_idx in range(num_spots):
@@ -274,5 +274,5 @@ if __name__ == "__main__":
         GimbalPublisher(view_idx='center', time_interval=20)
         # record rosbag (default 30s + delay 10s)
         CreateProcess(cmd=GetLidarLioBagCmd(source_spot_idx=spot_idx, target_spot_idx=spot_idx+1, duration=30),
-                                        t_process=30)
+                                            t_process=30)
         time.sleep(40)

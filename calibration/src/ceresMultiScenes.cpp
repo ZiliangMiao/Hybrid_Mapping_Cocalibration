@@ -193,7 +193,8 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
     fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_dense_cloud_path;
 
-    pcl::io::loadPCDFile(fullview_cloud_path, *input_cloud);
+    pcl::io::loadPCDFile(fullview_cloud_path, *fullview_xyz_cloud);
+    pcl::copyPointCloud(*fullview_xyz_cloud, *input_cloud);
 
     /** Loading optimized parameters and initial transform matrix **/
     extrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).head(6).cast<float>();

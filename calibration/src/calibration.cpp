@@ -41,23 +41,23 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //    }
 
 /** switch **/
-const bool kFisheyeFlatProcess = false;
+const bool kFisheyeFlatProcess = true;
 const bool kFisheyeEdgeProcess = false;
 
 const bool kCreateDensePcd = true;
-const bool kViewRegistration = false;
+const bool kViewRegistration = true;
 const bool kCreateFullViewPcd = true;
 
 const bool kLidarFlatProcess = true;
 const bool kLidarEdgeProcess = false;
 
-const bool kCeresOptimization = false;
+const bool kCeresOptimization = true;
 const bool kParamsAnalysis = false;
 const bool kReconstruction = true;
 const bool kSpotRegistration = true;
 const bool kGlobalColoredRecon = true;
 
-const int kOneSpot = 1; /** -1 means run all the spots, other means run a specific spot **/
+const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
 int main(int argc, char** argv) {
     /** ros initialization **/
@@ -72,7 +72,6 @@ int main(int argc, char** argv) {
             1, 0, 0 /** c, d, e **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
 
-    std::vector<double> params_calib;
     /** the two sensors are parallel on y axis **/
     std::vector<double> params_init = {
             M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
@@ -81,6 +80,8 @@ int main(int argc, char** argv) {
             616.7214056132 * M_PI, -616.7214056132, 0.0, 0.0, 0.0,
             1, 0, 0 /** c, d, e **/
     }; /** initial parameters **/
+    std::vector<double> params_calib(params_init);
+
     std::vector<double> dev = {
             1e-1, 1e-1, 1e-1,
             5e-2, 5e-2, 5e-2,
@@ -237,7 +238,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
-                lidar.CreateFullviewPcd(); /** generate full view pcds **/
+                lidar.CreateFullviewPcd(); /** generate fullview pcds **/
             }
         }
     }
@@ -250,7 +251,7 @@ int main(int argc, char** argv) {
                 CloudPtr cart_cloud(new CloudT);
                 CloudPtr polar_cloud(new CloudT);
                 lidar.LidarToSphere(cart_cloud, polar_cloud);
-                lidar.SphereToPlane(polar_cloud, cart_cloud);
+                lidar.SphereToPlane(cart_cloud, polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
                 lidar.PixLookUp(cart_cloud);
@@ -272,7 +273,7 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{1};
+        std::vector<int> spot_vec{0};
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
 
@@ -341,13 +342,13 @@ int main(int argc, char** argv) {
         //     0.996981, -0.00880807, 0.00981348
         // };
         // Current Best:
-        params_calib = {
-            0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
-            0.277415, -0.0112217, 0.046939, /** tx ty tz **/
-            1022.53, 1198.45, /** u0, v0 **/
-            1880.36, -536.721, -12.9298, -18.0154, 5.6414,
-            1.00176, -0.00863924, 0.00846056
-        };
+        // params_calib = {
+        //     0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+        //     0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+        //     1022.53, 1198.45, /** u0, v0 **/
+        //     1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+        //     1.00176, -0.00863924, 0.00846056
+        // };
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);

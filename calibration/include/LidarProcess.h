@@ -13,7 +13,7 @@ class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/lh3_global";
+    const string kDatasetPath = this->kPkgPath + "/data/ug";
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
@@ -132,7 +132,7 @@ public:
     void BagToPcd(string bag_file);
     /** registration **/
     tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz);
-    double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
+    double GetIcpFitnessScore(CloudPtr &cloud_tgt, CloudPtr &cloud_src, double max_range);
     void ViewRegistration();
     void SpotRegistration();
 

@@ -104,7 +104,7 @@ LidarProcess::LidarProcess() {
 /** point cloud registration **/
 tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz) {
     /** params **/
-    float uniform_radius = 0.03;
+    float uniform_radius = 0.05;
     int max_iters = 500;
     float max_corr_dis = 0.2;
     float trans_epsilon = 1e-10;
@@ -131,6 +131,7 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     PCL_INFO("Size of Uniform Sampling Filtered Source Cloud: %d\n", cloud_us_src->size());
 
     cout << "Initial Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt, cloud_init_trans_us, max_fitness_range) << endl;
+    cout << "Initial Matrix: " << init_trans_mat << endl;
 
     /** ICP **/
     pcl::StopWatch timer;
@@ -188,8 +189,6 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_icped_color_h(cloud_icp_trans_us, 180, 20, 20);
         viewer.addPointCloud(cloud_icp_trans_us, cloud_icped_color_h, "cloud_icped_v2", v2);
 
-        pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_icped_color_t(cloud_icp_trans, 20, 20, 180);
-        viewer.addPointCloud(cloud_icp_trans, cloud_icped_color_t, "cloud_icped_original", v2);
         viewer.addCoordinateSystem();
 
         while (!viewer.wasStopped()) {
@@ -201,19 +200,22 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     return result;
 }
 
-double LidarProcess::GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range) {
+double LidarProcess::GetIcpFitnessScore(CloudPtr &cloud_tgt, CloudPtr &cloud_src, double max_range) {
     double fitness_score = 0.0;
     std::vector<int> nn_indices(1);
     std::vector<float> nn_dists(1);
     // For each point in the source dataset
     int nr = 0;
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
-    kdtree.setInputCloud (cloud_tgt);
+    kdtree.setInputCloud(cloud_tgt);
+
+    pcl::StopWatch timer;
+    timer.reset(); /** timing **/
 
     #pragma omp parallel for num_threads(16)
-    for (auto & point : cloud_src->points) {
+    for (auto &point : cloud_src->points) {
         // Find its nearest neighbor in the target
-        kdtree.nearestKSearch (point, 1, nn_indices, nn_dists);
+        kdtree.nearestKSearch(point, 1, nn_indices, nn_dists);
         // Deal with occlusions (incomplete targets)
         if (nn_dists[0] <= max_range) {
             // Add to the fitness score
@@ -221,6 +223,8 @@ double LidarProcess::GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, 
             nr++;
         }
     }
+
+    cout << "ICP fitness score evaluation time: " << timer.getTimeSeconds() << endl;
     if (nr > 0)
         return (fitness_score / nr);
     return (std::numeric_limits<double>::max());
@@ -251,7 +255,7 @@ void LidarProcess::ViewRegistration() {
     Eigen::Matrix4f init_trans_mat = ExtrinsicMat(trans_params);
 
     /** ICP **/
-    std::tuple<Eigen::Matrix4f, CloudPtr> icp_result = ICP(view_cloud_tgt, view_cloud_src, init_trans_mat, true);
+    std::tuple<Eigen::Matrix4f, CloudPtr> icp_result = ICP(view_cloud_tgt, view_cloud_src, init_trans_mat, false);
     Eigen::Matrix4f icp_trans_mat;
     CloudPtr view_cloud_icp_trans;
     std::tie(icp_trans_mat, view_cloud_icp_trans) = icp_result;
@@ -570,7 +574,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
             /** use kdtree to search (radius search) the spherical point cloud **/
             int search_num = kdtree.radiusSearch(search_center, kSearchRadius, search_pt_idx_vec, search_pt_squared_dis_vec); // number of the radius nearest neighbors
             if (search_num == 0) {
-                flat_img.at<float>(u, v) = 160; /** intensity **/
+                flat_img.at<float>(u, v) = 0; /** intensity **/
                 invalid_search_num = invalid_search_num + 1;
                 /** Default tag with params = 0 **/
                 tags_map[u][v].pts_indices.push_back(0);
@@ -587,7 +591,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     /** hidden points filter **/
                     if (this->kHiddenPtsFilter) {
                         PointT &cart_pt = (*cart_cloud)[search_pt_idx_vec[i]];
-                        const float sensitivity = 0.02;
+                        const float sensitivity = 0.02f;
                         dist = cart_pt.getVector3fMap().norm();
                         dist_mean = (i * dist_mean + dist) / (i + 1); 
                         if (i > 0) {
@@ -642,7 +646,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     tags_map[u][v].mean = 99;
                     tags_map[u][v].sigma = 99;
                     tags_map[u][v].weight = 0;
-                    flat_img.at<float>(u, v) = 160;
+                    flat_img.at<float>(u, v) = 0;
                 }
                 else if (tags_map[u][v].num_pts >= 2) {
                     /** Gaussian Distribution Parameters Estimation **/
