@@ -1,4 +1,5 @@
 <launch>
+  <rosparam command="load" file="$(find calibration)/config/calibration.yaml" />
   <param name="tx" type="double" value="0.5" />
   <param name="ty" type="double" value="5.3" />
   <param name="tz" type="double" value="0.0" />

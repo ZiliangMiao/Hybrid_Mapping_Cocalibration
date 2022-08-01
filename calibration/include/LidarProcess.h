@@ -1,9 +1,39 @@
+/** basic **/
+#include <iostream>
 #include <string>
 #include <vector>
-#include <pcl/common/common.h>
+#include <tuple>
+#include <numeric>
+#include "python3.6/Python.h"
 /** ros **/
 #include <ros/ros.h>
 #include <ros/package.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <sensor_msgs/PointCloud2.h>
+/** pcl **/
+#include <pcl/point_cloud.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/uniform_sampling.h>
+#include <pcl/common/common.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/transforms.h>
+#include <Eigen/Core>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
+#include <pcl/registration/ndt.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/common/time.h>
+/** opencv **/
+#include <opencv2/opencv.hpp>
+
 using namespace std;
 typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
