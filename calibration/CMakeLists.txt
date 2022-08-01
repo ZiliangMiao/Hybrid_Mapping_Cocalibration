@@ -70,8 +70,9 @@ add_library(LidarProcess
         include/LidarProcess.h
         src/LidarProcess.cpp
 )
-add_library(ceresMultiScenes
-  src/ceresMultiScenes.cpp
+add_library(Optimization
+        include/Optimization.h
+        src/Optimization.cpp
 )
 
 ## Add executable cpp files
@@ -88,7 +89,7 @@ add_dependencies(calibration ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORT
 add_dependencies(FisheyeProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(LidarProcess ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rvizPub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(ceresMultiScenes ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(Optimization ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 add_dependencies(icp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(fullview_icp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -108,14 +109,14 @@ target_link_libraries(pairwise ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(calibration
   FisheyeProcess
   LidarProcess
-  ceresMultiScenes
+  Optimization
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}
   ${MLPACK_LIBRARIES}
 )
 
-target_link_libraries(ceresMultiScenes
+target_link_libraries(Optimization
   FisheyeProcess
   LidarProcess
   ${catkin_LIBRARIES}
