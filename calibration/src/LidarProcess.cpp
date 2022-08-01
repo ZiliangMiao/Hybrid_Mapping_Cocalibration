@@ -1,37 +1,3 @@
-/** basic **/
-#include <iostream>
-#include <string>
-#include <vector>
-#include <tuple>
-#include <numeric>
-#include "python3.6/Python.h"
-/** ros **/
-#include <ros/ros.h>
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/PointCloud2.h>
-/** pcl **/
-#include <pcl/point_cloud.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/uniform_sampling.h>
-#include <pcl/common/common.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/point_types.h>
-#include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/common/transforms.h>
-#include <Eigen/Core>
-#include <pcl/registration/icp.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/filters/filter.h>
-#include <pcl/filters/conditional_removal.h>
-#include <pcl/common/time.h>
-
-/** opencv **/
-#include <opencv2/opencv.hpp>
-
 /** headings **/
 #include "LidarProcess.h"
 #include "utils.h"
@@ -104,34 +70,48 @@ LidarProcess::LidarProcess() {
 /** point cloud registration **/
 tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz) {
     /** params **/
-    float uniform_radius = 0.05;
-    int max_iters = 500;
+    float uniform_radius = 0.02;
+    int max_iters = 100;
     float max_corr_dis = 0.2;
     float trans_epsilon = 1e-10;
-    float eucidean_epsilon = 0.005;
+    float eucidean_epsilon = 0.01;
     float max_fitness_range = 2.0;
 
-    /** get the init trans cloud & init fitness score **/
-    CloudPtr cloud_init_trans (new CloudT);
-    pcl::transformPointCloud(*cloud_src, *cloud_init_trans, init_trans_mat);
+    /** box down sampling **/
+    pcl::ConditionAnd<PointT>::Ptr range_cond(new pcl::ConditionAnd<PointT>());
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, -1.0)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, 15.0)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, -8.0)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, 8.0)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, -8.0)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, 8.0)));
+    pcl::ConditionalRemoval<PointT> cond_filter;
+    cond_filter.setKeepOrganized(true);
+    cond_filter.setCondition(range_cond);
+    cond_filter.setInputCloud(cloud_src);
+    cond_filter.filter(*cloud_src);
+    cond_filter.setInputCloud(cloud_tgt);
+    cond_filter.filter(*cloud_tgt);
 
     /** uniform sampling **/
     CloudPtr cloud_us_tgt (new CloudT);
     CloudPtr cloud_us_src (new CloudT);
-    CloudPtr cloud_init_trans_us (new CloudT);
     pcl::UniformSampling<PointT> us;
     us.setRadiusSearch(uniform_radius);
     us.setInputCloud(cloud_tgt);
     us.filter(*cloud_us_tgt);
     us.setInputCloud(cloud_src);
     us.filter(*cloud_us_src);
-    us.setInputCloud (cloud_init_trans);
-    us.filter (*cloud_init_trans_us);
     PCL_INFO("Size of Uniform Sampling Filtered Target Cloud: %d\n", cloud_us_tgt->size());
     PCL_INFO("Size of Uniform Sampling Filtered Source Cloud: %d\n", cloud_us_src->size());
 
+    /** get the init trans cloud & init fitness score **/
+    CloudPtr cloud_init_trans_us (new CloudT);
+    pcl::transformPointCloud(*cloud_us_src, *cloud_init_trans_us, init_trans_mat);
+    cout << "\nInit Trans Mat: \n " << init_trans_mat << endl;
+    pcl::StopWatch timer_fs;
     cout << "Initial Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt, cloud_init_trans_us, max_fitness_range) << endl;
-    cout << "Initial Matrix: " << init_trans_mat << endl;
+    cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
 
     /** ICP **/
     pcl::StopWatch timer;
@@ -139,7 +119,10 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     CloudPtr cloud_icp_trans (new CloudT);
     CloudPtr cloud_icp_trans_us (new CloudT);
     Eigen::Matrix4f icp_trans_mat;
-    pcl::IterativeClosestPoint <PointT, PointT> icp;
+//    pcl::IterativeClosestPoint <PointT, PointT> icp; /** original icp **/
+
+    pcl::GeneralizedIterativeClosestPoint<PointT, PointT> icp; /**  generalized icp **/
+
     icp.setInputTarget(cloud_us_tgt);
     icp.setInputSource(cloud_us_src);
     icp.setMaximumIterations(max_iters);
@@ -147,6 +130,15 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     icp.setTransformationEpsilon(trans_epsilon);
     icp.setEuclideanFitnessEpsilon(eucidean_epsilon);
     icp.align(*cloud_icp_trans_us, init_trans_mat);
+
+//    pcl::NormalDistributionsTransform<PointT, PointT> icp; /** ndt **/
+//    icp.setInputTarget(cloud_us_tgt);
+//    icp.setInputSource(cloud_us_src);
+//    icp.setMaximumIterations(max_iters);
+//    icp.setTransformationEpsilon (trans_epsilon);
+//    icp.setStepSize (1.0);
+//    icp.setResolution (0.5);
+//    icp.align(*cloud_icp_trans_us, init_trans_mat);
 
     if (icp.hasConverged()) {
         cout << "ICP run time: " << timer.getTimeSeconds() << " s" << endl;
@@ -251,7 +243,7 @@ void LidarProcess::ViewRegistration() {
     float radius = 0.15f;
     Eigen::Matrix<float, 6, 1> trans_params;
     trans_params << 0.0f, v_angle, 0.0f,
-                    radius * (sin(v_angle) - 0.0f), 0.0f, radius * (cos(v_angle) - 1.0f);
+                    radius * (sin(v_angle) - 0.0f), 0.0f, radius * (cos(v_angle) - 1.0f); /** LiDAR x-axis: car front; Gimbal positive angle: car front **/
     Eigen::Matrix4f init_trans_mat = ExtrinsicMat(trans_params);
 
     /** ICP **/
@@ -359,6 +351,7 @@ void LidarProcess::BagToPcd(string bag_file) {
 }
 
 void LidarProcess::CreateDensePcd() {
+    cout << "----- LiDAR: CreateDensePcd -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     int num_pcds;
     string folder_path, pcd_path;
 
@@ -393,27 +386,30 @@ void LidarProcess::CreateDensePcd() {
         }
     }
 
-    // /** invalid point filter **/
+    cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
+
+    /** invalid point filter **/
     // std::vector<int> null_indices;
     // pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
 
     /** condition filter **/
     CloudPtr view_cloud(new CloudT);
     pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.4)));
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.3))); /** GT: greater than **/
+    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.4))); /** LT: less than **/
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, 0.3)));
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, -0.3)));
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.3)));
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
     pcl::ConditionalRemoval<PointT> cond_filter;
     cond_filter.setCondition(range_cond);
+    cond_filter.setKeepOrganized(true);
     cond_filter.setInputCloud(view_raw_cloud);
     cond_filter.filter(*view_cloud);
 
     /** check the pass through filtered point cloud size **/
     int cond_filtered_cloud_size = view_cloud->points.size();
-    cout << "size of cloud after a condition filter:" << cond_filtered_cloud_size << endl;
+    cout << "size of cloud after a condition filter: " << cond_filtered_cloud_size << endl;
 
     pcl::io::savePCDFileBinary(pcd_path, *view_cloud);
     cout << "Create Dense Point Cloud File Successfully!" << endl;

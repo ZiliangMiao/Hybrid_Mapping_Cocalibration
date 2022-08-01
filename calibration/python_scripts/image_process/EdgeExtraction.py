@@ -278,7 +278,7 @@ if __name__ == "__main__":
     else:
         edge_lid_raw = cv2.imread(dir_lid_original)
         edge_lid_raw = cv2.cvtColor(edge_lid_raw, cv2.COLOR_BGR2GRAY)
-        # edge_lid = cv2.fastNlMeansDenoising(edge_lid, h=10, searchWindowSize=21, templateWindowSize=7)
+        # edge_lid_raw = cv2.GaussianBlur(edge_lid_raw, sigmaX=0.5, sigmaY=0.5, ksize=(5, 5))
         edge_lid = nlmeans(edge_lid_raw, h_u=20, h_l=10)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 

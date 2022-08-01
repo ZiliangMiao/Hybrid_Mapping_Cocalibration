@@ -40,29 +40,44 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //        }
 //    }
 
-/** switch **/
-const bool kFisheyeFlatProcess = true;
-const bool kFisheyeEdgeProcess = false;
-
-const bool kCreateDensePcd = true;
-const bool kViewRegistration = true;
-const bool kCreateFullViewPcd = true;
-
-const bool kLidarFlatProcess = true;
-const bool kLidarEdgeProcess = false;
-
-const bool kCeresOptimization = true;
-const bool kParamsAnalysis = false;
-const bool kReconstruction = true;
-const bool kSpotRegistration = true;
-const bool kGlobalColoredRecon = true;
-
-const int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
-
 int main(int argc, char** argv) {
     /** ros initialization **/
     ros::init(argc, argv, "calibration");
     ros::NodeHandle nh;
+
+    /** parameters server **/
+    /** switch **/
+    bool kFisheyeFlatProcess = false;
+    bool kFisheyeEdgeProcess = false;
+
+    bool kCreateDensePcd = true;
+    bool kViewRegistration = true;
+    bool kCreateFullViewPcd = false;
+
+    bool kLidarFlatProcess = true;
+    bool kLidarEdgeProcess = false;
+
+    bool kCeresOptimization = false;
+    bool kParamsAnalysis = false;
+    bool kReconstruction = false;
+    bool kSpotRegistration = false;
+    bool kGlobalColoredRecon = false;
+
+    int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
+
+    nh.param<bool>("switch/kFisheyeFlatProcess", kFisheyeFlatProcess, false);
+    nh.param<bool>("switch/kFisheyeEdgeProcess", kFisheyeEdgeProcess, false);
+    nh.param<bool>("switch/kCreateDensePcd", kCreateDensePcd, false);
+    nh.param<bool>("switch/kViewRegistration", kViewRegistration, false);
+    nh.param<bool>("switch/kCreateFullViewPcd", kCreateFullViewPcd, false);
+    nh.param<bool>("switch/kLidarFlatProcess", kLidarFlatProcess, false);
+    nh.param<bool>("switch/kLidarEdgeProcess", kLidarEdgeProcess, false);
+    nh.param<bool>("switch/kCeresOptimization", kCeresOptimization, false);
+    nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);
+    nh.param<bool>("switch/kReconstruction", kReconstruction, false);
+    nh.param<bool>("switch/kSpotRegistration", kSpotRegistration, false);
+    nh.param<bool>("switch/kGlobalColoredRecon", kGlobalColoredRecon, false);
+    nh.param<int>("spot/kOneSpot", kOneSpot, -1);
 
     vector<double> init_proj_params = {
             M_PI, 0.00, -M_PI/2, /** Rx, Ry, Rz **/
@@ -168,7 +183,8 @@ int main(int argc, char** argv) {
                 }
             }
         }
-        //            vector <Eigen::Matrix4f> local_trans_vec(lidar.num_views);
+
+//            vector <Eigen::Matrix4f> local_trans_vec(lidar.num_views);
 //            vector <Eigen::Matrix4f> global_trans_vec(lidar.num_views);
 //            Eigen::Matrix4f local_trans;
 //            Eigen::Matrix4f global_trans;
@@ -224,7 +240,7 @@ int main(int argc, char** argv) {
 //                    for (int k = j; k >= lidar.fullview_idx; --k) {
 //                        global_trans = local_trans_vec[j] * global_trans;
 //                    }
-//                    global_trans_vec[j] = global_trans;
+//                    global_trans_vec[j] = gcart_cloudlobal_trans;
 //                    std::ofstream mat_out;
 //                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
 //                    mat_out << global_trans << endl;
@@ -232,6 +248,7 @@ int main(int argc, char** argv) {
 //                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
 //                }
 //            }
+
     }
         
     if (kCreateFullViewPcd) {
@@ -283,7 +300,10 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(spot_idx);
             lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye.ReadEdge();
-            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
+            string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
+                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
+            SaveResults(record_path, params_init, 0, 0, 0);
         }
         
 

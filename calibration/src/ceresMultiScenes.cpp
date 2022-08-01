@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <thread>
 // eigen
 #include <Eigen/Core>
 // ros
@@ -168,7 +167,7 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     tk::spline poly_spline = InverseSpline(params);
 
     std::tuple<pcl::PointCloud<pcl::PointXYZRGB>::Ptr, pcl::PointCloud<pcl::PointXYZRGB>::Ptr> fisheyeResult =
-        fisheye.FisheyeImageToSphere(raw_image, true, poly_spline);
+        fisheye.FisheyeImageToSphere(raw_image, poly_spline);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPolarCloud;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr fisheyeOrgPixelCloud;
     std::tie(fisheyeOrgPolarCloud, fisheyeOrgPixelCloud) = fisheyeResult;
@@ -304,7 +303,9 @@ std::vector<double> GradientCalib(FisheyeProcess &fisheye,
 
     /********* 2D Image Visualization *********/
     std::vector<double> result_vec(params, params + sizeof(params) / sizeof(double));
-    CeresOutput(result_vec, params_init);
+    string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
+                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
+    SaveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
     Visualization2D(fisheye, lidar, result_vec, bandwidth);
     return result_vec;
 }
@@ -424,7 +425,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
-    options.num_threads = thread::hardware_concurrency();
+    options.num_threads = lidar.num_threads;
     options.max_num_iterations = 50;
     options.function_tolerance = 1e-6;
     options.use_nonmonotonic_steps = true;
@@ -438,7 +439,10 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     cout << Eigen::Quaterniond(params[3], params[0], params[1], params[2]).matrix() << endl;
     result.head(3) = Eigen::Quaterniond(params[3], params[0], params[1], params[2]).matrix().eulerAngles(2,1,0).reverse();
     std::vector<double> result_vec(&result[0], result.data()+result.cols()*result.rows());
-    CeresOutput(result_vec, init_params_vec);
+    string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
+                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
+    SaveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
+
     extrinsic = result.head(6);
     for (int &spot_idx : spot_vec) {
         fisheye.SetSpotIdx(spot_idx);
