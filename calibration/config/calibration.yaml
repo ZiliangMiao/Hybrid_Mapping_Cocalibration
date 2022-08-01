@@ -1,5 +1,5 @@
 switch:
-    kFisheyeFlatProcess: true  # true: use the fisheye flat image process method 
+    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     kCreateDensePcd: false
@@ -14,8 +14,10 @@ switch:
     kReconstruction: false
     kSpotRegistration: false
     kGlobalColoredRecon: false
+    
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+
 essential:
     kDatasetName: "lh3_global"
     kNumSpots: 5

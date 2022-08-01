@@ -43,7 +43,7 @@ class LidarProcess{
 public:
     string topic_name = "/livox/lidar";
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/lh3_global";
+    const string kDatasetPath = this->kPkgPath + "/data/ug";
     /** essential params **/
     int spot_idx = 0;
     int view_idx = 0;
