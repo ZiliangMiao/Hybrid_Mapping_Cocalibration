@@ -114,8 +114,6 @@ void FisheyeProcess::ReadEdge() {
 cv::Mat FisheyeProcess::ReadFisheyeImage(string fisheye_hdr_img_path) {
     cout << "----- Fisheye: ReadFisheyeImage -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     cv::Mat fisheye_hdr_image = cv::imread(fisheye_hdr_img_path, cv::IMREAD_UNCHANGED);
-//    cv::Mat fisheye_hdr_filped_image;
-//    cv::flip(fisheye_hdr_image, fisheye_hdr_filped_image, 0);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows != 0 && fisheye_hdr_image.cols != 0),
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
     ROS_ASSERT_MSG((fisheye_hdr_image.rows == this->kFisheyeRows || fisheye_hdr_image.cols == this->kFisheyeCols),
@@ -132,11 +130,11 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere() {
     std::vector<double> intrinsic_ = 
         {intrinsic.u0, intrinsic.v0, intrinsic.a0, intrinsic.a1, intrinsic.a2, intrinsic.a3, intrinsic.a4, intrinsic.c, intrinsic.d, intrinsic.e};
     tk::spline spline = InverseSpline(intrinsic_);
-    result = FisheyeImageToSphere(image, true, spline);
+    result = FisheyeImageToSphere(image, spline);
     return result;
 }
 
-std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline) {
+std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Mat &image, tk::spline spline) {
     cout << "----- Fisheye: FisheyeImageToSphere -----"  << " Spot Index: " << this->spot_idx << endl;
     int r, g, b;
     float x, y, z;
@@ -164,26 +162,9 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             y = e * u + 1 * v - v0;
             radius = sqrt(pow(x, 2) + pow(y, 2));
             if (radius != 0) {
-                if (!enable_spline){
-                    a0 = this->intrinsic.a0;
-                    a1 = this->intrinsic.a1;
-                    a2 = this->intrinsic.a2;
-                    a3 = this->intrinsic.a3;
-                    a4 = this->intrinsic.a4;
-                    z = a0 + a2 * pow(radius, 2) + a3 * pow(radius, 3) + a4 * pow(radius, 4);
-                    /** spherical coordinates **/
-                    phi = atan2(y, x); // note that atan2 is defined as Y/X
-                    theta = acos(z / sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2)));
-
-                    /** spherical coordinates **/
-                    // phi = atan2(y, x); // note that atan2 is defined as Y/X
-                    // theta = -a0/a1 + radius/a1;
-                }
-                else{
-                    /** spherical coordinates **/
-                    phi = atan2(y, x); // note that atan2 is defined as Y/X
-                    theta = spline(radius);
-                }
+                /** spherical coordinates **/
+                phi = atan2(y, x); // note that atan2 is defined as Y/X
+                theta = spline(radius);
 
                 /** point cloud with origin polar coordinates **/
                 polar_pt.x = theta;
