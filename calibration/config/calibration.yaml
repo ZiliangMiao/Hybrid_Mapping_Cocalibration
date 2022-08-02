@@ -4,16 +4,27 @@ switch:
 
     kCreateDensePcd: false
     kViewRegistration: true
-    kCreateFullViewPcd: false
+    kCreateFullViewPcd: true
 
-    kLidarFlatProcess: false
+    kLidarFlatProcess: true
     kLidarEdgeProcess: false
 
-    kCeresOptimization: false
+    kCeresOptimization: true
     kParamsAnalysis: false
     kReconstruction: false
-    kSpotRegistration: true
+    kSpotRegistration: false
     kGlobalColoredRecon: false
+    
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+
+essential:
+    kDatasetName: "lh3_global"
+    kNumSpots: 5
+    kNumViews: 5
+    kFisheyeRows: 2048
+    kFisheyeCols: 2448
+    kLiDARTopic: "/livox/lidar"
+    kResolution: 1000
+    kAngleStep: 25
 
