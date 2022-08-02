@@ -21,6 +21,9 @@ void getMessage(sensor_msgs::PointCloud2 &msg,
         msg_cloud->points.push_back(cloud.points[i]);
     }
     pcl::toROSMsg(*msg_cloud, msg);
+    msg.header.frame_id = "livox_frame"; //this has been done in order to be able to visualize our PointCloud2 message on the RViz visualizer
+    msg.header.stamp = ros::Time::now();
+    msg.header.seq = partition;
 }
 
 int main (int argc, char **argv) {
@@ -37,12 +40,12 @@ int main (int argc, char **argv) {
     pcl::PointCloud<pcl::PointXYZI> orgCloud;
     // pcl::PointCloud<pcl::PointXYZI> fltCloud;
     pcl::io::loadPCDFile(data_path, orgCloud);
+    
     sensor_msgs::PointCloud2 orgMsg;
     // sensor_msgs::PointCloud2 fltMsg;
     // pcl::toROSMsg(orgCloud, orgMsg);
     // pcl::toROSMsg(fltCloud, fltMsg);
 
-    orgMsg.header.frame_id = "livox_frame"; //this has been done in order to be able to visualize our PointCloud2 message on the RViz visualizer
     // fltMsg.header.frame_id = "flt";
 
     ros::Rate loop_rate(1);
