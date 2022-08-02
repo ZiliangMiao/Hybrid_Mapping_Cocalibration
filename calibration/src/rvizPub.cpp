@@ -48,15 +48,17 @@ int main (int argc, char **argv) {
 
     // fltMsg.header.frame_id = "flt";
 
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(10);
     size_t msg_size = 2e4;
     size_t limit = int(orgCloud.points.size() / msg_size) + 1;
     size_t cnt = 0;
     while (ros::ok()) {
-        getMessage(orgMsg, orgCloud, msg_size, cnt);
-        orgPub.publish(orgMsg);
         // fltPub.publish(fltMsg);
-        if (cnt < limit) {cnt++;}
+        if (cnt < limit) {
+            getMessage(orgMsg, orgCloud, msg_size, cnt);
+            orgPub.publish(orgMsg);
+            cnt++;
+        }
         ros::spinOnce();
         loop_rate.sleep();
     }
