@@ -291,7 +291,9 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{0};
+        std::vector<int> spot_vec;
+        if (kOneSpot != -1) {spot_vec.push_back(kOneSpot);}
+        else {spot_vec = {0, 1, 2, 3, 4};}
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
 
@@ -332,7 +334,9 @@ int main(int argc, char** argv) {
     }
 
     if (kParamsAnalysis) {
-        std::vector<int> spot_vec{0};
+        std::vector<int> spot_vec;
+        if (kOneSpot != -1) {spot_vec.push_back(kOneSpot);}
+        else {spot_vec = {0, 1, 2, 3, 4};}
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         params_init = {

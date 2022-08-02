@@ -3,14 +3,14 @@ switch:
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     kCreateDensePcd: false
-    kViewRegistration: false
-    kCreateFullViewPcd: false
+    kViewRegistration: true
+    kCreateFullViewPcd: true
 
-    kLidarFlatProcess: false
+    kLidarFlatProcess: true
     kLidarEdgeProcess: false
 
-    kCeresOptimization: false
-    kParamsAnalysis: true
+    kCeresOptimization: true
+    kParamsAnalysis: false
     kReconstruction: false
     kSpotRegistration: false
     kGlobalColoredRecon: false
