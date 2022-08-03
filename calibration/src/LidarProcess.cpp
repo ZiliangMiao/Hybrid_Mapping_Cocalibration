@@ -254,8 +254,6 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_icped_color_h(cloud_icp_trans_us, 180, 20, 20);
         viewer.addPointCloud(cloud_icp_trans_us, cloud_icped_color_h, "cloud_icped_v2", v2);
 
-        pcl::visualization::PointCloudColorHandlerCustom <PointT> cloud_icped_color_t(cloud_icp_trans_us, 20, 20, 180);
-        viewer.addPointCloud(cloud_icp_trans_us, cloud_icped_color_t, "cloud_icped_original", v2);
         viewer.addCoordinateSystem();
 
         while (!viewer.wasStopped()) {
@@ -274,12 +272,12 @@ double LidarProcess::GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, 
     // For each point in the source dataset
     int nr = 0;
     pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
-    kdtree.setInputCloud (cloud_tgt);
+    kdtree.setInputCloud(cloud_tgt);
 
     #pragma omp parallel for num_threads(16)
-    for (auto & point : cloud_src->points) {
+    for (auto &point : cloud_src->points) {
         // Find its nearest neighbor in the target
-        kdtree.nearestKSearch (point, 1, nn_indices, nn_dists);
+        kdtree.nearestKSearch(point, 1, nn_indices, nn_dists);
         // Deal with occlusions (incomplete targets)
         if (nn_dists[0] <= max_range) {
             // Add to the fitness score
@@ -287,6 +285,7 @@ double LidarProcess::GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, 
             nr++;
         }
     }
+
     if (nr > 0)
         return (fitness_score / nr);
     return (std::numeric_limits<double>::max());
@@ -340,6 +339,7 @@ void LidarProcess::SpotRegistration() {
     int tgt_idx = this->spot_idx - 1;
 //    ros::param::get("tgt_idx", tgt_idx);
 //    ros::param::get("src_idx", src_idx);
+    PCL_INFO("ICP Target Index: %d\n", tgt_idx);
     PCL_INFO("ICP Source Index: %d\n", src_idx);
 
     /** load points **/
@@ -640,7 +640,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
             /** use kdtree to search (radius search) the spherical point cloud **/
             int search_num = kdtree.radiusSearch(search_center, kSearchRadius, search_pt_idx_vec, search_pt_squared_dis_vec); // number of the radius nearest neighbors
             if (search_num == 0) {
-                flat_img.at<float>(u, v) = 160; /** intensity **/
+                flat_img.at<float>(u, v) = 0; /** intensity **/
                 invalid_search_num = invalid_search_num + 1;
                 /** Default tag with params = 0 **/
                 tags_map[u][v].pts_indices.push_back(0);
@@ -657,7 +657,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     /** hidden points filter **/
                     if (this->kHiddenPtsFilter) {
                         PointT &cart_pt = (*cart_cloud)[search_pt_idx_vec[i]];
-                        const float sensitivity = 0.02;
+                        const float sensitivity = 0.02f;
                         dist = cart_pt.getVector3fMap().norm();
                         dist_mean = (i * dist_mean + dist) / (i + 1); 
                         if (i > 0) {
@@ -712,7 +712,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     tags_map[u][v].mean = 99;
                     tags_map[u][v].sigma = 99;
                     tags_map[u][v].weight = 0;
-                    flat_img.at<float>(u, v) = 160;
+                    flat_img.at<float>(u, v) = 0;
                 }
                 else if (tags_map[u][v].num_pts >= 2) {
                     /** Gaussian Distribution Parameters Estimation **/

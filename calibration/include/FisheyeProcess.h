@@ -16,7 +16,7 @@ class FisheyeProcess{
 public:
     /** essential params **/
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/lh3_global";
+    const string kDatasetPath = this->kPkgPath + "/data/ug";
     int spot_idx = 0;
     int view_idx = 0;
     int num_spots = 5;
@@ -96,7 +96,7 @@ public:
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
     std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
-    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, bool enable_spline, tk::spline spline);
+    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, tk::spline spline);
     void SphereToPlane(RGBCloudPtr &sphere_polar_cloud);
     void SphereToPlane(RGBCloudPtr &sphere_polar_cloud, double bandwidth);
 

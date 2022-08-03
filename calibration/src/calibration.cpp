@@ -17,7 +17,8 @@
 #include <pcl/filters/filter.h>
 #include <pcl/filters/conditional_removal.h>
 /** heading **/
-#include "ceresMultiScenes.cpp"
+#include "Optimization.h"
+#include "utils.h"
 
 using namespace std;
 using namespace cv;
@@ -89,7 +90,6 @@ int main(int argc, char** argv) {
             1, 0, 0 /** c, d, e **/
     }; /** fisheye intrinsics here are calibrated by chessboard **/
 
-    std::vector<double> params_calib;
     /** the two sensors are parallel on y axis **/
     std::vector<double> params_init = {
             M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
@@ -98,6 +98,8 @@ int main(int argc, char** argv) {
             616.7214056132 * M_PI, -616.7214056132, 0.0, 0.0, 0.0,
             1, 0, 0 /** c, d, e **/
     }; /** initial parameters **/
+    std::vector<double> params_calib(params_init);
+
     std::vector<double> dev = {
             1e-1, 1e-1, 1e-1,
             5e-2, 5e-2, 5e-2,
@@ -254,7 +256,7 @@ int main(int argc, char** argv) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
-                lidar.CreateFullviewPcd(); /** generate full view pcds **/
+                lidar.CreateFullviewPcd(); /** generate fullview pcds **/
             }
         }
     }
@@ -289,7 +291,9 @@ int main(int argc, char** argv) {
         params_mat.row(2) = params_mat.row(0) + Eigen::Map<Eigen::Matrix<double, 1, 17>>(dev.data());
 
         /********* Initial Visualization *********/
-        std::vector<int> spot_vec{1};
+        std::vector<int> spot_vec;
+        if (kOneSpot != -1) {spot_vec.push_back(kOneSpot);}
+        else {spot_vec = {0, 1, 2, 3, 4};}
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
 
@@ -299,7 +303,10 @@ int main(int argc, char** argv) {
             lidar.SetSpotIdx(spot_idx);
             lidar.ReadEdge(); /** this is the only time when ReadEdge method appears **/
             fisheye.ReadEdge();
-            Visualization2D(fisheye, lidar, params_init, 88); /** 88 - invalid bandwidth to initialize the visualization **/
+            Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
+            string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
+                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
+            SaveResults(record_path, params_init, 0, 0, 0);
         }
         
 
@@ -327,15 +334,17 @@ int main(int argc, char** argv) {
     }
 
     if (kParamsAnalysis) {
-        std::vector<int> spot_vec{0, 1, 2, 3, 4};
+        std::vector<int> spot_vec;
+        if (kOneSpot != -1) {spot_vec.push_back(kOneSpot);}
+        else {spot_vec = {0, 1, 2, 3, 4};}
         fisheye.SetViewIdx(fisheye.fullview_idx);
         lidar.SetViewIdx(lidar.fullview_idx);
         params_init = {
-            0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
-            0.250552, 0.0014601, 0.0765269, /** tx ty tz **/
-            1020.0, 1198.0,
-            1888.37, -536.802, -19.6401, -17.8592, 6.34771,
-            0.996981, -0.00880807, 0.00981348
+            0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+            0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+            1022.53, 1198.45, /** u0, v0 **/
+            1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+            1.00176, -0.00863924, 0.00846056
         };
         for (int &spot_idx : spot_vec)
         {
@@ -358,6 +367,7 @@ int main(int argc, char** argv) {
         //     0.996981, -0.00880807, 0.00981348
         // };
         // Current Best:
+
         params_calib = {
             0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
             0.277415, -0.0112217, 0.046939, /** tx ty tz **/
@@ -365,7 +375,6 @@ int main(int argc, char** argv) {
             1880.36, -536.721, -12.9298, -18.0154, 5.6414,
             1.00176, -0.00863924, 0.00846056
         };
-
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);

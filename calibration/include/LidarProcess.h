@@ -164,6 +164,7 @@ public:
     /** registration **/
     tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
     double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
+
     void ViewRegistration();
     void SpotRegistration();
 

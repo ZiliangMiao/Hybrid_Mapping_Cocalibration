@@ -10,6 +10,7 @@ lidar_fast_lio_cmd = "roslaunch fast_lio mapping_mid360.launch"
 lidar_msg_cmd = "roslaunch livox_ros_driver livox_lidar_msg.launch"
 lidar_sync_cmd = "roslaunch calibration lidar_sync.launch"
 fisheye_auto_capture_cmd = "roslaunch mindvision mindvision.launch delay:=0"
+record_cmd = "rosbag record -a -o /home/isee/catkin_ws/fast_lio_record.bag"
 
 process_pids = []
 
@@ -56,4 +57,5 @@ if __name__ == "__main__":
     time.sleep(5)
     CreateProcess(cmd=lidar_fast_lio_cmd)
     CreateProcess(cmd=lidar_msg_cmd)
+    CreateProcess(cmd=record_cmd)
     

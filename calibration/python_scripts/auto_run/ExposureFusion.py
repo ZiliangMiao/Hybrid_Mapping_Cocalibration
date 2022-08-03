@@ -6,23 +6,22 @@ import cv2 as cv2
 
 def ExposureFusion(image_output_path):
 	exposure_times = np.array([0.5, 1, 5, 10, 20, 50, 100], dtype=np.float32)
-	real_exp_time = np.loadtxt(image_output_path + "/exposure.txt", delimiter="\t")
 	try:
 		real_exp_time = np.loadtxt(image_output_path + "/exposure.txt", delimiter="\t")
 	except:
-		print("Exposure time record missing, set to default values")
+		print("Exposure time record file not found, set to default values.")
+		real_exp_time = np.vstack((exposure_times, exposure_times)).T
 	img_list = []
 	time_list = []
 	
-	for t in exposure_times:
-		if (t - int(t) == 0):
-			num = int(t)
-		else:
-			num = t
-		img_list.append(cv2.imread(image_output_path + "/grab_" + str(num) + ".bmp"))
-		real_t = real_exp_time[:, 1].flat[np.abs(real_exp_time[:, 0] - num).argmin()]
+	for exp_time in exposure_times:
+		t = exp_time if (exp_time - int(exp_time) != 0) else int(exp_time)
+		img_list.append(cv2.imread(image_output_path + "/grab_" + str(t) + ".bmp"))
+		real_t = real_exp_time[:, 1].flat[np.abs(real_exp_time[:, 0] - t).argmin()]
 		time_list.append(real_t)
 
+	time_list = np.asarray(time_list).astype(np.float32)
+	print(time_list)
 	# Obtain Camera Response Function (CRF)
 	print("Calculating Camera Response Function (CRF) ... ")
 	calibrate = cv2.createCalibrateDebevec()

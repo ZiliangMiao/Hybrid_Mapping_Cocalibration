@@ -3,6 +3,7 @@ switch:
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     kCreateDensePcd: false
+
     kViewRegistration: false
     kCreateFullViewPcd: false
 
@@ -15,6 +16,17 @@ switch:
     kSpotRegistration: true
     kGlobalColoredRecon: false
     kGlobalRecon: false
+
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+
+essential:
+    kDatasetName: "lh3_global"
+    kNumSpots: 5
+    kNumViews: 5
+    kFisheyeRows: 2048
+    kFisheyeCols: 2448
+    kLiDARTopic: "/livox/lidar"
+    kResolution: 1000
+    kAngleStep: 25
 
