@@ -5,29 +5,26 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <ros/package.h>
-// pcl library
+// pcl librarya
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
-
 using namespace std;
-
-string getDataPath(){
-    std::string currPkgDir = ros::package::getPath("calibration");
-    std::string dataPath = currPkgDir + "/data/bs3_global/spot0/0";
-    return dataPath;
-}
-const string dataPath = getDataPath();
 
 int main (int argc, char **argv) {
     ros::init (argc, argv, "rviz_pub");
     ros::NodeHandle nh;
 
-    ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 1);
+    std::string currPkgDir = ros::package::getPath("calibration");
+    std::string data_path;
+    nh.getParam("data_path", data_path);
+    data_path = currPkgDir + data_path;
+
+    ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 100000);
     // ros::Publisher fltPub = nh.advertise<sensor_msgs::PointCloud2> ("rvizFltTopic", 1);
     pcl::PointCloud<pcl::PointXYZI> orgCloud;
     // pcl::PointCloud<pcl::PointXYZI> fltCloud;
-    pcl::io::loadPCDFile (dataPath + "/full_view/fullview_target_dense_cloud.pcd", orgCloud);
+    pcl::io::loadPCDFile (data_path, orgCloud);
     sensor_msgs::PointCloud2 orgMsg;
     // sensor_msgs::PointCloud2 fltMsg;
     pcl::toROSMsg(orgCloud, orgMsg);

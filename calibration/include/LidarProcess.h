@@ -31,6 +31,7 @@
 #include <pcl/filters/filter.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/common/time.h>
+#include <pcl/filters/extract_indices.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
 
@@ -161,7 +162,7 @@ public:
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void BagToPcd(string bag_file);
     /** registration **/
-    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, const bool kIcpViz);
+    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
     double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
     void ViewRegistration();
     void SpotRegistration();
@@ -169,6 +170,7 @@ public:
     void CreateDensePcd();
     void CreateFullviewPcd();
     void GlobalColoredRecon();
+    void GlobalRecon();
     /***** Edge Related *****/
     void EdgeToPixel();
     void ReadEdge();

@@ -40,10 +40,6 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 //        }
 //    }
 
-
-
-
-
 int main(int argc, char** argv) {
     /** ros initialization **/
     ros::init(argc, argv, "calibration");
@@ -54,11 +50,11 @@ int main(int argc, char** argv) {
     bool kFisheyeFlatProcess = false;
     bool kFisheyeEdgeProcess = false;
 
-    bool kCreateDensePcd = true;
-    bool kViewRegistration = true;
+    bool kCreateDensePcd = false;
+    bool kViewRegistration = false;
     bool kCreateFullViewPcd = false;
 
-    bool kLidarFlatProcess = true;
+    bool kLidarFlatProcess = false;
     bool kLidarEdgeProcess = false;
 
     bool kCeresOptimization = false;
@@ -66,6 +62,7 @@ int main(int argc, char** argv) {
     bool kReconstruction = false;
     bool kSpotRegistration = false;
     bool kGlobalColoredRecon = false;
+    bool kGlobalRecon = false;
 
     int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
@@ -81,6 +78,7 @@ int main(int argc, char** argv) {
     nh.param<bool>("switch/kReconstruction", kReconstruction, false);
     nh.param<bool>("switch/kSpotRegistration", kSpotRegistration, false);
     nh.param<bool>("switch/kGlobalColoredRecon", kGlobalColoredRecon, false);
+    nh.param<bool>("switch/kGlobalRecon", kGlobalRecon, false);
     nh.param<int>("spot/kOneSpot", kOneSpot, -1);
 
     vector<double> init_proj_params = {
@@ -140,7 +138,6 @@ int main(int argc, char** argv) {
     }
 
     cout << "----------------- Fisheye Processing ---------------------" << endl;
-
     if (kFisheyeFlatProcess) {
         for (int i = 0; i < fisheye.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -160,7 +157,6 @@ int main(int argc, char** argv) {
     
     cout << "----------------- LiDAR Processing ---------------------" << endl;
     /********* Create Dense Pcd for All Scenes *********/
-
     if (kCreateDensePcd) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -369,6 +365,7 @@ int main(int argc, char** argv) {
             1880.36, -536.721, -12.9298, -18.0154, 5.6414,
             1.00176, -0.00863924, 0.00846056
         };
+
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);
@@ -382,12 +379,22 @@ int main(int argc, char** argv) {
 
     if (kSpotRegistration) {
         cout << "----------------- Spot Registration ---------------------" << endl;
-        lidar.SpotRegistration();
+        for (int i = lidar.num_spots - 1; i > 0; --i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                lidar.SpotRegistration();
+            }
+        }
     }
 
     if (kGlobalColoredRecon) {
-        cout << "----------------- Global Reconstruction ---------------------" << endl;
+        cout << "----------------- Global Colored Reconstruction ---------------------" << endl;
         lidar.GlobalColoredRecon();
+    }
+
+    if (kGlobalRecon) {
+        cout << "----------------- Global Reconstruction ---------------------" << endl;
+        lidar.GlobalRecon();
     }
 
     return 0;

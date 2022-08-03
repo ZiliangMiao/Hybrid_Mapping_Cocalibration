@@ -3,7 +3,7 @@ switch:
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     kCreateDensePcd: false
-    kViewRegistration: true
+    kViewRegistration: false
     kCreateFullViewPcd: false
 
     kLidarFlatProcess: false
@@ -14,6 +14,7 @@ switch:
     kReconstruction: false
     kSpotRegistration: true
     kGlobalColoredRecon: false
+    kGlobalRecon: false
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 

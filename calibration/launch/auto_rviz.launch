@@ -1,4 +1,5 @@
 <launch>
+  <param name="data_path" type="string" value="/data/lh3_global/spot0/fullview_recon/global_registered_cloud.pcd" />
   <node name="rviz_pub" pkg="calibration" type="rvizPub" output="screen">
   </node>
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/launch/livox.rviz">
