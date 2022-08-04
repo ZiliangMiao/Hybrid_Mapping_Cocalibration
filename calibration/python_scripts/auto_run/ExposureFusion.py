@@ -11,6 +11,7 @@ def ExposureFusion(image_output_path):
 	except:
 		print("Exposure time record file not found, set to default values.")
 		real_exp_time = np.vstack((exposure_times, exposure_times)).T
+
 	img_list = []
 	time_list = []
 	

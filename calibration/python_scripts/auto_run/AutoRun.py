@@ -167,7 +167,7 @@ def Capture(image_output_path):
 			status = mvsdk.CameraSaveImage(hCamera, image_output_path + "/grab_" + str(t) + ".bmp", pFrameBuffer, FrameHead, mvsdk.FILE_BMP, 100)
 			if status == mvsdk.CAMERA_STATUS_SUCCESS:
 				# print("Save image successfully. image_size = {}X{}".format(FrameHead.iWidth, FrameHead.iHeight) )\
-				real_exposure_time.append(mvsdk.CameraGetExposureTime(hCamera))
+				real_exposure_time.append(mvsdk.CameraGetExposureTime(hCamera) * 1e-3)
 				pass
 			else:
 				print("Save image failed. err={}".format(status) )

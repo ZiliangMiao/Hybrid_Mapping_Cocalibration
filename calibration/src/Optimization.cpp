@@ -450,7 +450,8 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
         Eigen::Matrix<double, 6, 1> extrinsic = params_mat.head(6);
         Eigen::Matrix<double, kIntrinsics, 1> intrinsic = params_mat.tail(kIntrinsics);
         std::vector<double> results;
-        std::vector<double> input_x, input_y;
+        std::vector<double> input_x;
+        std::vector<double> input_y;
         std::vector<const char*> name = {
                 "rx", "ry", "rz",
                 "tx", "ty", "tz",
@@ -479,10 +480,19 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                 param_idx[1] = m;
             }
 
-            #pragma omp parallel for num_threads(16)
             for (int k = 0; k < spot_vec.size(); k++) {
                 lidar.SetSpotIdx(spot_vec[k]);
                 double normalize_weight = (double)30000 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+
+                /** Save & terminal output **/
+                string analysis_filepath = lidar.kDatasetPath + "/log/";
+                if (steps[0] > 1) {
+                    analysis_filepath = analysis_filepath + name[param_idx[0]] + "_";
+                }
+                if (steps[1] > 1) {
+                    analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
+                }
+                outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
 
                 for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
                     offset[0] = i * step_size[0];
@@ -491,8 +501,6 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                     for (int j = -int((steps[1]-1)/2); j < int((steps[1]-1)/2)+1; j++) {
                         offset[1] = j * step_size[1];
                         extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
-                        input_x.push_back(offset[0]);
-                        input_y.push_back(offset[1]);
 
                         double step_res = 0;
                         /** Evaluate cost funstion **/
@@ -507,28 +515,14 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                             step_res += pow(weight * val, 2);
                         }
                         cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
-                        
-                        results.push_back(step_res);
+                        if (steps[0] > 1) {
+                            outfile << offset[0] + params_mat(param_idx[0]) << "\t";
+                        }
+                        if (steps[1] > 1) {
+                            outfile << offset[1] + params_mat(param_idx[1]) << "\t";
+                        }
+                        outfile << step_res << endl;
                     }
-                }
-
-                /** Save & terminal output **/
-                string analysis_filepath = lidar.kDatasetPath + "/log/";
-                if (steps[0] > 1) {
-                    analysis_filepath = analysis_filepath + name[param_idx[0]] + "_";
-                }
-                if (steps[1] > 1) {
-                    analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
-                }
-                outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
-                for (int i = 0; i < (steps[0] * steps[1]); i++) {
-                    if (steps[0] > 1) {
-                        outfile << input_x[i] + params_mat(param_idx[0]) << "\t";
-                    }
-                    if (steps[1] > 1) {
-                        outfile << input_y[i] + params_mat(param_idx[1]) << "\t";
-                    }
-                    outfile << results[i] << endl;
                 }
                 outfile.close();
             }

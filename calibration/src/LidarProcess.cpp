@@ -459,8 +459,9 @@ void LidarProcess::CreateDensePcd() {
     cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
 
     /** invalid point filter **/
-    // std::vector<int> null_indices;
-    // pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
+    (*view_raw_cloud).is_dense = false;
+    std::vector<int> null_indices;
+    pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
 
     /** condition filter **/
     CloudPtr view_cloud(new CloudT);
@@ -473,13 +474,11 @@ void LidarProcess::CreateDensePcd() {
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
     pcl::ConditionalRemoval<PointT> cond_filter;
     cond_filter.setCondition(range_cond);
-    cond_filter.setKeepOrganized(true);
     cond_filter.setInputCloud(view_raw_cloud);
     cond_filter.filter(*view_cloud);
 
     /** check the pass through filtered point cloud size **/
-    int cond_filtered_cloud_size = view_cloud->points.size();
-    cout << "size of cloud after a condition filter: " << cond_filtered_cloud_size << endl;
+    cout << "size of cloud after a condition filter:" << view_cloud->points.size() << endl;
 
     pcl::io::savePCDFileBinary(pcd_path, *view_cloud);
     cout << "Create Dense Point Cloud File Successfully!" << endl;
