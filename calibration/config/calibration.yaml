@@ -18,7 +18,7 @@ switch:
     kGlobalRecon: false
 
 spot:
-    kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 0  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kDatasetName: "lh3_global"
