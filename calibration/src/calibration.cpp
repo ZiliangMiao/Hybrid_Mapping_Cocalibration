@@ -67,12 +67,12 @@ int main(int argc, char** argv) {
 
     int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
-    nh.param<bool>("switch/kFisheyeFlatProcess", kFisheyeFlatProcess, false);
+    nh.param<bool>("switch/kFisheyeFlatProcess", kFisheyeFlatProcess, true);
     nh.param<bool>("switch/kFisheyeEdgeProcess", kFisheyeEdgeProcess, false);
     nh.param<bool>("switch/kCreateDensePcd", kCreateDensePcd, false);
     nh.param<bool>("switch/kViewRegistration", kViewRegistration, false);
     nh.param<bool>("switch/kCreateFullViewPcd", kCreateFullViewPcd, false);
-    nh.param<bool>("switch/kLidarFlatProcess", kLidarFlatProcess, false);
+    nh.param<bool>("switch/kLidarFlatProcess", kLidarFlatProcess, true);
     nh.param<bool>("switch/kLidarEdgeProcess", kLidarEdgeProcess, false);
     nh.param<bool>("switch/kCeresOptimization", kCeresOptimization, false);
     nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);

@@ -1,20 +1,20 @@
 switch:
-    kFisheyeFlatProcess: true  # true: use the fisheye flat image process method 
+    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
-    kCreateDensePcd: true
+    kCreateDensePcd: false
 
-    kViewRegistration: true
-    kCreateFullViewPcd: true
+    kViewRegistration: false
+    kCreateFullViewPcd: false
 
     kLidarFlatProcess: true
     kLidarEdgeProcess: false
 
     kCeresOptimization: false
     kParamsAnalysis: false
-    kReconstruction: true
-    kSpotRegistration: true
-    kGlobalColoredRecon: true
+    kReconstruction: false
+    kSpotRegistration: false
+    kGlobalColoredRecon: false
     kGlobalRecon: false
 
 spot:

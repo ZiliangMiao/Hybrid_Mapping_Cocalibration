@@ -70,7 +70,7 @@ LidarProcess::LidarProcess() {
 /** point cloud registration **/
 tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz) {
     /** params **/
-    float uniform_radius = 0.02;
+    float uniform_radius = 0.01;
     int max_iters = 100;
     float max_corr_dis = 0.2;
     float trans_epsilon = 1e-10;
@@ -102,14 +102,14 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, -8.0)));
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, 8.0)));
         pcl::ConditionalRemoval<PointT> cond_filter;
-        cond_filter.setKeepOrganized(true);
+        cond_filter.setKeepOrganized(false);
         cond_filter.setCondition(range_cond);
         cond_filter.setInputCloud(cloud_us_src);
         cond_filter.filter(*cloud_us_src_effe);
         cond_filter.setInputCloud(cloud_us_tgt);
         cond_filter.filter(*cloud_us_tgt_effe);
-        cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->points.size() << endl;
         cout << "Size of source cloud after effective point filter: " << cloud_us_src_effe->points.size() << endl;
+        cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->points.size() << endl;
     }
     else if (cloud_type == 1) { /** spot point cloud **/
 //        string lio_trans_path = this->poses_files_path_vec[4][0].lio_spot_trans_mat_path;
@@ -182,7 +182,7 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     /** get the init trans cloud & init fitness score **/
     CloudPtr cloud_init_trans_us (new CloudT);
     pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, init_trans_mat);
-    cout << "\nInit Trans Mat: \n " << init_trans_mat << endl;
+    cout << "\nInit Trans Mat: \n" << init_trans_mat << endl;
     pcl::StopWatch timer_fs;
     cout << "Initial Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
@@ -458,11 +458,6 @@ void LidarProcess::CreateDensePcd() {
 
     cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
 
-    /** invalid point filter **/
-    (*view_raw_cloud).is_dense = false;
-    std::vector<int> null_indices;
-    pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
-
     /** condition filter **/
     CloudPtr view_cloud(new CloudT);
     pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
@@ -473,9 +468,15 @@ void LidarProcess::CreateDensePcd() {
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.3)));
     range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
     pcl::ConditionalRemoval<PointT> cond_filter;
+    cond_filter.setKeepOrganized(false);
     cond_filter.setCondition(range_cond);
     cond_filter.setInputCloud(view_raw_cloud);
     cond_filter.filter(*view_cloud);
+
+    /** invalid point filter **/
+    (*view_raw_cloud).is_dense = false;
+    std::vector<int> null_indices;
+    pcl::removeNaNFromPointCloud(*view_cloud, *view_cloud, null_indices);
 
     /** check the pass through filtered point cloud size **/
     cout << "size of cloud after a condition filter:" << view_cloud->points.size() << endl;
@@ -584,12 +585,17 @@ void LidarProcess::LidarToSphere(CloudPtr &cart_cloud, CloudPtr &polar_cloud) {
         float theta = acos(point.z / radius);
         point.x = theta;
         point.y = phi;
-        point.z = 0;
+        point.z = radius;
         if (theta > theta_max) { theta_max = theta; }
         else if (theta < theta_min) { theta_min = theta; }
     }
-    cout << "min theta of the fullview cloud: " << theta_min << "\n"
-         << " max theta of the fullview cloud: " << theta_max << endl;
+
+    cout << "LiDAR polar cloud generated. \ntheta_min = " << theta_min << " theta_max = " << theta_max << endl;
+    
+    if (kEdgeAnalysis) {
+        /** visualization for weight check**/ 
+        pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/fullview_polar_cloud.pcd", *polar_cloud);
+    }
 
 }
 
@@ -602,7 +608,10 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
     /** construct kdtrees and load the point clouds **/
     /** caution: the point cloud need to be set before the loop **/
     pcl::KdTreeFLANN<PointT> kdtree;
-    kdtree.setInputCloud(polar_cloud);
+    CloudPtr polar_flat_cloud(new CloudT);
+    pcl::copyPointCloud(*polar_cloud, *polar_flat_cloud);
+    for (auto &pt : polar_flat_cloud->points) {pt.z = 0;}
+    kdtree.setInputCloud(polar_flat_cloud);
 
     /** define the invalid search parameters **/
     int invalid_search_num = 0; /** search invalid count **/
@@ -613,19 +622,16 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
     /** std range to generate weights **/
     float dis_std_max = 0;
     float dis_std_min = 1;
-    float theta_center;
-    float phi_center;
     int hidden_pt_cnt = 0;
-
-    vector<int> removed_indices;
+    const float sensitivity = 0.02f;
 
     for (int u = 0; u < kFlatRows; ++u) {
         /** upper and lower bound of the current theta unit **/
-        theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
+        float theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
 
         for (int v = 0; v < kFlatCols; ++v) {
             /** upper and lower bound of the current phi unit **/
-            phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
+            float phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
 
             /** assign the theta and phi center to the search_center **/
             PointT search_center;
@@ -654,30 +660,28 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     bool skip = false;
                     PointT &polar_pt = (*polar_cloud)[search_pt_idx_vec[i]];
                     /** hidden points filter **/
-                    if (this->kHiddenPtsFilter) {
-                        PointT &cart_pt = (*cart_cloud)[search_pt_idx_vec[i]];
-                        const float sensitivity = 0.02f;
-                        dist = cart_pt.getVector3fMap().norm();
-                        dist_mean = (i * dist_mean + dist) / (i + 1); 
-                        if (i > 0) {
-                            PointT &cart_pt_former = (*cart_cloud)[search_pt_idx_vec[i - 1]];
-                            if ((dist < (1-2*sensitivity) * dist_mean && i == 1) ) {
-                                hidden_pt_num++;
-                                hidden_pt_cnt++;
-                                tags_map[u][v].pts_indices.erase(tags_map[u][v].pts_indices.begin());
-                                intensity_vec.erase(intensity_vec.begin());
-                                theta_vec.erase(theta_vec.begin());
-                                phi_vec.erase(phi_vec.begin());
-                                dist_mean = dist;
-                            }
-                            if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && cart_pt.intensity < 20)) {
-                            // if ((abs(dist_mean - dist) > dist * sensitivity)) {
-                                hidden_pt_num++;
-                                hidden_pt_cnt++;
-                                skip = true;
-                                dist_mean = (dist_mean * (i + 1) - dist) / i;
-                            }
+
+                    dist = polar_pt.z;
+                    dist_mean = (i * dist_mean + dist) / (i + 1); 
+                    if (i > 0) {
+                        PointT &cart_pt_former = (*cart_cloud)[search_pt_idx_vec[i - 1]];
+                        if ((dist < (1-2*sensitivity) * dist_mean && i == 1) ) {
+                            hidden_pt_num++;
+                            hidden_pt_cnt++;
+                            tags_map[u][v].pts_indices.erase(tags_map[u][v].pts_indices.begin());
+                            intensity_vec.erase(intensity_vec.begin());
+                            theta_vec.erase(theta_vec.begin());
+                            phi_vec.erase(phi_vec.begin());
+                            dist_mean = dist;
                         }
+                        if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && polar_pt.intensity < 20)) {
+                        // if ((abs(dist_mean - dist) > dist * sensitivity)) {
+                            hidden_pt_num++;
+                            hidden_pt_cnt++;
+                            skip = true;
+                            dist_mean = (dist_mean * (i + 1) - dist) / i;
+                        }
+                        
                     }
 
                     if (!skip) {
@@ -685,9 +689,6 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                         theta_vec.push_back(polar_pt.x);
                         phi_vec.push_back(polar_pt.y);
                         tags_map[u][v].pts_indices.push_back(search_pt_idx_vec[i]);
-                    }
-                    else {
-                        removed_indices.push_back(search_pt_idx_vec[i]);
                     }
                 }
 
@@ -717,18 +718,17 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     /** Gaussian Distribution Parameters Estimation **/
                     double theta_mean = accumulate(std::begin(theta_vec), std::end(theta_vec), 0.0) / tags_map[u][v].num_pts; /** central position calculation **/
                     double phi_mean = accumulate(std::begin(phi_vec), std::end(phi_vec), 0.0) / tags_map[u][v].num_pts;
+                    double intensity_mean = accumulate(std::begin(intensity_vec), std::end(intensity_vec), 0.0) / tags_map[u][v].num_pts;
                     vector<double> dis_vec(tags_map[u][v].num_pts);
-                    double distance = 0.0;
+                    
                     for (int i = 0; i < tags_map[u][v].num_pts; i++) {
                         if ((theta_vec[i] > theta_mean && phi_vec[i] >= phi_mean) || (theta_vec[i] < theta_mean && phi_vec[i] <= phi_mean)) {
                             /** consider these two conditions as positive distance **/
-                            distance = sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
-                            dis_vec[i] = distance;
+                            dis_vec[i] = sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
                         }
                         else if ((theta_vec[i] >= theta_mean && phi_vec[i] < phi_mean) || (theta_vec[i] <= theta_mean && phi_vec[i] > phi_mean)) {
                             /** consider these two conditions as negative distance **/
-                            distance = - sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
-                            dis_vec[i] = distance;
+                            dis_vec[i] = -sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
                         }
                         else if (theta_vec[i] == theta_mean && phi_vec[i] == phi_mean) {
                             dis_vec[i] = 0;
@@ -752,7 +752,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
                     tags_map[u][v].label = 1;
                     tags_map[u][v].mean = dis_mean;
                     tags_map[u][v].sigma = dis_std;
-                    double intensity_mean = accumulate(std::begin(intensity_vec), std::end(intensity_vec), 0.0) / intensity_vec.size();
+                    
                     flat_img.at<float>(u, v) = intensity_mean;
                 }
             }
@@ -803,14 +803,6 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
     string flat_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].flat_img_path;
     cout << "LiDAR flat image path: " << flat_img_path << endl;
     cv::imwrite(flat_img_path, flat_img);
-
-    if (kEdgeAnalysis) {
-        /** visualization for weight check**/ 
-        CloudPtr cart_rgb_cloud(new CloudT);
-        pcl::copyPointCloud(*cart_cloud, removed_indices, *cart_rgb_cloud);
-        pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/removed_cart_cloud.pcd", *cart_rgb_cloud);
-         pcl::io::savePCDFileBinary(this->poses_files_path_vec[this->spot_idx][this->view_idx].output_folder_path + "/fullview_polar_cloud.pcd", *polar_cloud);
-    }
 
 }
 

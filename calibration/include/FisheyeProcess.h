@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <thread>
 #include <pcl/common/common.h>
 /** ros **/
 #include <ros/ros.h>

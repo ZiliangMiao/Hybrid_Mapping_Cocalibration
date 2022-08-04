@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread>
 #include <tuple>
 #include <numeric>
 #include "python3.6/Python.h"
@@ -65,7 +66,6 @@ public:
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / 4000;
-    const bool kHiddenPtsFilter = true; /** hidden points filter of pixels' space in Func SphereToPlane **/
     const bool kEdgeAnalysis = true; /** enable edge cloud output in polar/3D space for visualization **/
 
     /** tags and maps **/
