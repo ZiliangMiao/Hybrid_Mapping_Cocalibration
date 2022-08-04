@@ -359,12 +359,12 @@ void LidarProcess::SpotRegistration() {
     icp_trans_mat_vec.push_back(icp_spot_trans_mat);
 
     /** compared the fitness score of lio and icp **/
-    CloudPtr spot_lio_trans (new CloudT);
-    CloudPtr spot_icp_trans (new CloudT);
-    pcl::transformPointCloud(*spot_cloud_src, *spot_lio_trans, lio_spot_trans_mat);
-    pcl::transformPointCloud(*spot_cloud_src, *spot_icp_trans, icp_spot_trans_mat);
-    cout << "Spot Registration Fast-LIO Fitness Score: " << GetIcpFitnessScore(spot_cloud_tgt, spot_lio_trans, 2.0) << endl;
-    cout << "Spot Registration ICP Fitness Score: " << GetIcpFitnessScore(spot_cloud_tgt, spot_icp_trans, 2.0) << endl;
+//    CloudPtr spot_lio_trans (new CloudT);
+//    CloudPtr spot_icp_trans (new CloudT);
+//    pcl::transformPointCloud(*spot_cloud_src, *spot_lio_trans, lio_spot_trans_mat);
+//    pcl::transformPointCloud(*spot_cloud_src, *spot_icp_trans, icp_spot_trans_mat);
+//    cout << "Spot Registration Fast-LIO Fitness Score: " << GetIcpFitnessScore(spot_cloud_tgt, spot_lio_trans, 2.0) << endl;
+//    cout << "Spot Registration ICP Fitness Score: " << GetIcpFitnessScore(spot_cloud_tgt, spot_icp_trans, 2.0) << endl;
 
     /** save the spot trans matrix by icp **/
     std::ofstream mat_out;
@@ -484,7 +484,7 @@ void LidarProcess::CreateDensePcd() {
 
 }
 
-void LidarProcess::CreateFullviewPcd() {
+void LidarProcess::FullViewMapping() {
     cout << "----- LiDAR: CreateFullviewPcd -----" << " Spot Index: " << this->spot_idx << endl;
     /** target and fullview cloud path **/
     string fullview_target_cloud_path, fullview_cloud_path;
@@ -991,7 +991,7 @@ void LidarProcess::ReadEdge() {
 
 /** reconstruction **/
 
-void LidarProcess::GlobalColoredRecon() {
+void LidarProcess::GlobalColoredMapping() {
     /** global cloud registration **/
     RGBCloudPtr spot_clouds_registered(new RGBCloudT);
     pcl::io::loadPCDFile<RGBPointT>(this->poses_files_path_vec[0][0].fullview_rgb_cloud_path,
@@ -1036,7 +1036,7 @@ void LidarProcess::GlobalColoredRecon() {
     pcl::io::savePCDFileBinary(global_registered_cloud_path, *spot_clouds_registered);
 }
 
-void LidarProcess::GlobalRecon() {
+void LidarProcess::GlobalMapping() {
     /** global cloud registration **/
     CloudPtr spot_clouds_registered(new CloudT);
     pcl::io::loadPCDFile<PointT>(this->poses_files_path_vec[0][0].fullview_dense_cloud_path,

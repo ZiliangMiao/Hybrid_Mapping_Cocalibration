@@ -162,17 +162,19 @@ public:
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void BagToPcd(string bag_file);
+
     /** registration **/
     tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
     double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
 
-    void ViewRegistration();
-    void SpotRegistration();
-
     void CreateDensePcd();
-    void CreateFullviewPcd();
-    void GlobalColoredRecon();
-    void GlobalRecon();
+    void ViewRegistration();
+    void FullViewMapping();
+
+    void SpotRegistration();
+    void GlobalColoredMapping();
+    void GlobalMapping();
+
     /***** Edge Related *****/
     void EdgeToPixel();
     void ReadEdge();
