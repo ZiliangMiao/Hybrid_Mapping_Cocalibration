@@ -4,17 +4,18 @@ import numpy as np
 from AutoRun import CreateProcess, Exiting
 
 view_path_list = []
+dataset = "rb1"
 
 def ReformatBags(path, filename):
     if ("spot" in filename) and (".bag" in filename):
         print(filename)
-        filename_list = filename.split(".")[0].split("_")
+        filename_list = filename.split(dataset)[1].split(".")[0].split("_")
         if len(filename_list) == 3:
-            [dataset_name, spot_name, view_name] = filename_list
+            [_, spot_name, view_name] = filename_list
         else:
-            [dataset_name, spot_name, view_name, _] = filename_list
+            [_, spot_name, view_name, _] = filename_list
         full_path = os.path.join(path, filename).replace('\\', '/')
-        rename_path = os.path.join(path, dataset_name + "_" + spot_name + "_" + view_name + ".bag").replace('\\', '/')
+        rename_path = os.path.join(path, dataset + "_" + spot_name + "_" + view_name + ".bag").replace('\\', '/')
         os.rename(full_path, rename_path)
         if ("spot" not in view_name):
             BagToPcd(rename_path, path)
@@ -30,7 +31,8 @@ def BagToPcd(input_file, path):
     CreateProcess(cmd, t_process=15)
 
 def DataCleaner():
-    dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/ug")
+    # dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/sdim3")
+    dir = os.path.abspath("/home/isee/catkin_ws/data/" + dataset)
     for path, _, files in os.walk(dir):
         for filename in files:
             ReformatBags(path, filename)
@@ -55,6 +57,6 @@ atexit.register(Exiting)
 
 if __name__ == "__main__":
     DataCleaner()
-    time.sleep(20)
+    # time.sleep(20)
     for spot_path in view_path_list:
         MovePcds(spot_path)

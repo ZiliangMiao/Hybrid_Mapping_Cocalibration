@@ -17,10 +17,10 @@ class FisheyeProcess{
 public:
     /** essential params **/
     const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/liyuan";
+    const string kDatasetPath = this->kPkgPath + "/data/sdim3";
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 7;
+    int num_spots = 1;
     int num_views = 5;
     int view_angle_init = -50;
     int view_angle_step = 25;
