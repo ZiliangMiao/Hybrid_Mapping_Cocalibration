@@ -28,8 +28,8 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 // headings
-#include "FisheyeProcess.h"
-#include "LidarProcess.h"
+#include "fisheye_process.h"
+#include "lidar_process.h"
 
 using namespace std;
 

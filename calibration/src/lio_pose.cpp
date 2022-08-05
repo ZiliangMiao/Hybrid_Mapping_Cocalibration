@@ -1,18 +1,9 @@
-/** **/
 #include <iostream>
 /** pcl **/
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/registration/icp.h>
 #include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/filters/filter.h>
-#include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/conditional_removal.h>
-#include <pcl/registration/gicp.h>
 #include <pcl/common/time.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/registration/ia_ransac.h>
 #include <Eigen/Dense>
 /** ros **/
 #include <ros/ros.h>
@@ -44,7 +35,7 @@ void path_callback(const nav_msgs::Path &path_msg) {
 }
 
 int main(int argc, char *argv[]) {
-    ros::init(argc, argv, "spot_reg");
+    ros::init(argc, argv, "lio_pose");
     ros::NodeHandle nh;
     time_stamp = ros::Time::now().toSec();
     ros::Subscriber sub = nh.subscribe("/path", 1, path_callback);
@@ -58,7 +49,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (false) {
+    if (true) {
         /** save the lio spot transformation matrix **/
         Eigen::Affine3d lio_spot_trans = Eigen::Affine3d::Identity();
         Eigen::Matrix4d lio_spot_trans_mat = Eigen::Matrix4d::Identity();

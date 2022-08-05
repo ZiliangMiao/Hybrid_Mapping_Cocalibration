@@ -1,6 +1,5 @@
 #coding=utf-8
 import os, sys
-from time import time
 import numpy as np
 import cv2 as cv2
 
@@ -11,6 +10,7 @@ def ExposureFusion(image_output_path):
 	except:
 		print("Exposure time record file not found, set to default values.")
 		real_exp_time = np.vstack((exposure_times, exposure_times)).T
+
 	img_list = []
 	time_list = []
 	

@@ -17,9 +17,9 @@
 #include <pcl/filters/filter.h>
 #include <pcl/filters/conditional_removal.h>
 /** heading **/
-#include "Optimization.h"
+#include "optimization.h"
 #include "utils.h"
-
+/** namespace **/
 using namespace std;
 using namespace cv;
 typedef pcl::PointXYZI PointT;
@@ -28,7 +28,7 @@ typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 int main(int argc, char** argv) {
     /***** ROS Initialization *****/
-    ros::init(argc, argv, "calibration");
+    ros::init(argc, argv, "main");
     ros::NodeHandle nh;
 
     /***** ROS Parameters Server *****/
@@ -262,7 +262,6 @@ int main(int argc, char** argv) {
             SaveResults(record_path, params_init, 0, 0, 0);
         }
 
-
         for (int i = 0; i < bw.size(); i++) {
             double bandwidth = bw[i];
             cout << "Round " << i << endl;
@@ -311,76 +310,11 @@ int main(int argc, char** argv) {
     return 0;
 }
 
-//    ros::param::get("~param_test", param_test_1);
-//    ros::NodeHandle nh("~");
-//    nh.getParam("param_test", param_test_1);
-//    /** get the parameters from ros parameters server **/
-//    bool param_get1 = ros::param::get("param_test", param_test_1);
-//    bool param_get = nh.getParam("param_test", param_test_1);
-//    /** set the value of parameter to ros parameters server **/
-//    ros::param::set("param_test", 520.00);
-
-//            vector <Eigen::Matrix4f> local_trans_vec(lidar.num_views);
-//            vector <Eigen::Matrix4f> global_trans_vec(lidar.num_views);
-//            Eigen::Matrix4f local_trans;
-//            Eigen::Matrix4f global_trans;
-//
-//            /** local pair transformation matrix **/
-//            for (int j = 0; j < lidar.num_views; ++j) {
-//                int view_idx_tgt;
-//                if (j == lidar.fullview_idx) {
-//                    local_trans_vec[j] = Eigen::Matrix4f::Identity();
-//                    continue;
-//                }
-//                else if (j < lidar.fullview_idx) {
-//                    view_idx_tgt = j + 1;
-//                    lidar.SetViewIdx(j);
-//                    local_trans = lidar.ICP2(view_idx_tgt);
-//                    local_trans_vec[j] = local_trans;
-//                }
-//                else if (j > lidar.fullview_idx) {
-//                    view_idx_tgt = j - 1;
-//                    lidar.SetViewIdx(j);
-//                    local_trans = lidar.ICP2(view_idx_tgt);
-//                    local_trans_vec[j] = local_trans;
-//                }
-//            }
-//
-//            /** global transformation matrix to target view **/
-//            for (int j = 0; j < lidar.num_views; ++j) {
-//                if (j == lidar.fullview_idx) {
-//                    global_trans = Eigen::Matrix4f::Identity();
-//                    global_trans_vec[j] = global_trans;
-//                    std::ofstream mat_out;
-//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
-//                    mat_out << global_trans << endl;
-//                    mat_out.close();
-//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
-//                    continue;
-//                }
-//                else if (j < lidar.fullview_idx) {
-//                    global_trans = Eigen::Matrix4f::Identity();
-//                    for (int k = j; k <= lidar.fullview_idx; ++k) {
-//                        /** note: take care of the matrix multiplication,  **/
-//                        global_trans = local_trans_vec[j] * global_trans;
-//                    }
-//                    global_trans_vec[j] = global_trans;
-//                    std::ofstream mat_out;
-//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
-//                    mat_out << global_trans << endl;
-//                    mat_out.close();
-//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
-//                }
-//                else if (j > lidar.fullview_idx) {
-//                    global_trans = Eigen::Matrix4f::Identity();
-//                    for (int k = j; k >= lidar.fullview_idx; --k) {
-//                        global_trans = local_trans_vec[j] * global_trans;
-//                    }
-//                    global_trans_vec[j] = gcart_cloudlobal_trans;
-//                    std::ofstream mat_out;
-//                    mat_out.open(lidar.poses_files_path_vec[lidar.spot_idx][j].pose_trans_mat_path);
-//                    mat_out << global_trans << endl;
-//                    mat_out.close();
-//                    cout << "ICP Transformation Matrix" << " View " << j << ":\n" << global_trans << endl;
-//                }
-//            }
+//ros::param::get("~param_test", param_test_1);
+//ros::NodeHandle nh("~");
+//nh.getParam("param_test", param_test_1);
+///** get the parameters from ros parameters server **/
+//bool param_get1 = ros::param::get("param_test", param_test_1);
+//bool param_get = nh.getParam("param_test", param_test_1);
+///** set the value of parameter to ros parameters server **/
+//ros::param::set("param_test", 520.00);

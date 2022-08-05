@@ -15,20 +15,21 @@ typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
 class FisheyeProcess{
 public:
     /** essential params **/
-    const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/ug";
+    string kPkgPath = ros::package::getPath("calibration");
+    string dataset_name;
+    string kDatasetPath;
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 5;
-    int num_views = 5;
-    int view_angle_init = -50;
-    int view_angle_step = 25;
-    int fullview_idx = (this->num_views-1) / 2;
+    int num_spots;
+    int num_views;
+    int view_angle_init;
+    int view_angle_step;
+    int fullview_idx;
     vector<vector<string>> poses_folder_path_vec;
 
     /** original data - images **/
-    const int kFisheyeRows = 2048;
-    const int kFisheyeCols = 2448;
+    int kFisheyeRows = 2048;
+    int kFisheyeCols = 2448;
     const int kFlatRows = int((double)110 / 90 * 1000) + 1;
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / 4000;

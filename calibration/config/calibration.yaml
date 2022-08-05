@@ -7,7 +7,7 @@ switch:
 
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: false
+    kCreateDensePcd: true
     kViewRegistration: false
     kFullViewMapping: false
     kFullViewColorization: false
@@ -24,12 +24,12 @@ spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
-    kDatasetName: "lh3_global"
-    kNumSpots: 5
-    kNumViews: 5
+    kLidarTopic: "/livox/lidar"
+    kDatasetName: "liyuan"
+    kNumSpots: 7
+    kNumViews: 5GlobalMapping
     kFisheyeRows: 2048
     kFisheyeCols: 2448
-    kLiDARTopic: "/livox/lidar"
-    kResolution: 1000
+    kAngleInit: -50
     kAngleStep: 25
 

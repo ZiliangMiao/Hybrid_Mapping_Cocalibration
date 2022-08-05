@@ -252,11 +252,12 @@ if __name__ == "__main__":
 
     # -------- fisheye camera --------
 
-    if(mode == "fisheye"):
+    if (mode == "fisheye"):
         edge_cam_raw = cv2.imread(dir_cam_original)
         edge_cam_raw = cv2.cvtColor(edge_cam_raw, cv2.COLOR_BGR2GRAY)
 
         edge_cam = cv2.GaussianBlur(edge_cam_raw, sigmaX=1, sigmaY=1, ksize=(5, 5))
+        edge_cam = nlmeans(edge_cam, h_u=10, h_l=5)
         cv2.imwrite(dir_cam_filtered, edge_cam)
 
         # remove the black region

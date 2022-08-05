@@ -1,5 +1,5 @@
-// headings
-#include "Optimization.h"
+/** headings **/
+#include "optimization.h"
 #include "utils.h"
 
 ofstream outfile;
