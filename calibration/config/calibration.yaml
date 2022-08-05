@@ -1,15 +1,16 @@
 switch:
     ## Data Process
-    kLidarFlatProcess: false
+    kLidarFlatProcess: true
     kLidarEdgeProcess: false
-    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
+    kFisheyeFlatProcess: true  # true: use the fisheye flat image process method 
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     ## Registration, Colorization and Mapping
     # view
     kCreateDensePcd: true
-    kViewRegistration: false
-    kFullViewMapping: false
+    kViewRegistration: true
+    kFullViewMapping: true
+
     kFullViewColorization: false
     # spot
     kSpotRegistration: false
@@ -17,7 +18,7 @@ switch:
     kGlobalColoredMapping: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
+    kCeresOptimization: true
     kParamsAnalysis: false
     
 spot:
@@ -25,7 +26,7 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "sdim3"
+    kDatasetName: "rb1"
     kNumSpots: 1
     kNumViews: 5
     kFisheyeRows: 2048

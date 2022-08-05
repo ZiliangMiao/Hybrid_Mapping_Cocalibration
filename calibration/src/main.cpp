@@ -121,6 +121,47 @@ int main(int argc, char** argv) {
         }
     }
 
+    /***** Registration, Colorization and Mapping *****/
+    /** view **/
+    if (kCreateDensePcd) {
+        cout << "----------------- Merge Dense Point Cloud ---------------------" << endl;
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                for (int j = 0; j < lidar.num_views; ++j) {
+                    lidar.SetViewIdx(j);
+                    lidar.CreateDensePcd();
+                }
+            }
+        }
+    }
+    
+    if (kViewRegistration) {
+        cout << "----------------- View Registration ---------------------" << endl;
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                for (int j = 0; j < lidar.num_views; ++j) {
+                    if (j == lidar.fullview_idx) {
+                        continue;
+                    }
+                    lidar.SetViewIdx(j);
+                    lidar.ViewRegistration();
+                }
+            }
+        }
+    }
+    /** full view **/
+    if (kFullViewMapping) {
+        cout << "----------------- Full View Mapping ---------------------" << endl;
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                lidar.FullViewMapping(); /** generate fullview pcds **/
+            }
+        }
+    }
+
     /***** Data Process *****/
     if (kLidarFlatProcess) {
         for (int i = 0; i < lidar.num_spots; ++i) {
@@ -156,45 +197,6 @@ int main(int argc, char** argv) {
     }
 
     /***** Registration, Colorization and Mapping *****/
-    /** view **/
-    if (kCreateDensePcd) {
-        cout << "----------------- Merge Dense Point Cloud ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                for (int j = 0; j < lidar.num_views; ++j) {
-                    lidar.SetViewIdx(j);
-                    lidar.CreateDensePcd();
-                }
-            }
-        }
-    }
-    
-    if (kViewRegistration) {
-        cout << "----------------- View Registration ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                for (int j = 0; j < lidar.num_views; ++j) {
-                    if (j == lidar.fullview_idx) {
-                        continue;
-                    }
-                    lidar.SetViewIdx(j);
-                    lidar.ViewRegistration();
-                }
-            }
-        }
-    }
-        
-    if (kFullViewMapping) {
-        cout << "----------------- Full View Mapping ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.FullViewMapping(); /** generate fullview pcds **/
-            }
-        }
-    }
     /** spot **/
     if (kSpotRegistration) {
         cout << "----------------- Spot Registration ---------------------" << endl;

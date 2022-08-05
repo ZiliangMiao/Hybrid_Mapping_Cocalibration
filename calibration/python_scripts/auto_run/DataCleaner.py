@@ -4,7 +4,7 @@ import numpy as np
 from AutoRun import CreateProcess, Exiting
 
 view_path_list = []
-dataset = "rb1"
+dataset = "lh1_center"
 
 def ReformatBags(path, filename):
     if ("spot" in filename) and (".bag" in filename):
