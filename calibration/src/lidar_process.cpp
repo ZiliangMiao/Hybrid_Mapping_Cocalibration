@@ -75,7 +75,6 @@ int LidarProcess::ReadFileList(const std::string &folder_path, std::vector<std::
     struct dirent *dir_path;
     if ((dp = opendir(folder_path.c_str())) == nullptr) {
         return 0;
->>>>>>> b22e81933693f6542d6b6fe7256ae4e00a558bb1:calibration/src/lidar_process.cpp
     }
     int num = 0;
     while ((dir_path = readdir(dp)) != nullptr) {
@@ -90,15 +89,6 @@ int LidarProcess::ReadFileList(const std::string &folder_path, std::vector<std::
     return num;
 }
 
-<<<<<<< HEAD:calibration/src/LidarProcess.cpp
-    /** get the init trans cloud & init fitness score **/
-    CloudPtr cloud_init_trans_us (new CloudT);
-    pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, init_trans_mat);
-    cout << "\nInit Trans Mat: \n" << init_trans_mat << endl;
-    pcl::StopWatch timer_fs;
-    cout << "Initial Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
-    cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
-=======
 void LidarProcess::BagToPcd(string bag_file) {
     rosbag::Bag bag;
     bag.open(bag_file, rosbag::bagmode::Read);
@@ -406,32 +396,6 @@ void LidarProcess::EdgeToPixel() {
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-<<<<<<< HEAD:calibration/src/LidarProcess.cpp
-    cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
-
-    /** invalid point filter **/
-    (*view_raw_cloud).is_dense = false;
-    std::vector<int> null_indices;
-    pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
-
-    /** condition filter **/
-    CloudPtr view_cloud(new CloudT);
-    pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::GT, 0.3))); /** GT: greater than **/
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("z", pcl::ComparisonOps::LT, -0.4))); /** LT: less than **/
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("y", pcl::ComparisonOps::LT, -0.3)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, 0.3)));
-    range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, -0.3)));
-    pcl::ConditionalRemoval<PointT> cond_filter;
-    cond_filter.setKeepOrganized(false);
-    cond_filter.setCondition(range_cond);
-    cond_filter.setInputCloud(view_raw_cloud);
-    cond_filter.filter(*view_cloud);
-
-    /** check the pass through filtered point cloud size **/
-    cout << "size of cloud after a condition filter:" << view_cloud->points.size() << endl;
-=======
 void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
     cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
@@ -466,8 +430,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             y_avg = y_avg / num_pts;
             z_avg = z_avg / num_pts;
             float weight = tags_map[u][v].weight;
->>>>>>> b22e81933693f6542d6b6fe7256ae4e00a558bb1:calibration/src/lidar_process.cpp
-
+            
             /** store the spatial coordinates into vector **/
             vector<double> coordinates {x_avg, y_avg, z_avg};
             edge_pts.push_back(coordinates);
