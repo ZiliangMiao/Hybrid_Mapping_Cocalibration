@@ -25,9 +25,9 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "liyuan"
-    kNumSpots: 7
-    kNumViews: 5GlobalMapping
+    kDatasetName: "sdim3"
+    kNumSpots: 1
+    kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
     kAngleInit: -50
