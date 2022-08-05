@@ -1,7 +1,7 @@
 <launch>
   <param name="data_path" type="string" value="/data/lh3_global/spot0/fullview_recon/global_registered_cloud.pcd" />
-  <node name="rviz_pub" pkg="calibration" type="rvizPub" output="screen">
+  <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
   </node>
-  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/godm/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
   </node>
 </launch>

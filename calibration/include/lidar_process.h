@@ -36,31 +36,35 @@
 #include <pcl/filters/extract_indices.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
-
+/** namespace **/
 using namespace std;
+/** typedef **/
 typedef pcl::PointXYZI PointT;
 typedef pcl::PointCloud<PointT> CloudT;
 typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
+typedef pcl::PointXYZRGB RGBPointT;
+typedef pcl::PointCloud<RGBPointT> RGBCloudT;
+typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
 
 class LidarProcess{
 public:
-    string topic_name = "/livox/lidar";
-    const string kPkgPath = ros::package::getPath("calibration");
-    const string kDatasetPath = this->kPkgPath + "/data/sdim3";
     /** essential params **/
+    string topic_name;
+    string kPkgPath = ros::package::getPath("calibration");
+    string dataset_name;
+    string kDatasetPath;
     int spot_idx = 0;
     int view_idx = 0;
-    int num_spots = 1;
-    int num_views = 5; /** note: each spot contains several views, and each view at a specific spot called a pose**/
-    int view_angle_init = -50;
-    int view_angle_step = 25;
-    int fullview_idx = (this->num_views-1) / 2;
+    int num_spots;
+    int num_views; /** note: each spot contains several view **/
+    int view_angle_init;
+    int view_angle_step;
+    int fullview_idx;
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-
     const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud, 
-                                        otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
+                                       otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
     static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
@@ -158,33 +162,8 @@ public:
     std::map<int, int> degree_map;
 
 public:
+    /***** LiDAR Class *****/
     LidarProcess();
-    /***** Point Cloud Generation *****/
-    static int ReadFileList(const string &folder_path, vector<string> &file_list);
-    void BagToPcd(string bag_file);
-    /** registration **/
-    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
-    double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
-
-    void ViewRegistration();
-    void SpotRegistration();
-
-    void CreateDensePcd();
-    void CreateFullviewPcd();
-    void GlobalColoredRecon();
-    void GlobalRecon();
-    /***** Edge Related *****/
-    void EdgeToPixel();
-    void ReadEdge();
-    vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
-    void EdgeExtraction();
-
-    /***** LiDAR Pre-Processing *****/
-    void LidarToSphere(CloudPtr& cart_cloud, CloudPtr& polar_cloud);
-    void SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& polar_cloud);
-    void PixLookUp(const CloudPtr& cart_cloud);
-
-    /***** Get and Set Methods *****/
     void SetExtrinsic(vector<double> &parameters) {
         this->extrinsic.rx = parameters[0];
         this->extrinsic.ry = parameters[1];
@@ -193,12 +172,35 @@ public:
         this->extrinsic.ty = parameters[4];
         this->extrinsic.tz = parameters[5];
     }
-
     void SetSpotIdx(int spot_idx) {
         this->spot_idx = spot_idx;
     }
-
     void SetViewIdx(int view_idx) {
         this->view_idx = view_idx;
     }
+
+    /***** Point Cloud Generation *****/
+    static int ReadFileList(const string &folder_path, vector<string> &file_list);
+    void BagToPcd(string bag_file);
+
+    /***** LiDAR Pre-Processing *****/
+    void LidarToSphere(CloudPtr& cart_cloud, CloudPtr& polar_cloud);
+    void SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& polar_cloud);
+    void PixLookUp(const CloudPtr& cart_cloud);
+
+    /***** Edge Process *****/
+    void EdgeExtraction();
+    void EdgeToPixel();
+    void ReadEdge();
+    vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
+
+    /***** Registration and Mapping *****/
+    tuple<Eigen::Matrix4f, CloudPtr> ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
+    double GetIcpFitnessScore(CloudPtr cloud_tgt, CloudPtr cloud_src, double max_range);
+    void CreateDensePcd();
+    void ViewRegistration();
+    void FullViewMapping();
+    void SpotRegistration();
+    void GlobalColoredMapping();
+    void GlobalMapping();
 };
