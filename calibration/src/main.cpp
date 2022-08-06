@@ -251,7 +251,7 @@ int main(int argc, char** argv) {
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
         std::vector<double> lb(dev.size()), ub(dev.size());
-        std::vector<double> bw = {32, 16, 8, 4, 2};
+        std::vector<double> bw = {16, 8, 4, 2, 1};
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
             lb[i] = params_init[i] - dev[i];
