@@ -9,7 +9,7 @@ import subprocess
 import numpy as np
 from threading import Timer
 
-dataset_name = "sdim3"
+dataset_name = "crf"
 num_gimbal_step = 25
 num_views = 5
 num_spots = 1

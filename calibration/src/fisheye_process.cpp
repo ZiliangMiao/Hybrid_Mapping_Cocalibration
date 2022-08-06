@@ -26,7 +26,7 @@
 #include <mlpack/core/tree/octree.hpp>
 #include <mlpack/core/tree/cover_tree.hpp>
 /** headings **/
-#include "FisheyeProcess.h"
+#include "fisheye_process.h"
 #include "utils.h"
 /** namespace **/
 using namespace std;
@@ -39,6 +39,17 @@ using namespace arma;
 using namespace tk;
 
 FisheyeProcess::FisheyeProcess() {
+    /** parameter server **/
+    ros::param::get("essential/kDatasetName", this->dataset_name);
+    this->kDatasetPath = this->kPkgPath + "/data/" + this->dataset_name;
+    ros::param::get("essential/kNumSpots", this->num_spots);
+    ros::param::get("essential/kNumViews", this->num_views);
+    ros::param::get("essential/kFisheyeRows", this->kFisheyeRows);
+    ros::param::get("essential/kFisheyeCols", this->kFisheyeCols);
+    ros::param::get("essential/kAngleInit", this->view_angle_init);
+    ros::param::get("essential/kAngleStep", this->view_angle_step);
+    this->fullview_idx = (this->num_views - 1) / 2;
+
     cout << "----- Fisheye: ImageProcess -----" << endl;
     /** create objects, initialization **/
     string pose_folder_path_temp;
@@ -172,7 +183,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 polar_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 polar_pt.r = image.at<cv::Vec3b>(u, v)[2];
                 polar_cloud->points.push_back(polar_pt);
-                
+
                 /** point cloud with origin pixel coordinates **/
                 pixel_pt.x = u;
                 pixel_pt.y = v;
@@ -215,8 +226,8 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     double search_radius = kRadPerPix / 2;
 
     /** Multiprocessing test **/
-    #pragma omp parallel for num_threads(16)
-    
+#pragma omp parallel for num_threads(16)
+
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < kFlatRows; ++u) {
         // upper bound and lower bound of the current theta unit
@@ -301,7 +312,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     }
     else {
         string fusion_img_path = result_path + "/spot_" + to_string(this->spot_idx) +
-                "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
+                                 "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
         cv::imwrite(fusion_img_path, flat_image); /** fusion image generation **/
     }
 }
