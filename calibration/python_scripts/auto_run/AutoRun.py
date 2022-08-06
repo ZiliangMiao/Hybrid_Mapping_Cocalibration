@@ -9,10 +9,10 @@ import subprocess
 import numpy as np
 from threading import Timer
 
-dataset_name = "crf"
+dataset_name = "parking"
 num_gimbal_step = 25
 num_views = 5
-num_spots = 1
+num_spots = 6
 
 script_path = os.path.join(os.path.abspath(__file__))
 data_path = script_path.split("/catkin_ws/src")[0] + "/catkin_ws/data"
