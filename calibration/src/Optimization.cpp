@@ -254,7 +254,7 @@ std::vector<double> GradientCalib(FisheyeProcess &fisheye,
     ceres::GradientProblemSolver::Options options;
     options.minimizer_progress_to_stdout = true;
     options.max_num_iterations = 50;
-    options.function_tolerance = 1e-6;
+    options.function_tolerance = 1e-7;
 
     ceres::GradientProblemSolver::Summary summary;
     ceres::Solve(options, problem, params, &summary);
@@ -385,8 +385,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 50;
-    options.function_tolerance = 1e-6;
+    options.max_num_iterations = 75;
+    options.function_tolerance = 1e-7;
     options.use_nonmonotonic_steps = true;
 
     ceres::Solver::Summary summary;

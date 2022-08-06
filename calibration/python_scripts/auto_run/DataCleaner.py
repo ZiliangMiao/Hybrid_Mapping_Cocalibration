@@ -30,7 +30,8 @@ def BagToPcd(input_file, path):
     CreateProcess(cmd, t_process=15)
 
 def DataCleaner():
-    dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/ug")
+    # dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/sdim3")
+    dir = os.path.abspath("/home/isee/catkin_ws/data/sdim3")
     for path, _, files in os.walk(dir):
         for filename in files:
             ReformatBags(path, filename)
@@ -55,6 +56,6 @@ atexit.register(Exiting)
 
 if __name__ == "__main__":
     DataCleaner()
-    time.sleep(20)
+    # time.sleep(20)
     for spot_path in view_path_list:
         MovePcds(spot_path)

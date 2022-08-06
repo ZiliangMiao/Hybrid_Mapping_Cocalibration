@@ -1,6 +1,5 @@
 #coding=utf-8
 import os, sys
-from time import time
 import numpy as np
 import cv2 as cv2
 

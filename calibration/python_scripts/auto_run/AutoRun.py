@@ -9,10 +9,10 @@ import subprocess
 import numpy as np
 from threading import Timer
 
-dataset_name = "test"
+dataset_name = "sdim3"
 num_gimbal_step = 25
 num_views = 5
-num_spots = 5
+num_spots = 1
 
 script_path = os.path.join(os.path.abspath(__file__))
 data_path = script_path.split("/catkin_ws/src")[0] + "/catkin_ws/data"
@@ -258,7 +258,10 @@ if __name__ == "__main__":
         CreateProcess(cmd=lidar_broadcast_cmd, t_process=num_views*90)
         for view_idx in range(num_views):
             # rotate gimbal (maximum 20s)
-            GimbalPublisher(view_idx=view_idx, time_interval=20)
+            if (view_idx == 0 or view_idx == num_views - 1):
+                GimbalPublisher(view_idx=view_idx, time_interval=20)
+            else:
+                GimbalPublisher(view_idx=view_idx, time_interval=10)
             # record rosbag (default 60s + delay 10s)
             CreateProcess(cmd=GetLidarStaticBagCmd(spot_idx, view_idx, duration=60),
                                             t_process=60)
@@ -266,13 +269,15 @@ if __name__ == "__main__":
             Capture(GetFisheyeCapturePath(spot_idx, view_idx))
             CreateProcess(cmd=GetFisheyeCmd(spot_idx, view_idx),
                                             t_process=10)
-            time.sleep(70)
-        # broadcast LiDAR messages to ROS (delay 20s)
-        CreateProcess(cmd=fisheye_auto_capture_cmd, t_process=60)
-        CreateProcess(cmd=lidar_msg_cmd, t_process=60)
+            time.sleep(65)
+        if (spot_idx < num_spots - 1):
+            # broadcast LiDAR messages to ROS (delay 20s)
+            CreateProcess(cmd=fisheye_auto_capture_cmd, t_process=60)
+            CreateProcess(cmd=lidar_msg_cmd, t_process=60)
         # reset gimbal to center position (maximum 20s)
         GimbalPublisher(view_idx='center', time_interval=20)
-        # record rosbag (default 30s + delay 10s)
-        CreateProcess(cmd=GetLidarLioBagCmd(source_spot_idx=spot_idx, target_spot_idx=spot_idx+1, duration=30),
-                                            t_process=30)
-        time.sleep(40)
+        if (spot_idx < num_spots - 1):
+            # record rosbag (default 30s + delay 10s)
+            CreateProcess(cmd=GetLidarLioBagCmd(source_spot_idx=spot_idx, target_spot_idx=spot_idx+1, duration=30),
+                                                t_process=30)
+            time.sleep(40)
