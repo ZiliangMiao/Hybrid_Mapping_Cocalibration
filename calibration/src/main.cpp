@@ -196,57 +196,6 @@ int main(int argc, char** argv) {
         }
     }
 
-    /***** Registration, Colorization and Mapping *****/
-    /** spot **/
-    if (kSpotRegistration) {
-        cout << "----------------- Spot Registration ---------------------" << endl;
-        for (int i = lidar.num_spots - 1; i > 0; --i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
-            }
-        }
-    }
-
-    if (kFullViewColorization) {
-        cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
-        // params_calib = {
-        //     0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
-        //     0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
-        //     1020.0, 1198.0,
-        //     1888.37, -536.802, -19.6401, -17.8592, 6.34771,
-        //     0.996981, -0.00880807, 0.00981348
-        // };
-        // Current Best:
-
-        params_calib = {
-                0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
-                0.277415, -0.0112217, 0.046939, /** tx ty tz **/
-                1022.53, 1198.45, /** u0, v0 **/
-                1880.36, -536.721, -12.9298, -18.0154, 5.6414,
-                1.00176, -0.00863924, 0.00846056
-        };
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                fisheye.SetSpotIdx(i);
-                lidar.SetSpotIdx(i);
-                fisheye.SetViewIdx(lidar.fullview_idx);
-                lidar.SetViewIdx(lidar.fullview_idx);
-                Visualization3D(fisheye, lidar, params_calib);
-            }
-        }
-    }
-
-    if (kGlobalMapping) {
-        cout << "----------------- Global Mapping ---------------------" << endl;
-        lidar.GlobalMapping();
-    }
-
-    if (kGlobalColoredMapping) {
-        cout << "----------------- Global Colored Mapping ---------------------" << endl;
-        lidar.GlobalColoredMapping();
-    }
-
     /***** Calibration and Optimization Cost Analysis *****/
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
@@ -324,14 +273,56 @@ int main(int argc, char** argv) {
         CorrelationAnalysis(fisheye, lidar, spot_vec, params_init);
     }
 
+    /***** Registration, Colorization and Mapping *****/
+    /** spot **/
+    if (kSpotRegistration) {
+        cout << "----------------- Spot Registration ---------------------" << endl;
+        for (int i = lidar.num_spots - 1; i > 0; --i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                lidar.SpotRegistration();
+            }
+        }
+    }
+
+    if (kFullViewColorization) {
+        cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
+        // params_calib = {
+        //     0.00513968, 3.13105, 1.56417, /** Rx Ry Rz **/
+        //     0.250552, 0.0264601, 0.0765269, /** tx ty tz **/
+        //     1020.0, 1198.0,
+        //     1888.37, -536.802, -19.6401, -17.8592, 6.34771,
+        //     0.996981, -0.00880807, 0.00981348
+        // };
+        // Current Best:
+
+        params_calib = {
+                0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+                0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+                1022.53, 1198.45, /** u0, v0 **/
+                1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+                1.00176, -0.00863924, 0.00846056
+        };
+        for (int i = 0; i < lidar.num_spots; ++i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                fisheye.SetSpotIdx(i);
+                lidar.SetSpotIdx(i);
+                fisheye.SetViewIdx(lidar.fullview_idx);
+                lidar.SetViewIdx(lidar.fullview_idx);
+                Visualization3D(fisheye, lidar, params_calib);
+            }
+        }
+    }
+
+    if (kGlobalMapping) {
+        cout << "----------------- Global Mapping ---------------------" << endl;
+        lidar.GlobalMapping();
+    }
+
+    if (kGlobalColoredMapping) {
+        cout << "----------------- Global Colored Mapping ---------------------" << endl;
+        lidar.GlobalColoredMapping();
+    }
+
     return 0;
 }
-
-//ros::param::get("~param_test", param_test_1);
-//ros::NodeHandle nh("~");
-//nh.getParam("param_test", param_test_1);
-///** get the parameters from ros parameters server **/
-//bool param_get1 = ros::param::get("param_test", param_test_1);
-//bool param_get = nh.getParam("param_test", param_test_1);
-///** set the value of parameter to ros parameters server **/
-//ros::param::set("param_test", 520.00);

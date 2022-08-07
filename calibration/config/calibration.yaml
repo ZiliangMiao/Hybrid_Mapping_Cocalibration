@@ -1,21 +1,21 @@
 switch:
     ## Data Process
-    kLidarFlatProcess: true
+    kLidarFlatProcess: false
     kLidarEdgeProcess: false
-    kFisheyeFlatProcess: true  # true: use the fisheye flat image process method 
+    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
     kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
 
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: true
-    kViewRegistration: true
-    kFullViewMapping: true
+    kCreateDensePcd: false
+    kViewRegistration: false
+    kFullViewMapping: false
 
-    kFullViewColorization: false
+    kFullViewColorization: true
     # spot
-    kSpotRegistration: false
-    kGlobalMapping: false
-    kGlobalColoredMapping: false
+    kSpotRegistration: true
+    kGlobalMapping: true
+    kGlobalColoredMapping: true
 
     ## Calibration and Optimization cost analysis
     kCeresOptimization: true

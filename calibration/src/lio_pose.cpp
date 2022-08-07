@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 
         /** save the spot trans matrix by lio **/
         std::ofstream lio_mat_out;
-        lio_mat_out.open("/home/godm/Desktop/lio_spot_trans_mat.txt");
+        lio_mat_out.open("/home/isee/catkin_ws/lio_spot_trans_mat.txt");
         lio_mat_out << lio_spot_trans_mat << endl;
         lio_mat_out.close();
     }
