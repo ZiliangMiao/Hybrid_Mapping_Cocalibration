@@ -49,21 +49,16 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
 void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
 
-std::vector<double> GradientCalib(FisheyeProcess &fisheye,
-                                LidarProcess &lidar,
-                                double bandwidth,
-                                std::vector<double> params_init);
-
 std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     LidarProcess &lidar,
                                     double bandwidth,
                                     std::vector<int> spot_vec,
                                     std::vector<double> init_params_vec,
                                     std::vector<double> lb,
-                                    std::vector<double> ub,
-                                    int kDisabledBlock);
+                                    std::vector<double> ub);
 
 void CorrelationAnalysis(FisheyeProcess &fisheye,
                         LidarProcess &lidar,
                         std::vector<int> spot_vec,
-                        std::vector<double> params_vec);
+                        std::vector<double> params_vec,
+                        double bandwidth);

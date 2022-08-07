@@ -37,6 +37,7 @@ void path_callback(const nav_msgs::Path &path_msg) {
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "lio_pose");
     ros::NodeHandle nh;
+    ros::Rate loop_rate(100);
     time_stamp = ros::Time::now().toSec();
     ros::Subscriber sub = nh.subscribe("/path", 1, path_callback);
 
@@ -44,6 +45,7 @@ int main(int argc, char *argv[]) {
         double time_stamp_diff = ros::Time::now().toSec() - time_stamp;
         cout << time_stamp_diff << endl;
         ros::spinOnce();
+        loop_rate.sleep();
         if (time_stamp_diff > 5) {
             ros::shutdown();
         }
