@@ -1,10 +1,10 @@
 import os, sys, time, atexit
 import shutil
 import numpy as np
-from AutoRun import CreateProcess, Exiting
+from auto_run import CreateProcess, Exiting
 
 view_path_list = []
-dataset = "lh1_center"
+dataset = "parking"
 
 def ReformatBags(path, filename):
     if ("spot" in filename) and (".bag" in filename):
@@ -31,8 +31,8 @@ def BagToPcd(input_file, path):
     CreateProcess(cmd, t_process=15)
 
 def DataCleaner():
-    # dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/sdim3")
-    dir = os.path.abspath("/home/isee/catkin_ws/data/" + dataset)
+    dir = os.path.abspath("/home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/data/" + dataset)
+    # dir = os.path.abspath("/home/isee/catkin_ws/data/" + dataset)
     for path, _, files in os.walk(dir):
         for filename in files:
             ReformatBags(path, filename)

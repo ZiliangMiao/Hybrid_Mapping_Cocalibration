@@ -22,12 +22,12 @@ switch:
     kParamsAnalysis: false
     
 spot:
-    kOneSpot: 0  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "rb1"
-    kNumSpots: 1
+    kDatasetName: "parking"
+    kNumSpots: 6
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448

@@ -55,7 +55,7 @@ def GetFolderPath(spot_idx, view_idx=None, return_angle=False):
     return path
 
 def GetFisheyeCmd(spot_idx, view_idx):
-    cmd = "python3" + " " + os.path.abspath(os.path.join(os.path.abspath(__file__), "../ExposureFusion.py")) \
+    cmd = "python3" + " " + os.path.abspath(os.path.join(os.path.abspath(__file__), "../exposure_fusion.py")) \
         + " " + GetFolderPath(spot_idx, view_idx) + "/images"
     return cmd
 

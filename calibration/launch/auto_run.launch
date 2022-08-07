@@ -1,5 +1,5 @@
 <launch>
-  <node name="auto_run" pkg="calibration" type="AutoRun.py" output="screen">
+  <node name="auto_run" pkg="calibration" type="auto_run.py" output="screen">
   </node>
   <node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen">
   </node>
