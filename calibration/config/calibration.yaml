@@ -26,8 +26,8 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "parking"
-    kNumSpots: 6
+    kDatasetName: "lh3_global"
+    kNumSpots: 5
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448

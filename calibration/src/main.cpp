@@ -219,6 +219,8 @@ int main(int argc, char** argv) {
                 lidar.SetSpotIdx(spot);
                 fisheye.SetViewIdx(fisheye.fullview_idx);
                 lidar.SetViewIdx(lidar.fullview_idx);
+                fisheye.ReadEdge();
+                lidar.ReadEdge();
                 spot_vec = {spot};
                 Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
                 string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path
