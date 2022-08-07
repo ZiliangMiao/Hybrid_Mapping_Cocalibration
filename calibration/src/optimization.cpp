@@ -4,49 +4,6 @@
 
 ofstream outfile;
 
-struct GradientFunctor {
-    template <typename T>
-    bool operator()(const T *const p_, T *cost) const {
-        Eigen::Matrix<T, 6, 1> extrinsic_;
-        Eigen::Matrix<T, kIntrinsics, 1> intrinsic_;
-        extrinsic_ << p_[0], p_[1], p_[2], p_[3], p_[4], p_[5];
-        intrinsic_ << p_[6], p_[7], p_[8], p_[9], p_[10],
-                    p_[11], p_[12], p_[13], p_[14], p_[15]; 
-        Eigen::Matrix<T, 4, 4> T_mat = ExtrinsicMat(extrinsic_);
-
-        Eigen::Matrix<T, 4, 1> lidar_point;
-        Eigen::Matrix<T, 3, 1> lidar_trans;
-        Eigen::Matrix<T, 2, 1> projection;
-        T res = T(0), val = T(0);
-        
-        for (auto &point : lidar_cloud_.points) {
-            lidar_point << T(point.x), T(point.y), T(point.z), T(1);
-            lidar_trans = (T_mat * lidar_point).head(3);
-            Eigen::Matrix<T, 2, 1> projection = IntrinsicTransform(intrinsic_, lidar_trans);
-            kde_interpolator_.Evaluate(projection(0) * T(scale_), projection(1) * T(scale_), &val);
-            res += T(point.intensity) * T(val);
-        }
-        cost[0] = -res;
-        return true;
-    }
-
-    GradientFunctor(const CloudT lidar_cloud,
-                    const double scale,
-                    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-                    : lidar_cloud_(std::move(lidar_cloud)), kde_interpolator_(interpolator), scale_(std::move(scale)) {}
-
-    static ceres::FirstOrderFunction *Create(const CloudT &lidar_cloud,
-                                            const double &scale,
-                                            const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator) {
-        return new ceres::AutoDiffFirstOrderFunction<GradientFunctor, 6 + kIntrinsics>(
-                new GradientFunctor(lidar_cloud, scale, interpolator));
-    }
-
-    const CloudT lidar_cloud_;
-    const double scale_;
-    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
-};
-
 struct QuaternionFunctor {
     template <typename T>
     bool operator()(const T *const q_, const T *const t_, const T *const intrinsic_, T *cost) const {
@@ -227,47 +184,6 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     pcl::io::savePCDFileBinary(lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].fullview_rgb_cloud_path, *fullview_rgb_cloud);
 }
 
-std::vector<double> GradientCalib(FisheyeProcess &fisheye,
-                                LidarProcess &lidar,
-                                double bandwidth,
-                                std::vector<double> params_init) {
-    const int kParams = params_init.size();
-    const int kViews = fisheye.num_views;
-    const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
-    double params[kParams];
-    memcpy(params, &params_init[0], params_init.size() * sizeof(double));
-
-    /********* Fisheye KDE *********/
-    vector<double> p_c = fisheye.Kde(bandwidth, scale);
-    double *kde_val = new double[p_c.size()];
-    memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
-    
-    double ref_val = *max_element(p_c.begin(), p_c.end());
-    const ceres::Grid2D<double> kde_grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
-    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
-
-    /********* Initialize Ceres Problem *********/
-    CloudPtr &edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
-    ceres::GradientProblem problem(GradientFunctor::Create((*edge_cloud), scale, kde_interpolator));
-
-    /********* Initial Options *********/
-    ceres::GradientProblemSolver::Options options;
-    options.minimizer_progress_to_stdout = true;
-    options.max_num_iterations = 50;
-    options.function_tolerance = 1e-7;
-
-    ceres::GradientProblemSolver::Summary summary;
-    ceres::Solve(options, problem, params, &summary);
-    std::cout << summary.FullReport() << "\n";
-
-    /********* 2D Image Visualization *********/
-    std::vector<double> result_vec(params, params + sizeof(params) / sizeof(double));
-    string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
-                        + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
-    SaveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
-    Visualization2D(fisheye, lidar, result_vec, bandwidth);
-    return result_vec;
-}
 
 std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     LidarProcess &lidar,
@@ -275,14 +191,11 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     std::vector<int> spot_vec,
                                     std::vector<double> init_params_vec,
                                     std::vector<double> lb,
-                                    std::vector<double> ub,
-                                    int kDisabledBlock) {
+                                    std::vector<double> ub) {
     Eigen::Matrix<double, 6 + kIntrinsics, 1> init_params = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(init_params_vec.data());
     Eigen::Matrix<double, 6, 1> extrinsic = init_params.head(6);
-    Eigen::Matrix<double, kIntrinsics + 3, 1> section = init_params.tail(kIntrinsics + 3);
     Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1> q_vector;
     Eigen::Matrix3d rotation_mat = ExtrinsicMat(extrinsic).topLeftCorner(3, 3);
-    // cout << rotation_mat << endl;
     Eigen::Quaterniond quaternion(rotation_mat);
     ceres::EigenQuaternionManifold *q_manifold = new ceres::EigenQuaternionManifold();
     
@@ -340,8 +253,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
         lidar.SetSpotIdx(spot_vec[idx]);
         double normalize_weight = 30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
-            double weight = point.intensity * normalize_weight;
-            // double weight = point.intensity * normalize_weight * sqrt((pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2)));
+            double weight = normalize_weight;
             Eigen::Vector3d lid_point = {point.x, point.y, point.z};
             problem.AddResidualBlock(QuaternionFunctor::Create(lid_point, weight, ref_vals[idx], scale, kde_interpolators[idx]),
                                     loss_function,
@@ -351,29 +263,17 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
             // params, params+(kExtrinsics-3), params+kExtrinsics);
         }
     }
-    
-    switch (kDisabledBlock) {
-    case 1:
-        problem.SetParameterBlockConstant(params);
-        problem.SetParameterBlockConstant(params+(kExtrinsics-3));
-        break;
-    case 2:
-        problem.SetParameterBlockConstant(params+kExtrinsics);
-        break;
-    default:
-        break;
-    }
 
     for (int i = 0; i < kParams; ++i) {
-        if (i < 4 && kDisabledBlock != 1) {
+        if (i < 4) {
             problem.SetParameterLowerBound(params, i, (q_vector[i]-0.15));
             problem.SetParameterUpperBound(params, i, (q_vector[i]+0.15));
         }
-        if (i >= 4 && i < kExtrinsics && kDisabledBlock != 1) {
+        if (i >= 4 && i < kExtrinsics) {
             problem.SetParameterLowerBound(params+(kExtrinsics-3), i-(kExtrinsics-3), lb[i-1]);
             problem.SetParameterUpperBound(params+(kExtrinsics-3), i-(kExtrinsics-3), ub[i-1]);
         }
-        else if (i >= kExtrinsics && kDisabledBlock != 2) {
+        else if (i >= kExtrinsics) {
             problem.SetParameterLowerBound(params+kExtrinsics, i-kExtrinsics, lb[i-1]);
             problem.SetParameterUpperBound(params+kExtrinsics, i-kExtrinsics, ub[i-1]);
         }
@@ -395,7 +295,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
 
     /********* 2D Image Visualization *********/
     Eigen::Matrix<double, 6+kIntrinsics, 1> result = Eigen::Map<Eigen::Matrix<double, kExtrinsics + kIntrinsics, 1>>(params).tail(6 + kIntrinsics);
-    cout << Eigen::Quaterniond(params[3], params[0], params[1], params[2]).matrix() << endl;
     result.head(3) = Eigen::Quaterniond(params[3], params[0], params[1], params[2]).matrix().eulerAngles(2,1,0).reverse();
     std::vector<double> result_vec(&result[0], result.data()+result.cols()*result.rows());
     string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
@@ -408,6 +307,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
         lidar.SetSpotIdx(spot_idx);
         Visualization2D(fisheye, lidar, result_vec, bandwidth);
     }
+
+    CorrelationAnalysis(fisheye, lidar, spot_vec, result_vec, bandwidth);
     
     return result_vec;
 }
@@ -415,117 +316,115 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
 void CorrelationAnalysis(FisheyeProcess &fisheye,
                          LidarProcess &lidar,
                          std::vector<int> spot_vec,
-                         std::vector<double> params_vec) {
-    std::vector<double> bw = {32, 16, 8, 4, 2};
-    for (double &bandwidth : bw) {
-        const int kViews = fisheye.num_views;
-        const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
+                         std::vector<double> params_vec,
+                         double bandwidth) {
+    const int kViews = fisheye.num_views;
+    const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
 
-        /********* Fisheye KDE *********/
-        std::vector<double> ref_vals;
-        std::vector<ceres::Grid2D<double>> grids;
-        std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
-        for (int i = 0; i < spot_vec.size(); i++) {
-            fisheye.SetSpotIdx(spot_vec[i]);
-            lidar.SetSpotIdx(spot_vec[i]);
-            std::vector<double> fisheye_edge = fisheye.Kde(bandwidth, scale);
-            double *kde_val = new double[fisheye_edge.size()];
-            memcpy(kde_val, &fisheye_edge[0], fisheye_edge.size() * sizeof(double));
-            ceres::Grid2D<double> grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
-            grids.push_back(grid);
-            double ref_val = *max_element(fisheye_edge.begin(), fisheye_edge.end());
-            ref_vals.push_back(ref_val);
+    /********* Fisheye KDE *********/
+    std::vector<double> ref_vals;
+    std::vector<ceres::Grid2D<double>> grids;
+    std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
+    for (int i = 0; i < spot_vec.size(); i++) {
+        fisheye.SetSpotIdx(spot_vec[i]);
+        lidar.SetSpotIdx(spot_vec[i]);
+        std::vector<double> fisheye_edge = fisheye.Kde(bandwidth, scale);
+        double *kde_val = new double[fisheye_edge.size()];
+        memcpy(kde_val, &fisheye_edge[0], fisheye_edge.size() * sizeof(double));
+        ceres::Grid2D<double> grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
+        grids.push_back(grid);
+        double ref_val = *max_element(fisheye_edge.begin(), fisheye_edge.end());
+        ref_vals.push_back(ref_val);
+    }
+    const std::vector<ceres::Grid2D<double>> kde_grids(grids);
+    for (int i = 0; i < spot_vec.size(); i++) {
+        fisheye.SetSpotIdx(spot_vec[i]);
+        lidar.SetSpotIdx(spot_vec[i]);
+        ceres::BiCubicInterpolator<ceres::Grid2D<double>> interpolator(kde_grids[i]);
+        interpolators.push_back(interpolator);
+    }
+    const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
+
+    /***** Correlation Analysis *****/
+    Eigen::Matrix<double, 6+kIntrinsics, 1> params_mat = Eigen::Map<Eigen::Matrix<double, 6+kIntrinsics, 1>>(params_vec.data());
+    Eigen::Matrix<double, 6, 1> extrinsic = params_mat.head(6);
+    Eigen::Matrix<double, kIntrinsics, 1> intrinsic = params_mat.tail(kIntrinsics);
+    std::vector<double> results;
+    std::vector<double> input_x;
+    std::vector<double> input_y;
+    std::vector<const char*> name = {
+            "rx", "ry", "rz",
+            "tx", "ty", "tz",
+            "u0", "v0",
+            "a0", "a1", "a2", "a3", "a4",
+            "c", "d", "e"};
+    int steps[2] = {1, 201};
+    int param_idx[2] = {0, 3};
+    const double step_size[2] = {0.005, 0.01};
+    const double deg2rad = M_PI / 180;
+    double offset[2] = {0, 0};
+
+    /** update evaluate points in 2D grid **/
+    for (int m = 0; m < 6; m++) {
+        extrinsic = params_mat.head(6);
+        if (m < 3) {
+            steps[0] = 201;
+            steps[1] = 1;
+            param_idx[0] = m;
+            param_idx[1] = 3;
         }
-        const std::vector<ceres::Grid2D<double>> kde_grids(grids);
-        for (int i = 0; i < spot_vec.size(); i++) {
-            fisheye.SetSpotIdx(spot_vec[i]);
-            lidar.SetSpotIdx(spot_vec[i]);
-            ceres::BiCubicInterpolator<ceres::Grid2D<double>> interpolator(kde_grids[i]);
-            interpolators.push_back(interpolator);
+        else {
+            steps[0] = 1;
+            steps[1] = 201;
+            param_idx[0] = 0;
+            param_idx[1] = m;
         }
-        const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
 
-        /***** Correlation Analysis *****/
-        Eigen::Matrix<double, 6+kIntrinsics, 1> params_mat = Eigen::Map<Eigen::Matrix<double, 6+kIntrinsics, 1>>(params_vec.data());
-        Eigen::Matrix<double, 6, 1> extrinsic = params_mat.head(6);
-        Eigen::Matrix<double, kIntrinsics, 1> intrinsic = params_mat.tail(kIntrinsics);
-        std::vector<double> results;
-        std::vector<double> input_x;
-        std::vector<double> input_y;
-        std::vector<const char*> name = {
-                "rx", "ry", "rz",
-                "tx", "ty", "tz",
-                "u0", "v0",
-                "a0", "a1", "a2", "a3", "a4",
-                "c", "d", "e"};
-        int steps[2] = {1, 201};
-        int param_idx[2] = {0, 3};
-        const double step_size[2] = {0.005, 0.01};
-        const double deg2rad = M_PI / 180;
-        double offset[2] = {0, 0};
+        for (int k = 0; k < spot_vec.size(); k++) {
+            lidar.SetSpotIdx(spot_vec[k]);
+            double normalize_weight = (double)30000 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
 
-        /** update evaluate points in 2D grid **/
-        for (int m = 0; m < 6; m++) {
-            extrinsic = params_mat.head(6);
-            if (m < 3) {
-                steps[0] = 201;
-                steps[1] = 1;
-                param_idx[0] = m;
-                param_idx[1] = 3;
+            /** Save & terminal output **/
+            string analysis_filepath = lidar.kDatasetPath + "/log/";
+            if (steps[0] > 1) {
+                analysis_filepath = analysis_filepath + name[param_idx[0]] + "_";
             }
-            else {
-                steps[0] = 1;
-                steps[1] = 201;
-                param_idx[0] = 0;
-                param_idx[1] = m;
+            if (steps[1] > 1) {
+                analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
             }
+            outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
 
-            for (int k = 0; k < spot_vec.size(); k++) {
-                lidar.SetSpotIdx(spot_vec[k]);
-                double normalize_weight = (double)30000 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+            for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
+                offset[0] = i * step_size[0];
+                extrinsic(param_idx[0]) = params_mat(param_idx[0]) + offset[0];
 
-                /** Save & terminal output **/
-                string analysis_filepath = lidar.kDatasetPath + "/log/";
-                if (steps[0] > 1) {
-                    analysis_filepath = analysis_filepath + name[param_idx[0]] + "_";
-                }
-                if (steps[1] > 1) {
-                    analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
-                }
-                outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
+                for (int j = -int((steps[1]-1)/2); j < int((steps[1]-1)/2)+1; j++) {
+                    offset[1] = j * step_size[1];
+                    extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
 
-                for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
-                    offset[0] = i * step_size[0];
-                    extrinsic(param_idx[0]) = params_mat(param_idx[0]) + offset[0];
-
-                    for (int j = -int((steps[1]-1)/2); j < int((steps[1]-1)/2)+1; j++) {
-                        offset[1] = j * step_size[1];
-                        extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
-
-                        double step_res = 0;
-                        /** Evaluate cost funstion **/
-                        for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
-                            double val;
-                            double weight = point.intensity * normalize_weight;
-                            Eigen::Vector4d lidar_point4 = {point.x, point.y, point.z, 1.0};
-                            Eigen::Matrix<double, 4, 4> T_mat = ExtrinsicMat(extrinsic);
-                            Eigen::Matrix<double, 3, 1> lidar_point = (T_mat * lidar_point4).head(3);
-                            Eigen::Matrix<double, 2, 1> projection = IntrinsicTransform(intrinsic, lidar_point);
-                            kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
-                            step_res += pow(weight * val, 2);
-                        }
-                        cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
-                        if (steps[0] > 1) {
-                            outfile << offset[0] + params_mat(param_idx[0]) << "\t";
-                        }
-                        if (steps[1] > 1) {
-                            outfile << offset[1] + params_mat(param_idx[1]) << "\t";
-                        }
-                        outfile << step_res << endl;
+                    double step_res = 0;
+                    /** Evaluate cost funstion **/
+                    for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
+                        double val;
+                        double weight = normalize_weight;
+                        Eigen::Vector4d lidar_point4 = {point.x, point.y, point.z, 1.0};
+                        Eigen::Matrix<double, 4, 4> T_mat = ExtrinsicMat(extrinsic);
+                        Eigen::Matrix<double, 3, 1> lidar_point = (T_mat * lidar_point4).head(3);
+                        Eigen::Matrix<double, 2, 1> projection = IntrinsicTransform(intrinsic, lidar_point);
+                        kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
+                        step_res += pow(weight * val, 2);
                     }
+                    cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
+                    if (steps[0] > 1) {
+                        outfile << offset[0] + params_mat(param_idx[0]) << "\t";
+                    }
+                    if (steps[1] > 1) {
+                        outfile << offset[1] + params_mat(param_idx[1]) << "\t";
+                    }
+                    outfile << step_res << endl;
                 }
-                outfile.close();
             }
+            outfile.close();
         }
     }
 }
