@@ -19,6 +19,9 @@ switch:
 
     # colorization
     kFullViewColorization: true
+
+    # colorization
+    kFullViewColorization: true
     kGlobalColoredMapping: true
 
 spot:
