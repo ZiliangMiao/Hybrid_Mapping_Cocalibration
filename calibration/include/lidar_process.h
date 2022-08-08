@@ -75,13 +75,8 @@ public:
 
     /** tags and maps **/
     typedef struct Tags {
-        int label = 0; /** label = 0->empty pixel; label = 1->normal pixel **/
         int num_pts = 0; /** number of points **/
-        vector<int> pts_indices;
-        float mean = 0;
-        float sigma = 0; /** sigma is the standard deviation estimation of lidar edge distribution **/
-        float weight = 0;
-        int num_hidden_pts = 0;
+        vector<int> pts_indices = {};
     }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
     typedef vector<vector<Tags>> TagsMap;
     vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
@@ -186,7 +181,7 @@ public:
     /***** LiDAR Pre-Processing *****/
     void LidarToSphere(CloudPtr& cart_cloud, CloudPtr& polar_cloud);
     void SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& polar_cloud);
-    void PixLookUp(const CloudPtr& cart_cloud);
+    void PixLookUp(CloudPtr cart_cloud);
 
     /***** Edge Process *****/
     void EdgeExtraction();

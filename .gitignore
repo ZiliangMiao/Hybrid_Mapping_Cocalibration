@@ -1,5 +1,6 @@
 calibration/build/*
 calibration/data/*
+calibration/config/*
 calibration/cmake-build-debug/*
 calibration/.idea/*
 calibration/.vscode/*

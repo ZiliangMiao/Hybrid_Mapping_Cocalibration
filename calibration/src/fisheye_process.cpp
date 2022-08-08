@@ -159,7 +159,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     RGBPointT pixel_pt;
     RGBPointT polar_pt;
     RGBCloudPtr fisheye_pixel_cloud(new RGBCloudT);
-    RGBCloudPtr polar_cloud(new RGBCloudT);
+    RGBCloudPtr fisheye_polar_cloud(new RGBCloudT);
     ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
 
@@ -182,7 +182,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 polar_pt.b = image.at<cv::Vec3b>(u, v)[0];
                 polar_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 polar_pt.r = image.at<cv::Vec3b>(u, v)[2];
-                polar_cloud->points.push_back(polar_pt);
+                fisheye_polar_cloud->points.push_back(polar_pt);
 
                 /** point cloud with origin pixel coordinates **/
                 pixel_pt.x = u;
@@ -197,19 +197,20 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
             }
         }
     }
+
     cout << "Fisheye polar cloud generated. \ntheta_min = " << theta_min << " theta_max = " << theta_max << endl;
 
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    result = std::make_tuple(polar_cloud, fisheye_pixel_cloud);
+    result = std::make_tuple(fisheye_pixel_cloud, fisheye_polar_cloud);
     return result;
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud) {
     cout << "----- Fisheye: SphereToPlane2 -----" << " Spot Index: " << this->spot_idx << endl;
     SphereToPlane(polar_cloud, -1.0);
 }
 
-void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
+void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     cout << "----- Fisheye: SphereToPlane -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     cv::Mat flat_image = cv::Mat::zeros(kFlatRows, kFlatCols, CV_8UC3); // define the flat image
 
@@ -226,7 +227,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
     double search_radius = kRadPerPix / 2;
 
     /** Multiprocessing test **/
-#pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(16)
 
     // use KDTree to search the spherical point cloud
     for (int u = 0; u < kFlatRows; ++u) {
@@ -245,7 +246,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
             std::vector<float> dist_L2;
             // radius search
             int num_RNN = kdtree.radiusSearch(search_point, search_radius, search_idx, dist_L2); // number of the radius nearest neighbors
-            float scale = 1.0f;
+            float scale = sqrt(2);
             // if the corresponding points are found in the radius neighborhood
             if (num_RNN == 0) {
                 // assign the theta and phi center to the searchPoint
@@ -256,7 +257,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
                 std::vector<int> search_idx_expand;
                 std::vector<float> dist_L2_expand;
                 int numSecondSearch = 0;
-                scale = 2.0f - ((float)u / kFlatRows);
+                scale = (2.0f - ((float)u / kFlatRows)) * sqrt(2);
                 while (numSecondSearch == 0) {
                     scale = scale + 0.1f;
                     numSecondSearch = kdtree2.radiusSearch(searchPoint, scale * search_radius, search_idx_expand, dist_L2_expand);
@@ -264,8 +265,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
                         flat_image.at<cv::Vec3b>(u, v)[0] = 0; // b
                         flat_image.at<cv::Vec3b>(u, v)[1] = 0; // g
                         flat_image.at<cv::Vec3b>(u, v)[2] = 0; // r
-                        invalid_search = invalid_search + 1;
-                        // tags_map[u][v].pts_indices.push_back(0);
+                        invalid_search += 1;
                         tags_map[u][v].pts_indices = {0};
                         break;
                     }
@@ -276,7 +276,6 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
                         B = B + polar_cloud->points[idx].b;
                         G = G + polar_cloud->points[idx].g;
                         R = R + polar_cloud->points[idx].r;
-                        // tags_map[u][v].pts_indices.push_back(idx);
                     }
                     tags_map[u][v].pts_indices = search_idx_expand;
                     flat_image.at<cv::Vec3b>(u, v)[0] = int(B / numSecondSearch); // b
@@ -290,7 +289,6 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr &polar_cloud, double bandwidth) {
                     B = B + polar_cloud->points[idx].b;
                     G = G + polar_cloud->points[idx].g;
                     R = R + polar_cloud->points[idx].r;
-                    // tags_map[u][v].pts_indices.push_back(idx);
                 }
                 tags_map[u][v].pts_indices = search_idx;
                 flat_image.at<cv::Vec3b>(u, v)[0] = int(B / num_RNN); // b
@@ -338,30 +336,30 @@ void FisheyeProcess::EdgeToPixel() {
     this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void FisheyeProcess::PixLookUp(RGBCloudPtr &fisheye_pixel_cloud) {
+void FisheyeProcess::PixLookUp(RGBCloudPtr fisheye_pixel_cloud) {
     cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int invalid_edge_pix = 0;
     EdgeFisheyePixels edge_fisheye_pixels;
-    EdgePixels edge_pixels = this -> edge_pixels_vec[this->spot_idx][this->view_idx];
-    TagsMap tags_map = this -> tags_map_vec[this->spot_idx][this->view_idx];
+    EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
+    TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     for (auto &edge_pixel : edge_pixels) {
         int u = round(edge_pixel[0]);
         int v = round(edge_pixel[1]);
-        double x = 0;
-        double y = 0;
+        float x = 0;
+        float y = 0;
 
-        int indice_size = tags_map[u][v].pts_indices.size();
-        if (indice_size == 0) {
+        int num_pts = tags_map[u][v].pts_indices.size();
+        if (num_pts == 0) {
             invalid_edge_pix++;
         }
         else {
-            for (int j = 0; j < indice_size; ++j) {
+            for (int j = 0; j < num_pts; ++j) {
                 RGBPointT &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
                 x += pt.x;
                 y += pt.y;
             }
-            x = x / indice_size;
-            y = y / indice_size;
+            x = x / num_pts;
+            y = y / num_pts;
             vector<double> pixel{x, y};
             edge_fisheye_pixels.push_back(pixel);
         }

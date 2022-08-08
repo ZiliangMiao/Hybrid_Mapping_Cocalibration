@@ -124,13 +124,9 @@ void LidarProcess::LidarToSphere(CloudPtr &cart_cloud, CloudPtr &polar_cloud) {
     /** Initial Transformation **/
     Eigen::Matrix<float, 6, 1> extrinsic_vec;
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-            // (float)this->extrinsic.tx, (float)this->extrinsic.ty, (float)this->extrinsic.tz;
             0.0, 0.0, 0.0;
     Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
-
-    /** Multiprocessing test **/
-#pragma omp parallel for num_threads(16)
 
     for (auto &point : polar_cloud->points) {
         // if (!projByIntensity) {
@@ -180,18 +176,18 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
     const float kScale = sqrt(2);
     const float kSearchRadius = kScale * (kRadPerPix / 2);
 
-    /** std range to generate weights **/
-    float dis_std_max = 0;
-    float dis_std_min = 1;
     int hidden_pt_cnt = 0;
     const float sensitivity = 0.02f;
 
+    /** Multiprocessing test **/
+    #pragma omp parallel for num_threads(16)
+
     for (int u = 0; u < kFlatRows; ++u) {
-        /** upper and lower bound of the current theta unit **/
+
         float theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
 
         for (int v = 0; v < kFlatCols; ++v) {
-            /** upper and lower bound of the current phi unit **/
+
             float phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
 
             /** assign the theta and phi center to the search_center **/
@@ -207,124 +203,52 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
             int search_num = kdtree.radiusSearch(search_center, kSearchRadius, search_pt_idx_vec, search_pt_squared_dis_vec); // number of the radius nearest neighbors
             if (search_num == 0) {
                 flat_img.at<float>(u, v) = 0; /** intensity **/
-                invalid_search_num = invalid_search_num + 1;
-                /** Default tag with params = 0 **/
-                tags_map[u][v].pts_indices.push_back(0);
+                invalid_search_num += 1;
+                tags_map[u][v].num_pts = 0;
+                tags_map[u][v].pts_indices = {};
             }
             else { /** corresponding points are found in the radius neighborhood **/
-                vector<double> intensity_vec, theta_vec, phi_vec;
                 int hidden_pt_num = 0;
-                float dist = 0, dist_mean = 0;
+                float dist_mean = 0;
+                float intensity_mean = 0;
+                vector<int> zero_vec(search_num, 0);
+                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
+
                 for (int i = 0; i < search_num; ++i) {
-                    bool skip = false;
-                    PointT &polar_pt = polar_cloud->points[search_pt_idx_vec[i]];
-                    dist = polar_pt.z;
-                    dist_mean = (i * dist_mean + dist) / (i + 1);
-                    if (i > 0) {
-                        PointT &cart_pt_former = (*cart_cloud)[search_pt_idx_vec[i - 1]];
-                        if ((dist < (1-2*sensitivity) * dist_mean && i == 1) ) {
-                            hidden_pt_num++;
-                            hidden_pt_cnt++;
-                            tags_map[u][v].pts_indices.erase(tags_map[u][v].pts_indices.begin());
-                            intensity_vec.erase(intensity_vec.begin());
-                            theta_vec.erase(theta_vec.begin());
-                            phi_vec.erase(phi_vec.begin());
-                            dist_mean = dist;
-                        }
-                        if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && polar_pt.intensity < 20)) {
-                            // if ((abs(dist_mean - dist) > dist * sensitivity)) {
-                            hidden_pt_num++;
-                            hidden_pt_cnt++;
-                            skip = true;
-                            dist_mean = (dist_mean * (i + 1) - dist) / i;
-                        }
+                    dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
+                }
+                dist_mean = dist_mean / search_num;
 
+                for (int i = 0; i < search_num; ++i) {
+                    PointT &local_pt = polar_cloud->points[search_pt_idx_vec[i]];
+                    float dist = local_pt.z;
+                    if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
+                        hidden_pt_num++;
+                        tags_map[u][v].pts_indices[i] = 0;
                     }
-
-                    if (!skip) {
-                        intensity_vec.push_back(polar_pt.intensity);
-                        theta_vec.push_back(polar_pt.x);
-                        phi_vec.push_back(polar_pt.y);
-                        tags_map[u][v].pts_indices.push_back(search_pt_idx_vec[i]);
+                    else {
+                        intensity_mean += local_pt.intensity;
+                        tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
                     }
                 }
-
+                 
                 /** add tags **/
                 tags_map[u][v].num_pts = search_num - hidden_pt_num;
-
-                /** check the size of vectors **/
-                ROS_ASSERT_MSG((theta_vec.size() == phi_vec.size()) && (phi_vec.size() == intensity_vec.size()) && (intensity_vec.size() == tags_map[u][v].pts_indices.size()) && (tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
-
-                if (tags_map[u][v].num_pts == 1) {
-                    /** only one point in the theta-phi sub-region of a pixel **/
-                    tags_map[u][v].label = 1;
-                    // tags_map[u][v].mean = 0;
-                    // tags_map[u][v].sigma = 0;
-                    // tags_map[u][v].weight = 1;
-                    flat_img.at<float>(u, v) = intensity_vec[0];
+                tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
+                
+                if (tags_map[u][v].num_pts > 0) {
+                    flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].num_pts;
                 }
-                else if (tags_map[u][v].num_pts == 0) {
-                    /** no points in a pixel **/
-                    tags_map[u][v].label = 0;
-                    // tags_map[u][v].mean = 99;
-                    // tags_map[u][v].sigma = 99;
-                    // tags_map[u][v].weight = 0;
+                else {
                     flat_img.at<float>(u, v) = 0;
                 }
-                else if (tags_map[u][v].num_pts >= 2) {
-                    /** Gaussian Distribution Parameters Estimation **/
-                    // double theta_mean = accumulate(std::begin(theta_vec), std::end(theta_vec), 0.0) / tags_map[u][v].num_pts; /** central position calculation **/
-                    // double phi_mean = accumulate(std::begin(phi_vec), std::end(phi_vec), 0.0) / tags_map[u][v].num_pts;
-                    double intensity_mean = accumulate(std::begin(intensity_vec), std::end(intensity_vec), 0.0) / tags_map[u][v].num_pts;
-                    // vector<double> dis_vec(tags_map[u][v].num_pts);
-
-                    // for (int i = 0; i < tags_map[u][v].num_pts; i++) {
-                    //     if ((theta_vec[i] > theta_mean && phi_vec[i] >= phi_mean) || (theta_vec[i] < theta_mean && phi_vec[i] <= phi_mean)) {
-                    //         /** consider these two conditions as positive distance **/
-                    //         dis_vec[i] = sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
-                    //     }
-                    //     else if ((theta_vec[i] >= theta_mean && phi_vec[i] < phi_mean) || (theta_vec[i] <= theta_mean && phi_vec[i] > phi_mean)) {
-                    //         /** consider these two conditions as negative distance **/
-                    //         dis_vec[i] = -sqrt(pow((theta_vec[i] - theta_mean), 2) + pow((phi_vec[i] - phi_mean), 2));
-                    //     }
-                    //     else if (theta_vec[i] == theta_mean && phi_vec[i] == phi_mean) {
-                    //         dis_vec[i] = 0;
-                    //     }
-                    // }
-
-                    // float dis_mean = accumulate(std::begin(dis_vec), std::end(dis_vec), 0.0) / tags_map[u][v].num_pts;
-                    // float dis_var = 0.0;
-                    // std::for_each (std::begin(dis_vec), std::end(dis_vec), [&](const double distance) {
-                    //     dis_var += (distance - dis_mean) * (distance - dis_mean);
-                    // });
-                    // dis_var = dis_var / tags_map[u][v].num_pts;
-                    // float dis_std = sqrt(dis_var);
-                    // if (dis_std > dis_std_max) {
-                    //     dis_std_max = dis_std;
-                    // }
-                    // else if (dis_std < dis_std_min) {
-                    //     dis_std_min = dis_std;
-                    // }
-
-                    tags_map[u][v].label = 1;
-                    // tags_map[u][v].mean = dis_mean;
-                    // tags_map[u][v].sigma = dis_std;
-
-                    flat_img.at<float>(u, v) = intensity_mean;
-                }
+                
+                hidden_pt_cnt += hidden_pt_num;
+                ROS_ASSERT_MSG((tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
             }
         }
     }
 
-    // double weight_max = 1;
-    // double weight_min = 0.7;
-    // for (int u = 0; u < kFlatRows; ++u) {
-    //     for (int v = 0; v < kFlatCols; ++v) {
-    //         if (tags_map[u][v].num_pts > 1) {
-    //             tags_map[u][v].weight = (dis_std_max - tags_map[u][v].sigma) / (dis_std_max - dis_std_min) * (weight_max - weight_min) + weight_min;
-    //         }
-    //     }
-    // }
     cout << "hidden points: " << hidden_pt_cnt << "/" << polar_cloud->points.size() << endl;
 
     /** add the tags_map of this specific pose to maps **/
@@ -338,21 +262,7 @@ void LidarProcess::SphereToPlane(const CloudPtr& cart_cloud, const CloudPtr& pol
 
     for (int u = 0; u < kFlatRows; ++u) {
         for (int v = 0; v < kFlatCols; ++v) {
-            const bool kIdxPrint = false;
-            // if (kIdxPrint) {
-            //     for (int k = 0; k < tags_map[u][v].pts_indices.size(); ++k) {
-            //         /** k is the number of lidar points that the [u][v] pixel contains **/
-            //         if (k == tags_map[u][v].pts_indices.size() - 1) {
-            //             cout << tags_map[u][v].pts_indices[k] << endl;
-            //             outfile << tags_map[u][v].pts_indices[k] << "\t" << "*****" << "\t" << tags_map[u][v].pts_indices.size() << endl;
-            //         }
-            //         else {
-            //             cout << tags_map[u][v].pts_indices[k] << endl;
-            //             outfile << tags_map[u][v].pts_indices[k] << "\t";
-            //         }
-            //     }
-            // }
-            outfile << "lable: " << tags_map[u][v].label << "\t" << "size: " << tags_map[u][v].num_pts << "\t" << "weight: " << tags_map[u][v].weight << endl;
+            outfile << "size: " << tags_map[u][v].num_pts << endl;
         }
     }
     outfile.close();
@@ -392,10 +302,10 @@ void LidarProcess::EdgeToPixel() {
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
+void LidarProcess::PixLookUp(CloudPtr cart_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
     cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
-    int invalid_pixel_space = 0;
+    int num_invalid_pixels = 0;
     EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     EdgePts edge_pts;
@@ -406,17 +316,14 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
         int num_pts = tags_map[u][v].num_pts;
-        if (tags_map[u][v].label == 0) { /** invalid pixels **/
-            invalid_pixel_space = invalid_pixel_space + 1;
-            continue;
+        if (num_pts == 0) { /** invalid pixels **/
+            num_invalid_pixels += 1;
         }
         else { /** normal pixels **/
             /** center of lidar edge distribution **/
-
-            CloudPtr pixel_cloud(new CloudT);
             float x_avg = 0.0f, y_avg = 0.0f, z_avg = 0.0f;
-            pcl::copyPointCloud(*cart_cloud, tags_map[u][v].pts_indices, *pixel_cloud);
-            for (auto &pixel_pt : pixel_cloud->points) {
+            for (int i = 0; i < tags_map[u][v].pts_indices.size(); ++i) {
+                PointT pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
                 x_avg += pixel_pt.x;
                 y_avg += pixel_pt.y;
                 z_avg += pixel_pt.z;
@@ -425,7 +332,6 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             x_avg = x_avg / num_pts;
             y_avg = y_avg / num_pts;
             z_avg = z_avg / num_pts;
-            // float weight = tags_map[u][v].weight;
             
             /** store the spatial coordinates into vector **/
             vector<double> coordinates {x_avg, y_avg, z_avg};
@@ -436,7 +342,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             pt.x = x_avg;
             pt.y = y_avg;
             pt.z = z_avg;
-            // pt.intensity = weight; /** note: I is used to store the point weight **/
+            pt.intensity = 1; /** note: I is used to store the point weight **/
             edge_cloud->points.push_back(pt);
 
             if (kEdgeAnalysis) {
@@ -446,7 +352,7 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
             }
         }
     }
-    cout << "number of invalid lookups(lidar): " << invalid_pixel_space << endl;
+    cout << "number of invalid lookups(lidar): " << num_invalid_pixels << endl;
     this->edge_pts_vec[this->spot_idx][this->view_idx] = edge_pts;
     this->edge_cloud_vec[this->spot_idx][this->view_idx] = edge_cloud;
 
@@ -458,10 +364,10 @@ void LidarProcess::PixLookUp(const CloudPtr& cart_cloud) {
         cout << "Open file failure" << endl;
     }
     for (auto &point : edge_cloud->points) {
-        outfile << point.x
-                << "\t" << point.y
-                << "\t" << point.z
-                << "\t" << point.intensity << endl;
+        outfile << point.x << "\t"
+                << point.y << "\t"
+                << point.z << "\t"
+                << point.intensity << endl;
     }
     outfile.close();
 
@@ -547,12 +453,6 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     float eucidean_epsilon = 0.01;
     float max_fitness_range = 2.0;
 
-    /** invalid point filter **/
-    std::vector<int> null_indices_tgt;
-    pcl::removeNaNFromPointCloud(*cloud_tgt, *cloud_tgt, null_indices_tgt);
-    std::vector<int> null_indices_src;
-    pcl::removeNaNFromPointCloud(*cloud_src, *cloud_src, null_indices_src);
-
     /** uniform sampling **/
     CloudPtr cloud_us_tgt (new CloudT);
     CloudPtr cloud_us_src (new CloudT);
@@ -564,6 +464,14 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
     us.filter(*cloud_us_src);
     PCL_INFO("Size of Uniform Sampling Filtered Target Cloud: %d\n", cloud_us_tgt->size());
     PCL_INFO("Size of Uniform Sampling Filtered Source Cloud: %d\n", cloud_us_src->size());
+
+    /** invalid point filter **/
+    std::vector<int> null_indices_tgt;
+    (*cloud_us_tgt).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_tgt, *cloud_us_tgt, null_indices_tgt);
+    std::vector<int> null_indices_src;
+    (*cloud_us_src).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
 
     CloudPtr cloud_us_tgt_effe (new CloudT);
     CloudPtr cloud_us_src_effe (new CloudT);
@@ -579,10 +487,11 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, -8.0)));
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, 8.0)));
         pcl::ConditionalRemoval<PointT> cond_filter;
-        cond_filter.setKeepOrganized(false); /** defalt replaced value NaN **/
+        cond_filter.setKeepOrganized(false); /** default replaced value NaN **/
         cond_filter.setCondition(range_cond);
         cond_filter.setInputCloud(cloud_us_src);
         cond_filter.filter(*cloud_us_src_effe);
+        cond_filter.setKeepOrganized(false);
         cond_filter.setInputCloud(cloud_us_tgt);
         cond_filter.filter(*cloud_us_tgt_effe);
         cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->points.size() << endl;
@@ -614,6 +523,7 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         extract.setInputCloud(cloud_us_src);
         extract.setIndices(src_effe_indices_ptr);
         extract.setNegative(false);
+        extract.setKeepOrganized(false);
         extract.filter(*cloud_us_src_effe);
         cout << "Size of source cloud after effective point filter: " << cloud_us_src_effe->size() << endl;
 
@@ -623,11 +533,9 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         for (int i = 0; i < cloud_us_tgt->size(); ++i) {
             kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
             if (nn_dists[0] <= max_fitness_range) {
-                cout << "normal" << endl;
                 tgt_effe_indices[i] = nn_indices[0];
             }
             else {
-                cout << "abnormal" << endl;
                 tgt_effe_indices[i] = 0;
             }
         }
@@ -637,10 +545,17 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         extract_tgt.setInputCloud(cloud_us_tgt);
         extract_tgt.setIndices(tgt_effe_indices_ptr);
         extract_tgt.setNegative(false);
+        extract_tgt.setKeepOrganized(false);
         extract_tgt.filter(*cloud_us_tgt_effe);
         cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->size() << endl;
         cout << "Run time of effective point filter: " << timer_effe.getTimeSeconds() << " s" << endl;
     }
+
+    /** invalid point filter **/
+    (*cloud_us_tgt_effe).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_tgt_effe, *cloud_us_tgt_effe, null_indices_tgt);
+    (*cloud_us_src_effe).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_src_effe, *cloud_us_src_effe, null_indices_src);
 
     /** get the init trans cloud & init fitness score **/
     CloudPtr cloud_init_trans_us (new CloudT);
@@ -795,11 +710,6 @@ void LidarProcess::CreateDensePcd() {
     }
     cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
 
-    /** invalid point filter **/
-    (*view_raw_cloud).is_dense = false;
-    std::vector<int> null_indices;
-    pcl::removeNaNFromPointCloud(*view_raw_cloud, *view_raw_cloud, null_indices);
-
     /** condition filter **/
     CloudPtr view_cloud(new CloudT);
     pcl::ConditionOr<PointT>::Ptr range_cond(new pcl::ConditionOr<PointT>());
@@ -814,6 +724,12 @@ void LidarProcess::CreateDensePcd() {
     cond_filter.setCondition(range_cond);
     cond_filter.setInputCloud(view_raw_cloud);
     cond_filter.filter(*view_cloud);
+
+    /** invalid point filter **/
+    (*view_cloud).is_dense = false;
+    std::vector<int> null_indices;
+    pcl::removeNaNFromPointCloud(*view_cloud, *view_cloud, null_indices);
+    (*view_cloud).is_dense = true;
 
     /** check the pass through filtered point cloud size **/
     cout << "size of cloud after a condition filter:" << view_cloud->points.size() << endl;
@@ -833,7 +749,7 @@ void LidarProcess::ViewRegistration() {
         PCL_ERROR("Could Not Load Target File!\n");
     }
     cout << "Loaded " << view_cloud_tgt->size() << " points from target file" << endl;
-    if (pcl::io::loadPCDFile<PointT>(src_pcd_path,*view_cloud_src) == -1) {
+    if (pcl::io::loadPCDFile<PointT>(src_pcd_path, *view_cloud_src) == -1) {
         PCL_ERROR("Could Not Load Source File!\n");
     }
     cout << "Loaded " << view_cloud_src->size() << " points from source file" << endl;
@@ -913,9 +829,10 @@ void LidarProcess::FullViewMapping() {
     CloudPtr radius_outlier_cloud(new CloudT);
     pcl::RadiusOutlierRemoval<PointT> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
-    radius_outlier_filter.setRadiusSearch(1);
-    radius_outlier_filter.setMinNeighborsInRadius(200);
+    radius_outlier_filter.setRadiusSearch(0.1);
+    radius_outlier_filter.setMinNeighborsInRadius(20);
     radius_outlier_filter.setNegative(false);
+    radius_outlier_filter.setKeepOrganized(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
 
     /** radius outlier filter cloud size check **/
@@ -930,8 +847,6 @@ void LidarProcess::SpotRegistration() {
     /** source index and target index **/
     int src_idx = this->spot_idx;
     int tgt_idx = this->spot_idx - 1;
-//    ros::param::get("tgt_idx", tgt_idx);
-//    ros::param::get("src_idx", src_idx);
     PCL_INFO("ICP Target Spot Index: %d\n", tgt_idx);
     PCL_INFO("ICP Source Spot Index: %d\n", src_idx);
 
