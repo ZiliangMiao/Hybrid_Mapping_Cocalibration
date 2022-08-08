@@ -11,18 +11,18 @@ switch:
     kViewRegistration: false
     kFullViewMapping: false
 
-    kFullViewColorization: true
+    ## Calibration and Optimization cost analysis
+    kCeresOptimization: false
+    kParamsAnalysis: false
+
+    kFullViewColorization: false
     # spot
     kSpotRegistration: true
     kGlobalMapping: true
     kGlobalColoredMapping: true
 
-    ## Calibration and Optimization cost analysis
-    kCeresOptimization: true
-    kParamsAnalysis: false
-    
 spot:
-    kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 2  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"

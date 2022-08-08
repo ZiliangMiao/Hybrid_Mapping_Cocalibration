@@ -540,17 +540,19 @@ void LidarProcess::ReadEdge() {
 /** Point Cloud Registration **/
 tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz) {
     /** params **/
-    float uniform_radius = 0.02;
-    int max_iters = 100;
-    float max_corr_dis = 0.2;
-    float trans_epsilon = 1e-10;
-    float eucidean_epsilon = 0.01;
-    float max_fitness_range = 2.0;
+    const float uniform_radius = 0.02;
+    const int max_iters = 100;
+    const float max_corr_dis = 0.2;
+    const float trans_epsilon = 1e-10;
+    const float eucidean_epsilon = 0.01;
+    const float max_fitness_range = 2.0;
 
     /** invalid point filter **/
     std::vector<int> null_indices_tgt;
+    (*cloud_tgt).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud_tgt, *cloud_tgt, null_indices_tgt);
     std::vector<int> null_indices_src;
+    (*cloud_src).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud_src, *cloud_src, null_indices_src);
 
     /** uniform sampling **/
@@ -579,7 +581,7 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::GT, -8.0)));
         range_cond->addComparison(pcl::FieldComparison<PointT>::ConstPtr(new pcl::FieldComparison<PointT> ("x", pcl::ComparisonOps::LT, 8.0)));
         pcl::ConditionalRemoval<PointT> cond_filter;
-        cond_filter.setKeepOrganized(false); /** defalt replaced value NaN **/
+        cond_filter.setKeepOrganized(false); /** default replaced value NaN **/
         cond_filter.setCondition(range_cond);
         cond_filter.setInputCloud(cloud_us_src);
         cond_filter.filter(*cloud_us_src_effe);
@@ -623,11 +625,11 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         for (int i = 0; i < cloud_us_tgt->size(); ++i) {
             kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
             if (nn_dists[0] <= max_fitness_range) {
-                cout << "normal" << endl;
+                // cout << "normal" << endl;
                 tgt_effe_indices[i] = nn_indices[0];
             }
             else {
-                cout << "abnormal" << endl;
+                // cout << "abnormal" << endl;
                 tgt_effe_indices[i] = 0;
             }
         }
@@ -913,8 +915,8 @@ void LidarProcess::FullViewMapping() {
     CloudPtr radius_outlier_cloud(new CloudT);
     pcl::RadiusOutlierRemoval<PointT> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
-    radius_outlier_filter.setRadiusSearch(1);
-    radius_outlier_filter.setMinNeighborsInRadius(200);
+    radius_outlier_filter.setRadiusSearch(0.1);
+    radius_outlier_filter.setMinNeighborsInRadius(20);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
 
