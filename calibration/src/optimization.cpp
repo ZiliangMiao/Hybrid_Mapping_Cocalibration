@@ -301,9 +301,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     bool kParamsAnalysis = false;
     ros::param::get("switch/kParamsAnalysis", kParamsAnalysis);
     if (kParamsAnalysis) {
-        CorrelationAnalysis(fisheye, lidar, spot_vec, result_vec, bandwidth);
+        CorrelationAnalysis(fisheye, lidar, spot_vec, init_params_vec, result_vec, bandwidth);
     }
-    
     
     return result_vec;
 }
@@ -311,7 +310,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
 void CorrelationAnalysis(FisheyeProcess &fisheye,
                          LidarProcess &lidar,
                          std::vector<int> spot_vec,
-                         std::vector<double> params_vec,
+                         std::vector<double> init_params_vec,
+                         std::vector<double> result_vec,
                          double bandwidth) {
     const int kViews = fisheye.num_views;
     const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
@@ -341,7 +341,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
     const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
 
     /***** Correlation Analysis *****/
-    Eigen::Matrix<double, 6+kIntrinsics, 1> params_mat = Eigen::Map<Eigen::Matrix<double, 6+kIntrinsics, 1>>(params_vec.data());
+    Eigen::Matrix<double, 6+kIntrinsics, 1> params_mat = Eigen::Map<Eigen::Matrix<double, 6+kIntrinsics, 1>>(result_vec.data());
     Eigen::Matrix<double, 6, 1> extrinsic = params_mat.head(6);
     Eigen::Matrix<double, kIntrinsics, 1> intrinsic = params_mat.tail(kIntrinsics);
     std::vector<double> results;
@@ -388,11 +388,18 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                 analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
             }
             outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
-
+            if (steps[0] > 1) {
+                outfile << init_params_vec[param_idx[0]] << "\t" << result_vec[param_idx[0]] << endl;
+            }
+            if (steps[1] > 1) {
+                outfile << init_params_vec[param_idx[1]] << "\t" << result_vec[param_idx[1]] << endl;
+            }
+            
+            
             for (int i = -int((steps[0]-1)/2); i < int((steps[0]-1)/2)+1; i++) {
                 offset[0] = i * step_size[0];
                 extrinsic(param_idx[0]) = params_mat(param_idx[0]) + offset[0];
-
+                
                 for (int j = -int((steps[1]-1)/2); j < int((steps[1]-1)/2)+1; j++) {
                     offset[1] = j * step_size[1];
                     extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
@@ -409,7 +416,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                         kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
                         step_res += pow(weight * val, 2);
                     }
-                    cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
+                    // cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
                     if (steps[0] > 1) {
                         outfile << offset[0] + params_mat(param_idx[0]) << "\t";
                     }

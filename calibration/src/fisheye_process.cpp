@@ -156,17 +156,14 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     u0 = this->intrinsic.u0;
     v0 = this->intrinsic.v0;
 
-    // RGBPointT pixel_pt;
-    // RGBPointT polar_pt;
-    RGBCloudPtr pixel_cloud(new RGBCloudT(1, kFisheyeRows * kFisheyeCols));
-    RGBCloudPtr polar_cloud(new RGBCloudT(1, kFisheyeRows * kFisheyeCols));
+    RGBPointT pixel_pt;
+    RGBPointT polar_pt;
+    RGBCloudPtr fisheye_pixel_cloud(new RGBCloudT);
+    RGBCloudPtr fisheye_polar_cloud(new RGBCloudT);
     ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
 
     float theta_min = M_PI, theta_max = -M_PI;
-
-    /** Multiprocessing test **/
-    #pragma omp parallel for num_threads(16)
 
     for (int u = 0; u < this->kFisheyeRows; u++) {
         for (int v = 0; v < this->kFisheyeCols; v++) {
@@ -179,24 +176,22 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
                 float theta = spline(radius);
 
                 /** point cloud with origin polar coordinates **/
-                RGBPointT &polar_pt = polar_cloud->points[u * kFisheyeCols + v];
                 polar_pt.x = theta;
                 polar_pt.y = phi;
                 polar_pt.z = 0;
                 polar_pt.b = image.at<cv::Vec3b>(u, v)[0];
                 polar_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 polar_pt.r = image.at<cv::Vec3b>(u, v)[2];
-                // polar_cloud->points.push_back(polar_pt);
+                fisheye_polar_cloud->points.push_back(polar_pt);
 
                 /** point cloud with origin pixel coordinates **/
-                RGBPointT &pixel_pt = pixel_cloud->points[u * kFisheyeCols + v];
                 pixel_pt.x = u;
                 pixel_pt.y = v;
                 pixel_pt.z = 0;
                 pixel_pt.b = image.at<cv::Vec3b>(u, v)[0];
                 pixel_pt.g = image.at<cv::Vec3b>(u, v)[1];
                 pixel_pt.r = image.at<cv::Vec3b>(u, v)[2];
-                // fisheye_pixel_cloud->points.push_back(pixel_pt);
+                fisheye_pixel_cloud->points.push_back(pixel_pt);
                 if (theta > theta_max) { theta_max = theta; }
                 else if (theta < theta_min) { theta_min = theta; }
             }
@@ -206,7 +201,7 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     cout << "Fisheye polar cloud generated. \ntheta_min = " << theta_min << " theta_max = " << theta_max << endl;
 
     std::tuple<RGBCloudPtr, RGBCloudPtr> result;
-    result = std::make_tuple(pixel_cloud, polar_cloud);
+    result = std::make_tuple(fisheye_pixel_cloud, fisheye_polar_cloud);
     return result;
 }
 

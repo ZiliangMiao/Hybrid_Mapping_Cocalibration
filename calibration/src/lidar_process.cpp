@@ -128,9 +128,6 @@ void LidarProcess::LidarToSphere(CloudPtr &cart_cloud, CloudPtr &polar_cloud) {
     Eigen::Matrix4f T_mat = ExtrinsicMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
-    /** Multiprocessing test **/
-    #pragma omp parallel for num_threads(16)
-
     for (auto &point : polar_cloud->points) {
         // if (!projByIntensity) {
         //     radius = proj_param;

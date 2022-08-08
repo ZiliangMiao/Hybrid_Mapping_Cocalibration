@@ -1,6 +1,6 @@
 switch:
     ## Data Process
-    kLidarFlatProcess: false
+    kLidarFlatProcess: true
     kFisheyeFlatProcess: false
 
     ## Registration, Colorization and Mapping
@@ -10,11 +10,11 @@ switch:
     kFullViewMapping: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kParamsAnalysis: false
+    kCeresOptimization: true
+    kParamsAnalysis: true
     
     # spot
-    kSpotRegistration: true
+    kSpotRegistration: false
     kGlobalMapping: true
 
     # colorization
@@ -22,7 +22,7 @@ switch:
     kGlobalColoredMapping: true
 
 spot:
-    kOneSpot: 1  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 0  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"

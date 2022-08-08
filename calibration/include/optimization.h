@@ -60,5 +60,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
 void CorrelationAnalysis(FisheyeProcess &fisheye,
                         LidarProcess &lidar,
                         std::vector<int> spot_vec,
-                        std::vector<double> params_vec,
+                        std::vector<double> init_params_vec,
+                        std::vector<double> result_vec,
                         double bandwidth);
