@@ -168,13 +168,13 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                CloudPtr cart_cloud(new CloudT);
-                CloudPtr polar_cloud(new CloudT);
-                lidar.LidarToSphere(cart_cloud, polar_cloud);
-                lidar.SphereToPlane(cart_cloud, polar_cloud);
+                CloudPtr lidar_cart_cloud(new CloudT);
+                CloudPtr lidar_polar_cloud(new CloudT);
+                lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
+                lidar.SphereToPlane(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
-                lidar.PixLookUp(cart_cloud);
+                lidar.PixLookUp(lidar_cart_cloud);
             }
         }
     }
@@ -185,9 +185,9 @@ int main(int argc, char** argv) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx);
                 std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_polar_cloud;
                 RGBCloudPtr fisheye_pixel_cloud;
-                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+                RGBCloudPtr fisheye_polar_cloud;
+                std::tie(fisheye_pixel_cloud, fisheye_polar_cloud) = fisheye_clouds;
                 fisheye.SphereToPlane(fisheye_polar_cloud);
                 fisheye.EdgeExtraction();
                 fisheye.EdgeToPixel();
@@ -221,16 +221,31 @@ int main(int argc, char** argv) {
                 lidar.SetViewIdx(lidar.fullview_idx);
                 fisheye.ReadEdge();
                 lidar.ReadEdge();
-                spot_vec = {spot};
+                
                 Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
                 string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path
                                     + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
                 SaveResults(record_path, params_init, 0, 0, 0);
+            }
+        }
+
+        for (int spot = 0; spot < lidar.num_spots; ++spot) {
+            if (kOneSpot == -1 || kOneSpot == spot) {
+                // if (kMultiSpotsOptimization) {
+                //     spot_vec.reserve(lidar.num_spots);
+                //     std::iota(spot_vec.begin(), spot_vec.end(), 0);
+                // }
+                // else {
+                //     spot_vec = {spot};
+                // }
+                spot_vec = {spot};
 
                 for (int i = 0; i < bw.size(); i++) {
                     double bandwidth = bw[i];
                     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub);
                 }
+
+                // if (kMultiSpotsOptimization) { break;}
             }
         }
     }
@@ -257,6 +272,7 @@ int main(int argc, char** argv) {
                 1880.36, -536.721, -12.9298, -18.0154, 5.6414,
                 1.00176, -0.00863924, 0.00846056
         };
+        
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);

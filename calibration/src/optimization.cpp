@@ -126,7 +126,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         int fullview_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
         RGBCloudPtr output_cloud(new RGBCloudT);
         std::vector<int> colored_point_idx;
-        std::vector<int> remaining_point_idx;
+        std::vector<int> blank_point_idx;
 
         /** Loading transform matrix between different views **/
         pose_mat_path = lidar.poses_files_path_vec[lidar.spot_idx][fullview_idx].pose_trans_mat_path;
@@ -164,16 +164,16 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
                     colored_point_idx.push_back(point_idx);
                 }
                 else {
-                    remaining_point_idx.push_back(point_idx);
+                    blank_point_idx.push_back(point_idx);
                 }
             }
             else {
-                remaining_point_idx.push_back(point_idx);
+                blank_point_idx.push_back(point_idx);
             }
         }
         pcl::copyPointCloud(*input_cloud, colored_point_idx, *output_cloud);
         pcl::transformPointCloud(*output_cloud, *output_cloud, (T_mat * pose_mat * T_mat_inv));
-	    pcl::copyPointCloud(*input_cloud, remaining_point_idx, *input_cloud);
+	    pcl::copyPointCloud(*input_cloud, blank_point_idx, *input_cloud);
         pcl::transformPointCloud(*input_cloud, *input_cloud, (T_mat * pose_mat * T_mat_inv));
         *fullview_rgb_cloud += *output_cloud;
         cout << input_cloud->points.size() << " " << fullview_rgb_cloud->points.size() << " " << fullview_xyz_cloud->points.size() << endl;
@@ -204,7 +204,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
     q_vector.tail(kIntrinsics + 3) = init_params.tail(kIntrinsics + 3);
     q_vector.head(4) << quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w();
-    // cout << q_vector.head(4) << endl;
     double params[kParams];
     memcpy(params, &q_vector(0), q_vector.size() * sizeof(double));
 
@@ -212,6 +211,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     std::vector<double> ref_vals;
     std::vector<ceres::Grid2D<double>> grids;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
+    fisheye.SetViewIdx(fisheye.fullview_idx);
+    lidar.SetViewIdx(lidar.fullview_idx);
     for (int i = 0; i < spot_vec.size(); i++) {
         fisheye.SetSpotIdx(spot_vec[i]);
         lidar.SetSpotIdx(spot_vec[i]);
@@ -232,14 +233,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     }
     const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
 
-    // vector<double> p_c = fisheye.Kde(bandwidth, scale);
-    // double *kde_val = new double[p_c.size()];
-    // memcpy(kde_val, &p_c[0], p_c.size() * sizeof(double));
-    
-    // double ref_val = *max_element(p_c.begin(), p_c.end());
-    // const ceres::Grid2D<double> kde_grid(kde_val, 0, fisheye.kFisheyeRows * scale, 0, fisheye.kFisheyeCols * scale);
-    // const ceres::BiCubicInterpolator<ceres::Grid2D<double>> kde_interpolator(kde_grid);
-
     /********* Initialize Ceres Problem *********/
     ceres::Problem problem;
     problem.AddParameterBlock(params, kExtrinsics-3, q_manifold);
@@ -258,9 +251,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
             problem.AddResidualBlock(QuaternionFunctor::Create(lid_point, weight, ref_vals[idx], scale, kde_interpolators[idx]),
                                     loss_function,
                                     params, params+(kExtrinsics-3), params+kExtrinsics);
-            // problem.AddResidualBlock(QuaternionCalibration::Create(lid_point, weight, ref_val, scale, kde_interpolator),
-            // loss_function,
-            // params, params+(kExtrinsics-3), params+kExtrinsics);
         }
     }
 
@@ -283,9 +273,9 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options.minimizer_progress_to_stdout = false;
+    options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 75;
+    options.max_num_iterations = 50;
     options.function_tolerance = 1e-7;
     options.use_nonmonotonic_steps = true;
 
@@ -308,7 +298,12 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
         Visualization2D(fisheye, lidar, result_vec, bandwidth);
     }
 
-    CorrelationAnalysis(fisheye, lidar, spot_vec, result_vec, bandwidth);
+    bool kParamsAnalysis = false;
+    ros::param::get("switch/kParamsAnalysis", kParamsAnalysis);
+    if (kParamsAnalysis) {
+        CorrelationAnalysis(fisheye, lidar, spot_vec, result_vec, bandwidth);
+    }
+    
     
     return result_vec;
 }
@@ -382,7 +377,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
         for (int k = 0; k < spot_vec.size(); k++) {
             lidar.SetSpotIdx(spot_vec[k]);
-            double normalize_weight = (double)30000 / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+            double normalize_weight = 30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
 
             /** Save & terminal output **/
             string analysis_filepath = lidar.kDatasetPath + "/log/";

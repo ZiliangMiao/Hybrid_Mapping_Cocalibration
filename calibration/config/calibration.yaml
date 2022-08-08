@@ -1,9 +1,7 @@
 switch:
     ## Data Process
     kLidarFlatProcess: false
-    kLidarEdgeProcess: false
-    kFisheyeFlatProcess: false  # true: use the fisheye flat image process method 
-    kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
+    kFisheyeFlatProcess: false
 
     ## Registration, Colorization and Mapping
     # view
@@ -14,20 +12,22 @@ switch:
     ## Calibration and Optimization cost analysis
     kCeresOptimization: false
     kParamsAnalysis: false
-
-    kFullViewColorization: false
+    
     # spot
     kSpotRegistration: true
     kGlobalMapping: true
+
+    # colorization
+    kFullViewColorization: true
     kGlobalColoredMapping: true
 
 spot:
-    kOneSpot: 2  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "lh3_global"
-    kNumSpots: 5
+    kDatasetName: "parking"
+    kNumSpots: 6
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
