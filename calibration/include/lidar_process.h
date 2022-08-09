@@ -39,12 +39,12 @@
 /** namespace **/
 using namespace std;
 /** typedef **/
-typedef pcl::PointXYZI PointT;
-typedef pcl::PointCloud<PointT> CloudT;
-typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
-typedef pcl::PointXYZRGB RGBPointT;
-typedef pcl::PointCloud<RGBPointT> RGBCloudT;
-typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
+typedef pcl::PointXYZI PointI;
+typedef pcl::PointCloud<PointI> CloudI;
+typedef pcl::PointCloud<PointI>::Ptr CloudPtr;
+typedef pcl::PointXYZRGB RGBPointI;
+typedef pcl::PointCloud<RGBPointI> RGBCloudI;
+typedef pcl::PointCloud<RGBPointI>::Ptr RGBCloudPtr;
 
 class LidarProcess{
 public:

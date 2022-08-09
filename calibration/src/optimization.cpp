@@ -23,11 +23,11 @@ struct QuaternionFunctor {
     }
 
     QuaternionFunctor(const Eigen::Vector3d lid_point,
-                        const double weight,
-                        const double ref_val,
-                        const double scale,
-                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-                        : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(std::move(weight)), kde_val_(std::move(ref_val)), kde_scale_(std::move(scale)) {}
+                    const double weight,
+                    const double ref_val,
+                    const double scale,
+                    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
+                    : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(std::move(weight)), kde_val_(std::move(ref_val)), kde_scale_(std::move(scale)) {}
 
     static ceres::CostFunction *Create(const Eigen::Vector3d &lid_point,
                                        const double &weight,
@@ -58,7 +58,7 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     Eigen::Matrix<double, kIntrinsics, 1> intrinsic = Eigen::Map<Eigen::Matrix<double, 6 + kIntrinsics, 1>>(params.data()).tail(kIntrinsics);
     
     CloudPtr edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
-    CloudPtr edge_trans_cloud(new CloudT);
+    CloudPtr edge_trans_cloud(new CloudI);
     Eigen::Matrix<double, 4, 4> T_mat = ExtrinsicMat(extrinsic);
     pcl::transformPointCloud(*edge_cloud, *edge_trans_cloud, T_mat);
 
@@ -96,8 +96,8 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     Eigen::Matrix<float, kIntrinsics, 1> intrinsic;
 
     cv::Mat target_view_img;
-    CloudPtr fullview_xyz_cloud(new CloudT);
-    RGBCloudPtr input_cloud(new RGBCloudT), fullview_rgb_cloud(new RGBCloudT);
+    CloudPtr fullview_xyz_cloud(new CloudI);
+    RGBCloudPtr input_cloud(new RGBCloudI), fullview_rgb_cloud(new RGBCloudI);
 
     Eigen::Matrix4f T_mat, T_mat_inv;
     Eigen::Matrix4f pose_mat, pose_mat_inv;
@@ -123,7 +123,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     for (int i = 0; i < lidar.num_views; i++)
     {
         int fullview_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
-        RGBCloudPtr output_cloud(new RGBCloudT);
+        RGBCloudPtr output_cloud(new RGBCloudI);
         std::vector<int> colored_point_idx;
         std::vector<int> blank_point_idx;
 
@@ -142,7 +142,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         pcl::transformPointCloud(*input_cloud, *input_cloud, (T_mat * pose_mat_inv * T_mat_inv)); 
 
         for (int point_idx = 0; point_idx < input_cloud->points.size(); ++point_idx) {
-            RGBPointT &point = input_cloud->points[point_idx];
+            RGBPointI &point = input_cloud->points[point_idx];
             if (point.x == 0 && point.y == 0 && point.z == 0) {
                 continue;
             }
@@ -354,7 +354,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
             "c", "d", "e"};
     int steps[2] = {1, 201};
     int param_idx[2] = {0, 3};
-    const double step_size[2] = {0.005, 0.01};
+    const double step_size[2] = {0.0005, 0.001};
     const double deg2rad = M_PI / 180;
     double offset[2] = {0, 0};
 

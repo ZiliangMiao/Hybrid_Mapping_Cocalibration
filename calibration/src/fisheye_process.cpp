@@ -156,10 +156,10 @@ std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeProcess::FisheyeImageToSphere(cv::Ma
     u0 = this->intrinsic.u0;
     v0 = this->intrinsic.v0;
 
-    RGBPointT pixel_pt;
-    RGBPointT polar_pt;
-    RGBCloudPtr fisheye_pixel_cloud(new RGBCloudT);
-    RGBCloudPtr fisheye_polar_cloud(new RGBCloudT);
+    RGBPointI pixel_pt;
+    RGBPointI polar_pt;
+    RGBCloudPtr fisheye_pixel_cloud(new RGBCloudI);
+    RGBCloudPtr fisheye_polar_cloud(new RGBCloudI);
     ROS_ASSERT_MSG((image.rows == this->kFisheyeRows || image.cols == this->kFisheyeCols),
                    "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
 
@@ -217,9 +217,9 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
     vector<vector<Tags>> tags_map(kFlatRows, vector<Tags>(kFlatCols));
 
     // define the variables of KDTree search
-    pcl::KdTreeFLANN<RGBPointT> kdtree;
+    pcl::KdTreeFLANN<RGBPointI> kdtree;
     kdtree.setInputCloud(polar_cloud);
-    pcl::KdTreeFLANN<RGBPointT> kdtree2;
+    pcl::KdTreeFLANN<RGBPointI> kdtree2;
     kdtree2.setInputCloud(polar_cloud);
 
     int invalid_search = 0;
@@ -237,7 +237,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
             // upper bound and lower bound of the current phi unit
             float phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
             // assign the theta and phi center to the searchPoint
-            RGBPointT search_point;
+            RGBPointI search_point;
             search_point.x = theta_center;
             search_point.y = phi_center;
             search_point.z = 0;
@@ -250,7 +250,7 @@ void FisheyeProcess::SphereToPlane(RGBCloudPtr polar_cloud, double bandwidth) {
             // if the corresponding points are found in the radius neighborhood
             if (num_RNN == 0) {
                 // assign the theta and phi center to the searchPoint
-                RGBPointT searchPoint;
+                RGBPointI searchPoint;
                 searchPoint.x = theta_center;
                 searchPoint.y = phi_center;
                 searchPoint.z = 0;
@@ -354,7 +354,7 @@ void FisheyeProcess::PixLookUp(RGBCloudPtr fisheye_pixel_cloud) {
         }
         else {
             for (int j = 0; j < num_pts; ++j) {
-                RGBPointT &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
+                RGBPointI &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
                 x += pt.x;
                 y += pt.y;
             }

@@ -9,9 +9,9 @@
 
 using namespace std;
 using namespace tk;
-typedef pcl::PointXYZRGB RGBPointT;
-typedef pcl::PointCloud<RGBPointT> RGBCloudT;
-typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
+typedef pcl::PointXYZRGB RGBPointI;
+typedef pcl::PointCloud<RGBPointI> RGBCloudI;
+typedef pcl::PointCloud<RGBPointI>::Ptr RGBCloudPtr;
 
 class FisheyeProcess{
 public:
