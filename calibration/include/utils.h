@@ -8,6 +8,12 @@
 // eigen
 #include <Eigen/Core>
 
+// pcl
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/filter.h>
+
 // headings
 #include "spline.h"
 
@@ -31,6 +37,19 @@ Eigen::Matrix4f LoadTransMat(string trans_path){
     }
     load_stream.close();
     return trans_mat;
+}
+
+template <typename PointType>
+void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
+    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
+        PCL_ERROR("Failed to load %s cloud.\n", name);
+    }
+    else {
+        cloud.is_dense = false;
+        vector<int> mapping;
+        pcl::removeNaNFromPointCloud(cloud, cloud, mapping);
+        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
+    }
 }
 
 template <typename T>

@@ -23,11 +23,11 @@ struct QuaternionFunctor {
     }
 
     QuaternionFunctor(const Eigen::Vector3d lid_point,
-                        const double weight,
-                        const double ref_val,
-                        const double scale,
-                        const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
-                        : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(std::move(weight)), kde_val_(std::move(ref_val)), kde_scale_(std::move(scale)) {}
+                    const double weight,
+                    const double ref_val,
+                    const double scale,
+                    const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &interpolator)
+                    : lid_point_(std::move(lid_point)), kde_interpolator_(interpolator), weight_(std::move(weight)), kde_val_(std::move(ref_val)), kde_scale_(std::move(scale)) {}
 
     static ceres::CostFunction *Create(const Eigen::Vector3d &lid_point,
                                        const double &weight,
@@ -272,10 +272,10 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options.minimizer_progress_to_stdout = true;
+    options.minimizer_progress_to_stdout = false;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 50;
-    options.function_tolerance = 1e-7;
+    options.max_num_iterations = 100;
+    options.function_tolerance = 1e-9;
     options.use_nonmonotonic_steps = true;
 
     ceres::Solver::Summary summary;
@@ -295,12 +295,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
         fisheye.SetSpotIdx(spot_idx);
         lidar.SetSpotIdx(spot_idx);
         Visualization2D(fisheye, lidar, result_vec, bandwidth);
-    }
-
-    bool kParamsAnalysis = false;
-    ros::param::get("switch/kParamsAnalysis", kParamsAnalysis);
-    if (kParamsAnalysis) {
-        CorrelationAnalysis(fisheye, lidar, spot_vec, init_params_vec, result_vec, bandwidth);
     }
     
     return result_vec;
@@ -354,7 +348,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
             "c", "d", "e"};
     int steps[2] = {1, 201};
     int param_idx[2] = {0, 3};
-    const double step_size[2] = {0.005, 0.01};
+    const double step_size[2] = {0.0005, 0.001};
     const double deg2rad = M_PI / 180;
     double offset[2] = {0, 0};
 

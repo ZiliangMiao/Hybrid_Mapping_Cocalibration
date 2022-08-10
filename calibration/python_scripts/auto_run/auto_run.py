@@ -4,7 +4,7 @@
 import os, sys, time, signal, atexit
 import rospy
 from geometry_msgs.msg import Twist
-import mvsdk
+# import mvsdk
 import subprocess
 import numpy as np
 from threading import Timer
@@ -76,114 +76,114 @@ def GetLidarLioBagCmd(source_spot_idx, target_spot_idx, duration=30):
     cmd = "rosbag record -a -o" + " " + filepath + " " + "--duration=" + str(duration)
     return cmd
 
-def Capture(image_output_path):
+# def Capture(image_output_path):
 
-	exposure_times = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
-                    1.5, 2, 2.5, 3, 3.5, 4, 4.5,
-                    5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-                    20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
-                    120, 140, 160, 180, 200]
+# 	exposure_times = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1,
+#                     1.5, 2, 2.5, 3, 3.5, 4, 4.5,
+#                     5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+#                     20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100,
+#                     120, 140, 160, 180, 200]
 
-	pre_sample_size = 10
-	target_median_exp = 20 * 1e3
-	isp_auto_exp = 20 * 1e3
-	real_exposure_time = []
+# 	pre_sample_size = 10
+# 	target_median_exp = 20 * 1e3
+# 	isp_auto_exp = 20 * 1e3
+# 	real_exposure_time = []
 
-	DevList = mvsdk.CameraEnumerateDevice()
-	nDev = len(DevList)
-	if nDev < 1:
-		print("No camera was found!")
-		return
+# 	DevList = mvsdk.CameraEnumerateDevice()
+# 	nDev = len(DevList)
+# 	if nDev < 1:
+# 		print("No camera was found!")
+# 		return
 		
-	for i, DevInfo in enumerate(DevList):
-		print("{}: {} {}".format(i, DevInfo.GetFriendlyName(), DevInfo.GetPortType()))
-	i = 0 if nDev == 1 else int(input("Select camera: "))
-	DevInfo = DevList[i]
+# 	for i, DevInfo in enumerate(DevList):
+# 		print("{}: {} {}".format(i, DevInfo.GetFriendlyName(), DevInfo.GetPortType()))
+# 	i = 0 if nDev == 1 else int(input("Select camera: "))
+# 	DevInfo = DevList[i]
 
-	# 打开相机
-	global hCamera
-	try:
-		hCamera = mvsdk.CameraInit(DevInfo, -1, -1)
-	except mvsdk.CameraException as e:
-		print("CameraInit Failed({}): {}".format(e.error_code, e.message) )
-		return
+# 	# 打开相机
+# 	global hCamera
+# 	try:
+# 		hCamera = mvsdk.CameraInit(DevInfo, -1, -1)
+# 	except mvsdk.CameraException as e:
+# 		print("CameraInit Failed({}): {}".format(e.error_code, e.message) )
+# 		return
 
-		# 获取相机特性描述
-	cap = mvsdk.CameraGetCapability(hCamera)
+# 		# 获取相机特性描述
+# 	cap = mvsdk.CameraGetCapability(hCamera)
 
-	# 判断是黑白相机还是彩色相机
-	monoCamera = (cap.sIspCapacity.bMonoSensor != 0)
+# 	# 判断是黑白相机还是彩色相机
+# 	monoCamera = (cap.sIspCapacity.bMonoSensor != 0)
 
-	# 黑白相机让ISP直接输出MONO数据，而不是扩展成R=G=B的24位灰度
-	if monoCamera:
-		mvsdk.CameraSetIspOutFormat(hCamera, mvsdk.CAMERA_MEDIA_TYPE_MONO8)
+# 	# 黑白相机让ISP直接输出MONO数据，而不是扩展成R=G=B的24位灰度
+# 	if monoCamera:
+# 		mvsdk.CameraSetIspOutFormat(hCamera, mvsdk.CAMERA_MEDIA_TYPE_MONO8)
 
-	# 相机模式切换成连续采集
-	mvsdk.CameraSetTriggerMode(hCamera, 0)
-	mvsdk.CameraSetAeState(hCamera, 1)
-	mvsdk.CameraSetAeTarget(hCamera, 10)
+# 	# 相机模式切换成连续采集
+# 	mvsdk.CameraSetTriggerMode(hCamera, 0)
+# 	mvsdk.CameraSetAeState(hCamera, 1)
+# 	mvsdk.CameraSetAeTarget(hCamera, 10)
 
-	# 让SDK内部取图线程开始工作
-	mvsdk.CameraPlay(hCamera)
+# 	# 让SDK内部取图线程开始工作
+# 	mvsdk.CameraPlay(hCamera)
 
-	for t in range(pre_sample_size):
-		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
-		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
+# 	for t in range(pre_sample_size):
+# 		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
+# 		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
 
-		try:
-			pRawData, FrameHead = mvsdk.CameraGetImageBuffer(hCamera, 2000)
-			mvsdk.CameraImageProcess(hCamera, pRawData, pFrameBuffer, FrameHead)
-			mvsdk.CameraReleaseImageBuffer(hCamera, pRawData)
-			isp_auto_exp = mvsdk.CameraGetExposureTime(hCamera)
+# 		try:
+# 			pRawData, FrameHead = mvsdk.CameraGetImageBuffer(hCamera, 2000)
+# 			mvsdk.CameraImageProcess(hCamera, pRawData, pFrameBuffer, FrameHead)
+# 			mvsdk.CameraReleaseImageBuffer(hCamera, pRawData)
+# 			isp_auto_exp = mvsdk.CameraGetExposureTime(hCamera)
 
-		except mvsdk.CameraException as e:
-			print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
+# 		except mvsdk.CameraException as e:
+# 			print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
 
-	mvsdk.CameraSetAeState(hCamera, 0)
-	print("Auto exposure time = " + str(isp_auto_exp))
-	scale = isp_auto_exp / target_median_exp
+# 	mvsdk.CameraSetAeState(hCamera, 0)
+# 	print("Auto exposure time = " + str(isp_auto_exp))
+# 	scale = isp_auto_exp / target_median_exp
 
-	for t in exposure_times:
+# 	for t in exposure_times:
 
-		# 计算RGB buffer所需的大小，这里直接按照相机的最大分辨率来分配
-		exp_time = int(t * scale) if ( t - int(t * scale) == 0) else t * scale
-		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
+# 		# 计算RGB buffer所需的大小，这里直接按照相机的最大分辨率来分配
+# 		exp_time = int(t * scale) if ( t - int(t * scale) == 0) else t * scale
+# 		FrameBufferSize = cap.sResolutionRange.iWidthMax * cap.sResolutionRange.iHeightMax * (1 if monoCamera else 3)
 
-		# 分配RGB buffer，用来存放ISP输出的图像
-		# 备注：从相机传输到PC端的是RAW数据，在PC端通过软件ISP转为RGB数据（如果是黑白相机就不需要转换格式，但是ISP还有其它处理，所以也需要分配这个buffer）
-		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
+# 		# 分配RGB buffer，用来存放ISP输出的图像
+# 		# 备注：从相机传输到PC端的是RAW数据，在PC端通过软件ISP转为RGB数据（如果是黑白相机就不需要转换格式，但是ISP还有其它处理，所以也需要分配这个buffer）
+# 		pFrameBuffer = mvsdk.CameraAlignMalloc(FrameBufferSize, 16)
 
-		# 曝光时间
-		mvsdk.CameraSetExposureTime(hCamera, exp_time * 1000)
+# 		# 曝光时间
+# 		mvsdk.CameraSetExposureTime(hCamera, exp_time * 1000)
 
-		# 从相机取一帧图片
-		try:
-			pRawData, FrameHead = mvsdk.CameraGetImageBuffer(hCamera, 2000)
-			mvsdk.CameraImageProcess(hCamera, pRawData, pFrameBuffer, FrameHead)
-			mvsdk.CameraReleaseImageBuffer(hCamera, pRawData)
+# 		# 从相机取一帧图片
+# 		try:
+# 			pRawData, FrameHead = mvsdk.CameraGetImageBuffer(hCamera, 2000)
+# 			mvsdk.CameraImageProcess(hCamera, pRawData, pFrameBuffer, FrameHead)
+# 			mvsdk.CameraReleaseImageBuffer(hCamera, pRawData)
 			
-			# 此时图片已经存储在pFrameBuffer中，对于彩色相机pFrameBuffer=RGB数据，黑白相机pFrameBuffer=8位灰度数据
-			# 该示例中我们只是把图片保存到硬盘文件中
-			status = mvsdk.CameraSaveImage(hCamera, image_output_path + "/grab_" + str(t) + ".bmp", pFrameBuffer, FrameHead, mvsdk.FILE_BMP, 100)
-			if status == mvsdk.CAMERA_STATUS_SUCCESS:
-				# print("Save image successfully. image_size = {}X{}".format(FrameHead.iWidth, FrameHead.iHeight) )\
-				real_exposure_time.append(mvsdk.CameraGetExposureTime(hCamera) * 1e-3)
-				pass
-			else:
-				print("Save image failed. err={}".format(status) )
-		except mvsdk.CameraException as e:
-			print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
+# 			# 此时图片已经存储在pFrameBuffer中，对于彩色相机pFrameBuffer=RGB数据，黑白相机pFrameBuffer=8位灰度数据
+# 			# 该示例中我们只是把图片保存到硬盘文件中
+# 			status = mvsdk.CameraSaveImage(hCamera, image_output_path + "/grab_" + str(t) + ".bmp", pFrameBuffer, FrameHead, mvsdk.FILE_BMP, 100)
+# 			if status == mvsdk.CAMERA_STATUS_SUCCESS:
+# 				# print("Save image successfully. image_size = {}X{}".format(FrameHead.iWidth, FrameHead.iHeight) )\
+# 				real_exposure_time.append(mvsdk.CameraGetExposureTime(hCamera) * 1e-3)
+# 				pass
+# 			else:
+# 				print("Save image failed. err={}".format(status) )
+# 		except mvsdk.CameraException as e:
+# 			print("CameraGetImageBuffer failed({}): {}".format(e.error_code, e.message) )
 
-	# 关闭相机
-	mvsdk.CameraUnInit(hCamera)
+# 	# 关闭相机
+# 	mvsdk.CameraUnInit(hCamera)
 
-	exposure_output = np.vstack((np.array(exposure_times), np.array(real_exposure_time))).T
-	np.savetxt(image_output_path + '/exposure.txt', exposure_output, delimiter='\t')
+# 	exposure_output = np.vstack((np.array(exposure_times), np.array(real_exposure_time))).T
+# 	np.savetxt(image_output_path + '/exposure.txt', exposure_output, delimiter='\t')
 
-	print("Capture terminated.")
+# 	print("Capture terminated.")
 
-	# 释放帧缓存
-	mvsdk.CameraAlignFree(pFrameBuffer)
+# 	# 释放帧缓存
+# 	mvsdk.CameraAlignFree(pFrameBuffer)
 
 def GimbalPublisher(view_idx=6, time_interval=15, send_interval=0.1):
     if view_idx == 'center':
@@ -239,10 +239,10 @@ def Exiting():
 	print("Cleaning ... ")
 	for pid in process_pids:
 		KillProcess(proc_pid=pid)
-	try:
-		mvsdk.CameraUnInit(hCamera)
-	except:
-		pass
+	# try:
+	# 	mvsdk.CameraUnInit(hCamera)
+	# except:
+	# 	pass
 
 atexit.register(Exiting)
 
@@ -266,7 +266,7 @@ if __name__ == "__main__":
             CreateProcess(cmd=GetLidarStaticBagCmd(spot_idx, view_idx, duration=60),
                                             t_process=60)
             # capture images (default 60s + delay 10s)
-            Capture(GetFisheyeCapturePath(spot_idx, view_idx))
+            # Capture(GetFisheyeCapturePath(spot_idx, view_idx))
             CreateProcess(cmd=GetFisheyeCmd(spot_idx, view_idx),
                                             t_process=10)
             time.sleep(65)

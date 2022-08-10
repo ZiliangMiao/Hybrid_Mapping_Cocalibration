@@ -18,7 +18,9 @@ void getMessage(sensor_msgs::PointCloud2 &msg,
     size_t cloud_size = cloud.points.size();
     pcl::PointCloud<pcl::PointXYZI>::Ptr msg_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     for (size_t i = (partition * msg_size); i < ((partition + 1) * msg_size) && i < cloud_size; ++i) {
-        msg_cloud->points.push_back(cloud.points[i]);
+        if (cloud.points[i].z > -0.5 && cloud.points[i].z < 3) {
+            msg_cloud->points.push_back(cloud.points[i]);
+        }
     }
     pcl::toROSMsg(*msg_cloud, msg);
     msg.header.frame_id = "livox_frame"; //this has been done in order to be able to visualize our PointCloud2 message on the RViz visualizer
@@ -36,7 +38,7 @@ int main (int argc, char **argv) {
     nh.getParam("data_path", data_path);
     data_path = currPkgDir + data_path;
 
-    ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 100000);
+    ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 1e5);
     // ros::Publisher fltPub = nh.advertise<sensor_msgs::PointCloud2> ("rvizFltTopic", 1);
     pcl::PointCloud<pcl::PointXYZI> orgCloud;
     // pcl::PointCloud<pcl::PointXYZI> fltCloud;
@@ -50,8 +52,8 @@ int main (int argc, char **argv) {
 
     // fltMsg.header.frame_id = "flt";
 
-    ros::Rate loop_rate(10);
-    size_t msg_size = 2e4;
+    ros::Rate loop_rate(50);
+    size_t msg_size = 1e5;
     size_t limit = int(orgCloud.points.size() / msg_size) + 1;
     size_t cnt = 0;
     while (ros::ok()) {

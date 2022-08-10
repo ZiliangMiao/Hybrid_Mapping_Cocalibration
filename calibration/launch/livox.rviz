@@ -53,7 +53,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: false
-    - Alpha: 0.10000000149011612
+    - Alpha: 0.20000000298023224
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
         Max Value: 10
@@ -71,7 +71,7 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Name: PointCloud2
       Position Transformer: XYZ
-      Queue Size: 10000
+      Queue Size: 100000
       Selectable: true
       Size (Pixels): 1
       Size (m): 0.009999999776482582
@@ -125,11 +125,11 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 100
+      Scale: 50
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz)
-      X: 0.8004873991012573
-      Y: 0.14739316701889038
+      X: -1.9293252229690552
+      Y: 17.623016357421875
     Saved: ~
 Window Geometry:
   Displays:

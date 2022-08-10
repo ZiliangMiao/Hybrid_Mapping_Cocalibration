@@ -447,7 +447,7 @@ void LidarProcess::ReadEdge() {
 tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz) {
     /** params **/
     float uniform_radius = 0.02;
-    int max_iters = 100;
+    int max_iters = 200;
     float max_corr_dis = 0.2;
     float trans_epsilon = 1e-10;
     float eucidean_epsilon = 0.01;
@@ -510,21 +510,16 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         #pragma omp parallel for num_threads(16)
         for (int i = 0; i < cloud_us_src->size(); ++i) {
             kdtree_tgt.nearestKSearch (cloud_us_src->points[i], 1, nn_indices, nn_dists);
-            if (nn_dists[0] <= max_fitness_range) {
-                src_effe_indices[i] = nn_indices[0];
+            if (nn_dists[0] <= max_fitness_range && i < cloud_us_src->size()) {
+                src_effe_indices[i] = i;
             }
             else {
                 src_effe_indices[i] = 0;
             }
         }
+        cout << "knn search." << endl;
         src_effe_indices.erase(std::remove(src_effe_indices.begin(), src_effe_indices.end(), 0), src_effe_indices.end());
-        pcl::IndicesPtr src_effe_indices_ptr = boost::make_shared<std::vector<int>>(src_effe_indices);
-        pcl::ExtractIndices<PointT> extract;
-        extract.setInputCloud(cloud_us_src);
-        extract.setIndices(src_effe_indices_ptr);
-        extract.setNegative(false);
-        extract.setKeepOrganized(false);
-        extract.filter(*cloud_us_src_effe);
+        pcl::copyPointCloud(*cloud_us_src, src_effe_indices, *cloud_us_src_effe);
         cout << "Size of source cloud after effective point filter: " << cloud_us_src_effe->size() << endl;
 
         pcl::KdTreeFLANN<PointT> kdtree_src;
@@ -532,21 +527,16 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         #pragma omp parallel for num_threads(16)
         for (int i = 0; i < cloud_us_tgt->size(); ++i) {
             kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
-            if (nn_dists[0] <= max_fitness_range) {
-                tgt_effe_indices[i] = nn_indices[0];
+            if (nn_dists[0] <= max_fitness_range && i < cloud_us_tgt->size()) {
+                tgt_effe_indices[i] = i;
             }
             else {
                 tgt_effe_indices[i] = 0;
             }
         }
+        cout << "knn search." << endl;
         tgt_effe_indices.erase(std::remove(tgt_effe_indices.begin(), tgt_effe_indices.end(), 0), tgt_effe_indices.end());
-        pcl::IndicesPtr tgt_effe_indices_ptr = boost::make_shared<std::vector<int>>(tgt_effe_indices);
-        pcl::ExtractIndices<PointT> extract_tgt;
-        extract_tgt.setInputCloud(cloud_us_tgt);
-        extract_tgt.setIndices(tgt_effe_indices_ptr);
-        extract_tgt.setNegative(false);
-        extract_tgt.setKeepOrganized(false);
-        extract_tgt.filter(*cloud_us_tgt_effe);
+        pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
         cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->size() << endl;
         cout << "Run time of effective point filter: " << timer_effe.getTimeSeconds() << " s" << endl;
     }
@@ -602,13 +592,13 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
         Eigen::Matrix3f icp_rotation_mat = icp_trans_mat.topLeftCorner<3, 3>();
         Eigen::Vector3f icp_euler_angle = icp_rotation_mat.eulerAngles(2, 1, 0); /** zyx euler angle **/
         cout << "Euler angle by ICP: \n" << icp_euler_angle << endl;
-        cout << "debug1" << endl;
+        // cout << "debug1" << endl;
     }
     else {
         PCL_ERROR("\nICP has not converged.\n");
     }
 
-    cout << "debug2" << endl;
+    // cout << "debug2" << endl;
     /** visualization **/
     if (kIcpViz) {
         pcl::visualization::PCLVisualizer viewer("ICP demo");
@@ -639,11 +629,11 @@ tuple<Eigen::Matrix4f, CloudPtr> LidarProcess::ICP(CloudPtr cloud_tgt, CloudPtr 
             viewer.spinOnce();
         }
     }
-    cout << "debug3" << endl;
+    // cout << "debug3" << endl;
     tuple<Eigen::Matrix4f, CloudPtr> result;
-    cout << "debug4" << endl;
+    // cout << "debug4" << endl;
     result = make_tuple(icp_trans_mat, cloud_icp_trans_us);
-    cout << "debug5" << endl;
+    // cout << "debug5" << endl;
     return result;
 }
 
@@ -783,15 +773,12 @@ void LidarProcess::ViewRegistration() {
 void LidarProcess::FullViewMapping() {
     cout << "----- LiDAR: CreateFullviewPcd -----" << " Spot Index: " << this->spot_idx << endl;
     /** target and fullview cloud path **/
-    string fullview_target_cloud_path, fullview_cloud_path;
-    fullview_target_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].dense_pcd_path;
-    fullview_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].fullview_dense_cloud_path;
+    string tgt_view_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].dense_pcd_path;
+    string fullview_cloud_path = this->poses_files_path_vec[this->spot_idx][this->fullview_idx].fullview_dense_cloud_path;
 
     /** load full view point cloud **/
     CloudPtr fullview_raw_cloud(new CloudT);
-    if (pcl::io::loadPCDFile<PointT>(fullview_target_cloud_path, *fullview_raw_cloud) == -1) {
-        PCL_ERROR("Pcd File Not Exist!");
-    }
+    LoadPcd(tgt_view_cloud_path, *fullview_raw_cloud, "view");
     cout << "Degree 0 Full View Dense Pcd Loaded!" << endl;
 
     for(int i = 0; i < this->num_views; i++) {
@@ -805,16 +792,9 @@ void LidarProcess::FullViewMapping() {
 
         /** transform point cloud **/
         CloudPtr view_cloud(new CloudT);
-        string view_cloud_path;
-        if (this->kDenseCloud) {
-            view_cloud_path = this->poses_files_path_vec[this->spot_idx][i].dense_pcd_path;
-        }
-        else {
-            view_cloud_path = this->poses_files_path_vec[this->spot_idx][i].icp_pcd_path;
-        }
-        if (pcl::io::loadPCDFile<PointT>(view_cloud_path, *view_cloud) == -1) {
-            PCL_ERROR("Pcd File Not Exist!");
-        }
+        string view_cloud_path = this->poses_files_path_vec[this->spot_idx][i].dense_pcd_path;
+        LoadPcd(view_cloud_path, *view_cloud, "view");
+
         pcl::transformPointCloud(*view_cloud, *view_cloud, pose_trans_mat);
 
         /** point cloud addition **/
@@ -852,13 +832,11 @@ void LidarProcess::SpotRegistration() {
 
     /** load points **/
     CloudPtr spot_cloud_tgt(new CloudT);
-    pcl::io::loadPCDFile<PointT>(this->poses_files_path_vec[tgt_idx][0].fullview_dense_cloud_path,
-                                 *spot_cloud_tgt);
-    PCL_INFO("Size of Target Spot Cloud: %d\n", spot_cloud_tgt->size());
     CloudPtr spot_cloud_src(new CloudT);
-    pcl::io::loadPCDFile<PointT>(this->poses_files_path_vec[src_idx][0].fullview_dense_cloud_path,
-                                 *spot_cloud_src);
-    PCL_INFO("Size of Source Spot Cloud: %d\n", spot_cloud_src->size());
+    string spot_cloud_tgt_path = this->poses_files_path_vec[tgt_idx][0].fullview_dense_cloud_path;
+    string spot_cloud_src_path = this->poses_files_path_vec[src_idx][0].fullview_dense_cloud_path;
+    LoadPcd(spot_cloud_tgt_path, *spot_cloud_tgt, "target spot");
+    LoadPcd(spot_cloud_src_path, *spot_cloud_src, "source spot");
 
     /** initial transformation and initial score **/
     vector<Eigen::Matrix4f> icp_trans_mat_vec;
@@ -871,14 +849,14 @@ void LidarProcess::SpotRegistration() {
 
     /** ICP **/
     std::tuple<Eigen::Matrix4f, CloudPtr> icp_result = ICP(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false);
-    cout << "debug6" << endl;
+    // cout << "debug6" << endl;
     Eigen::Matrix4f icp_spot_trans_mat;
     CloudPtr spot_cloud_icp_trans;
-    cout << "debug7" << endl;
+    // cout << "debug7" << endl;
     std::tie(icp_spot_trans_mat, spot_cloud_icp_trans) = icp_result;
-    cout << "debug8" << endl;
+    // cout << "debug8" << endl;
     icp_trans_mat_vec.push_back(icp_spot_trans_mat);
-    cout << "debug9" << endl;
+    // cout << "debug9" << endl;
 
     /** compared the fitness score of lio and icp **/
 //    CloudPtr spot_lio_trans (new CloudT);
@@ -904,11 +882,11 @@ void LidarProcess::SpotRegistration() {
 
 void LidarProcess::GlobalColoredMapping() {
     /** global cloud registration **/
-    RGBCloudPtr spot_clouds_registered(new RGBCloudT);
-    pcl::io::loadPCDFile<RGBPointT>(this->poses_files_path_vec[0][0].fullview_rgb_cloud_path,
-                                    *spot_clouds_registered);
+    RGBCloudPtr global_registered_rgb_cloud(new RGBCloudT);
+    string init_rgb_cloud_path = this->poses_files_path_vec[0][0].fullview_rgb_cloud_path;
+    LoadPcd(init_rgb_cloud_path, *global_registered_rgb_cloud, "fullview rgb");
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index **/
+        /** source index and target index (align to spot 0) **/
         int tgt_idx = 0;
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
@@ -917,8 +895,8 @@ void LidarProcess::GlobalColoredMapping() {
         RGBCloudPtr spot_cloud_us_src(new RGBCloudT);
 
         /** load points **/
-        pcl::io::loadPCDFile<RGBPointT>(this->poses_files_path_vec[src_idx][0].fullview_rgb_cloud_path,
-                                        *spot_cloud_src);
+        string load_rgb_cloud_path = this->poses_files_path_vec[src_idx][0].fullview_rgb_cloud_path;
+        LoadPcd(load_rgb_cloud_path, *spot_cloud_src, "fullview rgb");
 
         /** down sampling **/
         pcl::UniformSampling<RGBPointT> us;
@@ -935,25 +913,20 @@ void LidarProcess::GlobalColoredMapping() {
             cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
         }
         pcl::transformPointCloud(*spot_cloud_us_src, *spot_cloud_us_src, icp_spot_trans_mat);
-        *spot_clouds_registered += *spot_cloud_us_src;
-
-        // /** save the global registered point cloud **/
-        // string global_registered_cloud_path = this->poses_files_path_vec[src_idx - 1][0].fullview_recon_folder_path +
-        //                                     "/global_registered_rgb_cloud_at_spot_" + to_string(src_idx - 1) + ".pcd";
-        // pcl::io::savePCDFileBinary(global_registered_cloud_path, *spot_clouds_registered);
+        *global_registered_rgb_cloud += *spot_cloud_us_src;
     }
     string global_registered_cloud_path = this->poses_files_path_vec[0][0].fullview_recon_folder_path +
                                           "/global_registered_rgb_cloud.pcd";
-    pcl::io::savePCDFileBinary(global_registered_cloud_path, *spot_clouds_registered);
+    pcl::io::savePCDFileBinary(global_registered_cloud_path, *global_registered_rgb_cloud);
 }
 
 void LidarProcess::GlobalMapping() {
     /** global cloud registration **/
-    CloudPtr spot_clouds_registered(new CloudT);
-    pcl::io::loadPCDFile<PointT>(this->poses_files_path_vec[0][0].fullview_dense_cloud_path,
-                                 *spot_clouds_registered);
+    CloudPtr global_registered_cloud(new CloudT);
+    string init_dense_cloud_path = this->poses_files_path_vec[0][0].fullview_dense_cloud_path;
+    LoadPcd(init_dense_cloud_path, *global_registered_cloud, "fullview dense");
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index **/
+        /** source index and target index (align to spot 0) **/
         int tgt_idx = 0;
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
@@ -962,8 +935,8 @@ void LidarProcess::GlobalMapping() {
         CloudPtr spot_cloud_us_src(new CloudT);
 
         /** load points **/
-        pcl::io::loadPCDFile<PointT>(this->poses_files_path_vec[src_idx][0].fullview_dense_cloud_path,
-                                     *spot_cloud_src);
+        string load_dense_cloud_path = this->poses_files_path_vec[src_idx][0].fullview_dense_cloud_path;
+        LoadPcd(load_dense_cloud_path, *spot_cloud_src, "fullview dense");
 
         /** down sampling **/
         pcl::UniformSampling<PointT> us;
@@ -980,9 +953,9 @@ void LidarProcess::GlobalMapping() {
             cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
         }
         pcl::transformPointCloud(*spot_cloud_us_src, *spot_cloud_us_src, icp_spot_trans_mat);
-        *spot_clouds_registered += *spot_cloud_us_src;
+        *global_registered_cloud += *spot_cloud_us_src;
     }
     string global_registered_cloud_path = this->poses_files_path_vec[0][0].fullview_recon_folder_path +
                                           "/global_registered_cloud.pcd";
-    pcl::io::savePCDFileBinary(global_registered_cloud_path, *spot_clouds_registered);
+    pcl::io::savePCDFileBinary(global_registered_cloud_path, *global_registered_cloud);
 }

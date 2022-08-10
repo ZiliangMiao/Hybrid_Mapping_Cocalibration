@@ -1,5 +1,6 @@
 <launch>
-  <param name="data_path" type="string" value="/data/parking/spot5/fullview_recon/fullview_dense_cloud.pcd" />
+  <param name="data_path" type="string" value="/data/lh3_global/spot0/fullview_recon/global_registered_rgb_cloud.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/parking/scans.pcd" /> -->
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
   </node>
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
