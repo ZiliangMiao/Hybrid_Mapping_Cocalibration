@@ -16,6 +16,8 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/conditional_removal.h>
+
+#include "glog/logging.h"
 /** heading **/
 #include "optimization.h"
 #include "common_lib.h"
@@ -56,6 +58,8 @@ int main(int argc, char** argv) {
     nh.param<bool>("switch/kMultiSpotsOptimization", kMultiSpotsOptimization, false);
     nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);
     nh.param<int>("spot/kOneSpot", kOneSpot, -1);
+
+    google::InitGoogleLogging(argv[0]);
 
     /***** Initial Parameters *****/
     std::vector<double> params_init = {
