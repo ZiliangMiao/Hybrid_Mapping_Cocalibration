@@ -69,6 +69,19 @@ Eigen::Matrix4f LoadTransMat(std::string trans_path){
     return trans_mat;
 }
 
+template <typename PointType>
+void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
+    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
+        PCL_ERROR("Failed to load %s cloud.\n", name);
+    }
+    else {
+        cloud.is_dense = false;
+        vector<int> mapping;
+        pcl::removeNaNFromPointCloud(cloud, cloud, mapping);
+        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
+    }
+}
+
 template <typename T>
 Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, 7, 1> &extrinsic){
     Eigen::Matrix<T, 3, 3> R = Eigen::Quaternion<T>(extrinsic[3], extrinsic[0], extrinsic[1], extrinsic[2]).toRotationMatrix();

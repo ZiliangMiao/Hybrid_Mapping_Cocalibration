@@ -537,6 +537,7 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
             }
         }
         cout << "knn search." << endl;
+        cout << "knn search." << endl;
         src_effe_indices.erase(std::remove(src_effe_indices.begin(), src_effe_indices.end(), 0), src_effe_indices.end());
         pcl::copyPointCloud(*cloud_us_src, src_effe_indices, *cloud_us_src_effe);
         cout << "Size of source cloud after effective point filter: " << cloud_us_src_effe->size() << endl;
@@ -553,6 +554,7 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
                 tgt_effe_indices[i] = 0;
             }
         }
+        cout << "knn search." << endl;
         cout << "knn search." << endl;
         tgt_effe_indices.erase(std::remove(tgt_effe_indices.begin(), tgt_effe_indices.end(), 0), tgt_effe_indices.end());
         pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
@@ -611,13 +613,13 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
         Mat3F icp_rotation_mat = icp_trans_mat.topLeftCorner<3, 3>();
         Vec3F icp_euler_angle = icp_rotation_mat.eulerAngles(2, 1, 0); /** zyx euler angle **/
         cout << "Euler angle by ICP: \n" << icp_euler_angle << endl;
-        // cout << "debug1" << endl;
+        // // cout << "debug1" << endl;
     }
     else {
         PCL_ERROR("\nICP has not converged.\n");
     }
 
-    // cout << "debug2" << endl;
+    // // cout << "debug2" << endl;
     /** visualization **/
     if (kIcpViz) {
         pcl::visualization::PCLVisualizer viewer("ICP demo");
@@ -652,7 +654,7 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
     tuple<Mat4F, CloudI::Ptr> result;
     // cout << "debug4" << endl;
     result = make_tuple(icp_trans_mat, cloud_icp_trans_us);
-    // cout << "debug5" << endl;
+    // // cout << "debug5" << endl;
     return result;
 }
 
@@ -929,8 +931,8 @@ void LidarProcess::FullViewMapping() {
     CloudI::Ptr radius_outlier_cloud(new CloudI);
     pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
-    radius_outlier_filter.setRadiusSearch(0.1);
-    radius_outlier_filter.setMinNeighborsInRadius(20);
+    radius_outlier_filter.setRadiusSearch(1);
+    radius_outlier_filter.setMinNeighborsInRadius(200);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.setKeepOrganized(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
@@ -1042,7 +1044,7 @@ void LidarProcess::GlobalColoredMapping() {
     string init_rgb_cloud_path = this->poses_files_path_vec[0][0].fullview_rgb_cloud_path;
     LoadPcd(init_rgb_cloud_path, *global_registered_rgb_cloud, "fullview rgb");
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index (align to spot 0) **/
+        /** source index and target index (align to spot 0) (align to spot 0) **/
         int tgt_idx = 0;
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
@@ -1085,7 +1087,7 @@ void LidarProcess::GlobalMapping() {
     LoadPcd(init_dense_cloud_path, *global_registered_cloud, "fullview dense");
 
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index (align to spot 0) **/
+        /** source index and target index (align to spot 0) (align to spot 0) **/
         int tgt_idx = 0;
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
