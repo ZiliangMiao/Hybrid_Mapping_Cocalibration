@@ -367,14 +367,26 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
         if (m < 3) {
             steps[0] = 201;
             steps[1] = 1;
+            steps[2] = 1;
             param_idx[0] = m;
             param_idx[1] = 3;
+            param_idx[2] = 6;
         }
         else if (m < 6){
             steps[0] = 1;
             steps[1] = 201;
+            steps[2] = 1;
             param_idx[0] = 0;
             param_idx[1] = m;
+            param_idx[2] = 6;
+        }
+        else {
+            steps[0] = 1;
+            steps[1] = 1;
+            steps[2] = 201;
+            param_idx[0] = 0;
+            param_idx[1] = 3;
+            param_idx[2] = m;
         }
 
         for (int k = 0; k < spot_vec.size(); k++) {
