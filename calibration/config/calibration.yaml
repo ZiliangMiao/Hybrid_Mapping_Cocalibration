@@ -27,8 +27,8 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "lh3_global"
-    kNumSpots: 5
+    kDatasetName: "crf"
+    kNumSpots: 1
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
