@@ -33,8 +33,7 @@
 
 using namespace std;
 
-static const int kExtrinsics = 7;
-static const int kIntrinsics = 10;
+#define Q_LIM   (0.15)
 
 inline double getDouble(double x) {
     return static_cast<double>(x);
@@ -60,5 +59,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
 void CorrelationAnalysis(FisheyeProcess &fisheye,
                         LidarProcess &lidar,
                         std::vector<int> spot_vec,
-                        std::vector<double> params_vec,
+                        std::vector<double> init_params_vec,
+                        std::vector<double> result_vec,
                         double bandwidth);

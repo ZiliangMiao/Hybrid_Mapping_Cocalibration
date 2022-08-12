@@ -37,6 +37,7 @@ void path_callback(const nav_msgs::Path &path_msg) {
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "lio_pose");
     ros::NodeHandle nh;
+    string txt_path = ros::package::getPath("calibration") + "/data/lio_spot_trans_mat.txt";
     ros::Rate loop_rate(100);
     time_stamp = ros::Time::now().toSec();
     ros::Subscriber sub = nh.subscribe("/path", 1, path_callback);
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
 
         /** save the spot trans matrix by lio **/
         std::ofstream lio_mat_out;
-        lio_mat_out.open("/home/isee/catkin_ws/lio_spot_trans_mat.txt");
+        lio_mat_out.open(txt_path);
         lio_mat_out << lio_spot_trans_mat << endl;
         lio_mat_out.close();
     }

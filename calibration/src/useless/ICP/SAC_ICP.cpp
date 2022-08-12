@@ -17,8 +17,8 @@
 
 using pcl::NormalEstimation;
 using pcl::search::KdTree;
-typedef pcl::PointXYZ PointT;
-typedef pcl::PointCloud<PointT> PointCloud;
+typedef pcl::PointXYZ PointI;
+typedef pcl::PointCloud<PointI> PointCloud;
 
 
 #define TEMPLATE_FILE "../data_set/templateDisinfect.xyz"
@@ -175,7 +175,7 @@ int
    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_src;
    fpfh_src.setInputCloud(cloud_src);
    fpfh_src.setInputNormals(cloud_src_normals);
-   pcl::search::KdTree<PointT>::Ptr tree_src_fpfh (new pcl::search::KdTree<PointT>);
+   pcl::search::KdTree<PointI>::Ptr tree_src_fpfh (new pcl::search::KdTree<PointI>);
    fpfh_src.setSearchMethod(tree_src_fpfh);
    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_src(new pcl::PointCloud<pcl::FPFHSignature33>());
    fpfh_src.setRadiusSearch(0.05);
@@ -185,7 +185,7 @@ int
    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fpfh_tgt;
    fpfh_tgt.setInputCloud(cloud_tgt);
    fpfh_tgt.setInputNormals(cloud_tgt_normals);
-   pcl::search::KdTree<PointT>::Ptr tree_tgt_fpfh (new pcl::search::KdTree<PointT>);
+   pcl::search::KdTree<PointI>::Ptr tree_tgt_fpfh (new pcl::search::KdTree<PointI>);
    fpfh_tgt.setSearchMethod(tree_tgt_fpfh);
    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs_tgt(new pcl::PointCloud<pcl::FPFHSignature33>());
    fpfh_tgt.setRadiusSearch(0.05);

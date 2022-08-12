@@ -8,8 +8,44 @@
 // eigen
 #include <Eigen/Core>
 
+// pcl
+#include <pcl/common/common.h>
+#include <pcl/point_cloud.h>
+
 // headings
 #include "spline.h"
+
+#define K_EXT   (6)
+#define K_INT   (10)
+#define PI_M    (3.14159265358)
+
+#define MatD(a,b)  Eigen::Matrix<double, (a), (b)>
+#define MatF(a,b)  Eigen::Matrix<float, (a), (b)>
+
+typedef MatD(2,1)       Vec2D;
+typedef MatF(2,1)       Vec2F;
+typedef MatD(3,1)       Vec3D;
+typedef MatF(3,1)       Vec3F;
+
+typedef MatD(3,3)       Mat3D;
+typedef MatF(3,3)       Mat3F;
+typedef MatD(4,4)       Mat4D;
+typedef MatF(4,4)       Mat4F;
+
+typedef MatD(K_INT,1)      Int_D;
+typedef MatF(K_INT,1)      Int_F;
+typedef MatD(K_EXT,1)       Ext_D;
+typedef MatF(K_EXT,1)       Ext_F;
+typedef MatD(K_EXT+K_INT,1)    Param_D;
+typedef MatF(K_EXT+K_INT,1)    Param_F;
+
+/** typedef **/
+typedef pcl::PointXYZI PointI;
+typedef pcl::PointXYZRGB PointRGB;
+typedef pcl::PointCloud<PointI> CloudI;
+typedef pcl::PointCloud<PointRGB> CloudRGB;
+
+using namespace std;
 
 int CheckFolder(std::string spot_path) {
     int md = 0; /** 0 means the folder is already exist or has been created successfully **/
@@ -20,7 +56,7 @@ int CheckFolder(std::string spot_path) {
     return md;
 }
 
-Eigen::Matrix4f LoadTransMat(string trans_path){
+Eigen::Matrix4f LoadTransMat(std::string trans_path){
     std::ifstream load_stream;
     load_stream.open(trans_path);
     Eigen::Matrix4f trans_mat = Eigen::Matrix4f::Identity();
@@ -33,19 +69,32 @@ Eigen::Matrix4f LoadTransMat(string trans_path){
     return trans_mat;
 }
 
+template <typename PointType>
+void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
+    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
+        PCL_ERROR("Failed to load %s cloud.\n", name);
+    }
+    else {
+        cloud.is_dense = false;
+        vector<int> mapping;
+        pcl::removeNaNFromPointCloud(cloud, cloud, mapping);
+        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
+    }
+}
+
 template <typename T>
-Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 7, 1> &extrinsic){
+Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, 7, 1> &extrinsic){
     Eigen::Matrix<T, 3, 3> R = Eigen::Quaternion<T>(extrinsic[3], extrinsic[0], extrinsic[1], extrinsic[2]).toRotationMatrix();
     Eigen::Matrix<T, 4, 4> T_mat;
     T_mat << R(0,0), R(0,1), R(0,2), extrinsic(4),
         R(1,0), R(1,1), R(1,2), extrinsic(5),
-        R(2,0), R(2,1), R(2,2), extrinsic(6),
+        R(2,0), R(2,1), R(2,2), extrinsic(K_EXT),
         T(0.0), T(0.0), T(0.0), T(1.0);
     return T_mat;
 }
 
 template <typename T>
-Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic){
+Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, K_EXT, 1> &extrinsic){
     /***** R = Rx * Ry * Rz *****/
     Eigen::Matrix<T, 3, 3> R;
     R = Eigen::AngleAxis<T>(extrinsic(2), Eigen::Matrix<T, 3, 1>::UnitZ())
@@ -63,7 +112,7 @@ Eigen::Matrix<T, 4, 4> ExtrinsicMat(Eigen::Matrix<T, 6, 1> &extrinsic){
 template <typename T>
 Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 7, 1> &intrinsic, Eigen::Matrix<T, 3, 1> &point){
     
-    Eigen::Matrix<T, 10, 1> intrinsic_;
+    Eigen::Matrix<T, K_INT, 1> intrinsic_;
     intrinsic_.head(7) = intrinsic;
     intrinsic_.tail(3) << T(1), T(0), T(0);
     Eigen::Matrix<T, 2, 1> projection = IntrinsicTransform(intrinsic_, point);
@@ -72,7 +121,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 7, 1> &intrinsic, Eig
 }
 
 template <typename T>
-Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Eigen::Matrix<T, 3, 1> &point){
+Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, K_INT, 1> &intrinsic, Eigen::Matrix<T, 3, 1> &point){
     
     Eigen::Matrix<T, 2, 1> uv_0{intrinsic(0), intrinsic(1)};
     Eigen::Matrix<T, 5, 1> a_;
@@ -82,7 +131,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, 10, 1> &intrinsic, Ei
     Eigen::Matrix<T, 2, 1> projection;
     Eigen::Matrix<T, 2, 1> undistorted_projection;
 
-    a_ << intrinsic(2), intrinsic(3), intrinsic(4), intrinsic(5), intrinsic(6);
+    a_ << intrinsic(2), intrinsic(3), intrinsic(4), intrinsic(5), intrinsic(K_EXT);
     affine << intrinsic(7), intrinsic(8), intrinsic(9), T(1);
 
     theta = acos(point(2) / sqrt((point(0) * point(0)) + (point(1) * point(1)) + (point(2) * point(2))));
@@ -130,7 +179,7 @@ void SaveResults(std::string &record_path, std::vector<double> params, double ba
     cout << output << endl;
 }
 
-static bool cmp(const vector<double>& a, const vector<double>& b) {
+static bool cmp(const std::vector<double>& a, const std::vector<double>& b) {
     return a.back() < b.back();
 }
 

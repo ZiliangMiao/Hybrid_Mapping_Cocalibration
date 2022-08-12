@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="pcd_file"/>
+  <arg name="rviz_config"/>
+  <node pkg="pcl_ros" type="pcd_to_pointcloud" name="pcd_to_pointcloud" args="$(arg pcd_file) 5" output="screen">
+    <param name="frame_id" value="map" />
+  </node>
+  <node pkg="rviz" type="rviz" name="rviz" args="-d $(arg rviz_config)" required="true" />
+</launch>
+

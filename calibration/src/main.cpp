@@ -18,28 +18,10 @@
 #include <pcl/filters/conditional_removal.h>
 /** heading **/
 #include "optimization.h"
-#include "utils.h"
+#include "common_lib.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
-typedef pcl::PointXYZI PointT;
-typedef pcl::PointCloud<PointT> CloudT;
-typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
-
-/** params service **/
-//    ros::param::get("~param_test", param_test_1);
-//    ros::NodeHandle nh("~");
-//    nh.getParam("param_test", param_test_1);
-//    /** get the parameters from ros parameters server **/
-//    bool param_get1 = ros::param::get("param_test", param_test_1);
-//    bool param_get = nh.getParam("param_test", param_test_1);
-//    /** set the value of parameter to ros parameters server **/
-//    ros::param::set("param_test", 520.00);
-//    if (param_get) {
-//        for (int i = 0; i < 10; ++i) {
-//            cout << param_test_1 << endl;
-//        }
-//    }
 
 int main(int argc, char** argv) {
     /***** ROS Initialization *****/
@@ -57,6 +39,7 @@ int main(int argc, char** argv) {
     bool kGlobalMapping = false;
     bool kGlobalColoredMapping = false;
     bool kCeresOptimization = false;
+    bool kMultiSpotsOptimization = false;
     bool kParamsAnalysis = false;
     int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
@@ -70,6 +53,7 @@ int main(int argc, char** argv) {
     nh.param<bool>("switch/kGlobalMapping", kGlobalMapping, false);
     nh.param<bool>("switch/kGlobalColoredMapping", kGlobalColoredMapping, false);
     nh.param<bool>("switch/kCeresOptimization", kCeresOptimization, false);
+    nh.param<bool>("switch/kMultiSpotsOptimization", kMultiSpotsOptimization, false);
     nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);
     nh.param<int>("spot/kOneSpot", kOneSpot, -1);
 
@@ -168,13 +152,13 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                CloudPtr cart_cloud(new CloudT);
-                CloudPtr polar_cloud(new CloudT);
-                lidar.LidarToSphere(cart_cloud, polar_cloud);
-                lidar.SphereToPlane(cart_cloud, polar_cloud);
+                CloudI::Ptr lidar_cart_cloud(new CloudI);
+                CloudI::Ptr lidar_polar_cloud(new CloudI);
+                lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
+                lidar.SphereToPlane(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
-                lidar.PixLookUp(cart_cloud);
+                lidar.PixLookUp(lidar_cart_cloud, lidar_polar_cloud);
             }
         }
     }
@@ -184,10 +168,10 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx);
-                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_polar_cloud;
-                RGBCloudPtr fisheye_pixel_cloud;
-                std::tie(fisheye_polar_cloud, fisheye_pixel_cloud) = fisheye_clouds;
+                std::tuple<CloudRGB::Ptr, CloudRGB::Ptr> fisheye_clouds = fisheye.FisheyeImageToSphere();
+                CloudRGB::Ptr fisheye_pixel_cloud;
+                CloudRGB::Ptr fisheye_polar_cloud;
+                std::tie(fisheye_pixel_cloud, fisheye_polar_cloud) = fisheye_clouds;
                 fisheye.SphereToPlane(fisheye_polar_cloud);
                 fisheye.EdgeExtraction();
                 fisheye.EdgeToPixel();
@@ -200,7 +184,7 @@ int main(int argc, char** argv) {
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
         std::vector<double> lb(dev.size()), ub(dev.size());
-        std::vector<double> bw = {16, 8, 4, 2, 1};
+        std::vector<double> bw = {16, 4, 1};
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
             lb[i] = params_init[i] - dev[i];
@@ -221,18 +205,44 @@ int main(int argc, char** argv) {
                 lidar.SetViewIdx(lidar.fullview_idx);
                 fisheye.ReadEdge();
                 lidar.ReadEdge();
-                spot_vec = {spot};
+                
                 Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
                 string record_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path
                                     + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
                 SaveResults(record_path, params_init, 0, 0, 0);
+            }
+        }
+
+        bool kParamsAnalysis = false;
+        ros::param::get("switch/kParamsAnalysis", kParamsAnalysis);
+
+        for (int spot = 0; spot < lidar.num_spots; ++spot) {
+            if (kOneSpot == -1 || kOneSpot == spot) {
+                if (kMultiSpotsOptimization && kOneSpot == -1) {
+                    vector<int> spot_init_vec(lidar.num_spots);
+                    std::iota(spot_init_vec.begin(), spot_init_vec.end(), 0);
+                    spot_vec = spot_init_vec;
+                }
+                else {
+                    spot_vec = {spot};
+                }
+                // spot_vec = {spot};
 
                 for (int i = 0; i < bw.size(); i++) {
                     double bandwidth = bw[i];
+                    vector<double> init_params_vec(params_calib);
                     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub);
+                    if (kParamsAnalysis) {
+                        CorrelationAnalysis(fisheye, lidar, spot_vec, init_params_vec, params_calib, bandwidth);
+                    }
                 }
+
+                if (kMultiSpotsOptimization) { break;}
             }
         }
+
+        
+        
     }
 
     /***** Registration, Colorization and Mapping *****/
@@ -242,21 +252,31 @@ int main(int argc, char** argv) {
         for (int i = lidar.num_spots - 1; i > 0; --i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
+                // lidar.SpotRegistration();
+                lidar.FineToCoarseReg();
             }
         }
     }
 
     if (kFullViewColorization) {
         cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
-        // Current Best:
+        // lh3_global:
+        // params_calib = {
+        //         0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
+        //         0.277415, -0.0112217, 0.046939, /** tx ty tz **/
+        //         1022.53, 1198.45, /** u0, v0 **/
+        //         1880.36, -536.721, -12.9298, -18.0154, 5.6414,
+        //         1.00176, -0.00863924, 0.00846056
+        // };
+        // parking:
         params_calib = {
-                0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
-                0.277415, -0.0112217, 0.046939, /** tx ty tz **/
-                1022.53, 1198.45, /** u0, v0 **/
-                1880.36, -536.721, -12.9298, -18.0154, 5.6414,
-                1.00176, -0.00863924, 0.00846056
+                0.001335, -3.139391, 1.559892,
+                0.281820, -0.006560, 0.044851,
+                1024.081111, 1197.734465,
+                1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
+                1.000177, -0.005878, 0.006144
         };
+        
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i);
@@ -270,7 +290,8 @@ int main(int argc, char** argv) {
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        lidar.GlobalMapping();
+        // lidar.GlobalMapping();
+        lidar.MappingEval();
     }
 
     if (kGlobalColoredMapping) {

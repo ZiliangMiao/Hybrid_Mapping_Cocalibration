@@ -1,9 +1,7 @@
 switch:
     ## Data Process
     kLidarFlatProcess: false
-    kLidarEdgeProcess: false
-    kFisheyeFlatProcess: false  # false: use the fisheye flat image process method 
-    kFisheyeEdgeProcess: false  # false: use the fisheye edge process method
+    kFisheyeFlatProcess: false
 
     ## Registration, Colorization and Mapping
     # view
@@ -11,16 +9,19 @@ switch:
     kViewRegistration: false
     kFullViewMapping: false
 
-    kFullViewColorization: false
+    ## Calibration and Optimization cost analysis
+    kCeresOptimization: true
+    kMultiSpotsOptimization: true
+    kParamsAnalysis: true
+    
     # spot
     kSpotRegistration: false
     kGlobalMapping: false
+
+    # colorization
+    kFullViewColorization: false
     kGlobalColoredMapping: false
 
-    ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kParamsAnalysis: false
-    
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
@@ -34,3 +35,10 @@ essential:
     kAngleInit: -50
     kAngleStep: 25
 
+transform:
+    rx: 0.012864
+    ry: -0.001143
+    rz: 0.160874
+    tx: 0.299831
+    ty: 0.230617
+    tz: -0.029438
