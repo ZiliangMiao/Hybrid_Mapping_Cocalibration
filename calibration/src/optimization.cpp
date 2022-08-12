@@ -207,7 +207,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     
     const int kParams = q_vector.size();
     const int kViews = fisheye.num_views;
-    const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
+    const double scale = 1;
     q_vector.tail(K_INT + 3) = init_params.tail(K_INT + 3);
     q_vector.head(4) << quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w();
     double params[kParams];
@@ -315,7 +315,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                          std::vector<double> result_vec,
                          double bandwidth) {
     const int kViews = fisheye.num_views;
-    const double scale = pow(2, (-(int)floor(log(bandwidth) / log(4))));
+    const double scale = 1;
 
     /********* Fisheye KDE *********/
     std::vector<double> ref_vals;
@@ -361,20 +361,32 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
     double offset[3] = {0, 0, 0};
 
     /** update evaluate points in 2D grid **/
-    for (int m = 0; m < 6; m++) {
+    for (int m = 0; m < 16; m++) {
         extrinsic = params_mat.head(6);
         intrinsic = params_mat.tail(K_INT);
         if (m < 3) {
             steps[0] = 201;
             steps[1] = 1;
+            steps[2] = 1;
             param_idx[0] = m;
             param_idx[1] = 3;
+            param_idx[2] = 6;
         }
         else if (m < 6){
             steps[0] = 1;
             steps[1] = 201;
+            steps[2] = 1;
             param_idx[0] = 0;
             param_idx[1] = m;
+            param_idx[2] = 6;
+        }
+        else {
+            steps[0] = 1;
+            steps[1] = 1;
+            steps[2] = 201;
+            param_idx[0] = 0;
+            param_idx[1] = 3;
+            param_idx[2] = m;
         }
 
         for (int k = 0; k < spot_vec.size(); k++) {
