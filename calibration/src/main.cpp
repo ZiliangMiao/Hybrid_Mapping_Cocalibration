@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
                 lidar.SphereToPlane(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
-                lidar.PixLookUp(lidar_cart_cloud);
+                lidar.PixLookUp(lidar_cart_cloud, lidar_polar_cloud);
             }
         }
     }

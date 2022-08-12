@@ -156,7 +156,7 @@ void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_clo
 
 }
 
-void LidarProcess::SphereToPlane(const CloudI::Ptr& cart_cloud, const CloudI::Ptr& polar_cloud) {
+void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) {
     cout << "----- LiDAR: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the data container **/
     cv::Mat flat_img = cv::Mat::zeros(kFlatRows, kFlatCols, CV_32FC1); /** define the flat image **/
@@ -176,8 +176,8 @@ void LidarProcess::SphereToPlane(const CloudI::Ptr& cart_cloud, const CloudI::Pt
     const float kScale = sqrt(2);
     const float kSearchRadius = kScale * (kRadPerPix / 2);
 
-    int hidden_pt_cnt = 0;
-    const float sensitivity = 0.02f;
+    // int hidden_pt_cnt = 0;
+    // const float sensitivity = 0.02f;
 
     /** Multiprocessing test **/
     #pragma omp parallel for num_threads(16)
@@ -205,33 +205,35 @@ void LidarProcess::SphereToPlane(const CloudI::Ptr& cart_cloud, const CloudI::Pt
                 tags_map[u][v].pts_indices = {};
             }
             else { /** corresponding points are found in the radius neighborhood **/
-                int hidden_pt_num = 0;
-                float dist_mean = 0;
+                // int hidden_pt_num = 0;
+                // float dist_mean = 0;
                 float intensity_mean = 0;
-                vector<int> zero_vec(search_num, 0);
-                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
+                // vector<int> zero_vec(search_num, 0);
+                // tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
 
-                for (int i = 0; i < search_num; ++i) {
-                    dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
-                }
-                dist_mean = dist_mean / search_num;
+                // for (int i = 0; i < search_num; ++i) {
+                //     dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
+                // }
+                // dist_mean = dist_mean / search_num;
 
-                for (int i = 0; i < search_num; ++i) {
-                    PointI &local_pt = polar_cloud->points[search_pt_idx_vec[i]];
-                    float dist = local_pt.z;
-                    if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
-                        hidden_pt_num++;
-                        tags_map[u][v].pts_indices[i] = 0;
-                    }
-                    else {
-                        intensity_mean += local_pt.intensity;
-                        tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
-                    }
-                }
+                // for (int i = 0; i < search_num; ++i) {
+                //     PointI &local_pt = polar_cloud->points[search_pt_idx_vec[i]];
+                //     float dist = local_pt.z;
+                //     if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
+                //         hidden_pt_num++;
+                //         tags_map[u][v].pts_indices[i] = 0;
+                //     }
+                //     else {
+                //         intensity_mean += local_pt.intensity;
+                //         tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
+                //     }
+                // }
                  
                 /** add tags **/
-                tags_map[u][v].num_pts = search_num - hidden_pt_num;
-                tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
+                tags_map[u][v].num_pts = search_num;
+
+                // tags_map[u][v].num_pts = search_num - hidden_pt_num;
+                // tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
                 
                 if (tags_map[u][v].num_pts > 0) {
                     flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].num_pts;
@@ -240,13 +242,13 @@ void LidarProcess::SphereToPlane(const CloudI::Ptr& cart_cloud, const CloudI::Pt
                     flat_img.at<float>(u, v) = 0;
                 }
                 
-                hidden_pt_cnt += hidden_pt_num;
+                // hidden_pt_cnt += hidden_pt_num;
                 ROS_ASSERT_MSG((tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
             }
         }
     }
 
-    cout << "hidden points: " << hidden_pt_cnt << "/" << polar_cloud->points.size() << endl;
+    // cout << "hidden points: " << hidden_pt_cnt << "/" << polar_cloud->points.size() << endl;
 
     /** add the tags_map of this specific pose to maps **/
     this->tags_map_vec[this->spot_idx][this->view_idx] = tags_map;
@@ -299,10 +301,11 @@ void LidarProcess::EdgeToPixel() {
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void LidarProcess::PixLookUp(CloudI::Ptr cart_cloud) {
+void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
     cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int num_invalid_pixels = 0;
+    const float sensitivity = 0.01;
     EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     EdgePts edge_pts;
@@ -317,14 +320,33 @@ void LidarProcess::PixLookUp(CloudI::Ptr cart_cloud) {
             num_invalid_pixels += 1;
         }
         else { /** normal pixels **/
-            /** center of lidar edge distribution **/
-            float x_avg = 0.0f, y_avg = 0.0f, z_avg = 0.0f;
-            for (int &idx : tags_map[u][v].pts_indices) {
-                PointI pixel_pt = cart_cloud->points[idx];
-                x_avg += pixel_pt.x;
-                y_avg += pixel_pt.y;
-                z_avg += pixel_pt.z;
+
+            float dist_mean = 0;
+            float intensity_mean = 0;
+            float x_avg = 0;
+            float y_avg = 0;
+            float z_avg = 0;
+
+            for (int i = 0; i < num_pts; ++i) {
+                dist_mean += polar_cloud->points[tags_map[u][v].pts_indices[i]].z;
             }
+            dist_mean = dist_mean / num_pts;
+
+            for (int i = 0; i < num_pts; ++i) {
+                PointI &local_pt = polar_cloud->points[tags_map[u][v].pts_indices[i]];
+                PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
+                float dist = local_pt.z;
+                if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
+                    continue;
+                }
+                else {
+                    x_avg += pixel_pt.x;
+                    y_avg += pixel_pt.y;
+                    z_avg += pixel_pt.z;
+                    intensity_mean += pixel_pt.intensity;
+                }
+            }
+
             /** average coordinates->unbiased estimation of center position **/
             x_avg = x_avg / num_pts;
             y_avg = y_avg / num_pts;

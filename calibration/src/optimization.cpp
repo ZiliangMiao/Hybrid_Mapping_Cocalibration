@@ -281,7 +281,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 100;
+    options.max_num_iterations = 300;
+    options.gradient_tolerance = 1e-9;
     options.function_tolerance = 1e-9;
     options.use_nonmonotonic_steps = true;
 
@@ -342,8 +343,8 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
     /***** Correlation Analysis *****/
     Param_D params_mat = Eigen::Map<Param_D>(result_vec.data());
-    Ext_D extrinsic = params_mat.head(6);
-    Int_D intrinsic = params_mat.tail(K_INT);
+    Ext_D extrinsic;
+    Int_D intrinsic;
     std::vector<double> results;
     std::vector<double> input_x;
     std::vector<double> input_y;
@@ -353,24 +354,25 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
             "u0", "v0",
             "a0", "a1", "a2", "a3", "a4",
             "c", "d", "e"};
-    int steps[2] = {1, 201};
-    int param_idx[2] = {0, 3};
-    const double step_size[2] = {0.0002, 0.001};
+    int steps[3] = {1, 1, 1};
+    int param_idx[3] = {0, 3, 6};
+    const double step_size[3] = {0.0002, 0.001, 0.01};
     const double deg2rad = M_PI / 180;
-    double offset[2] = {0, 0};
+    double offset[3] = {0, 0, 0};
 
     /** update evaluate points in 2D grid **/
     for (int m = 0; m < 6; m++) {
         extrinsic = params_mat.head(6);
+        intrinsic = params_mat.tail(K_INT);
         if (m < 3) {
-            steps[0] = 1001;
+            steps[0] = 201;
             steps[1] = 1;
             param_idx[0] = m;
             param_idx[1] = 3;
         }
-        else {
+        else if (m < 6){
             steps[0] = 1;
-            steps[1] = 1001;
+            steps[1] = 201;
             param_idx[0] = 0;
             param_idx[1] = m;
         }
@@ -387,12 +389,18 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
             if (steps[1] > 1) {
                 analysis_filepath = analysis_filepath + name[param_idx[1]] + "_";
             }
+            if (steps[2] > 1) {
+                analysis_filepath = analysis_filepath + name[param_idx[2]] + "_";
+            }
             outfile.open(analysis_filepath + "spot_" + to_string(lidar.spot_idx) + "_bw_" + to_string(int(bandwidth)) + "_result.txt", ios::out);
             if (steps[0] > 1) {
                 outfile << init_params_vec[param_idx[0]] << "\t" << result_vec[param_idx[0]] << endl;
             }
             if (steps[1] > 1) {
                 outfile << init_params_vec[param_idx[1]] << "\t" << result_vec[param_idx[1]] << endl;
+            }
+            if (steps[2] > 1) {
+                outfile << init_params_vec[param_idx[2]] << "\t" << result_vec[param_idx[2]] << endl;
             }
             
             
@@ -404,26 +412,34 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                     offset[1] = j * step_size[1];
                     extrinsic(param_idx[1]) = params_mat(param_idx[1]) + offset[1];
 
-                    double step_res = 0;
-                    /** Evaluate cost funstion **/
-                    for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
-                        double val;
-                        double weight = normalize_weight;
-                        Eigen::Vector4d lidar_point4 = {point.x, point.y, point.z, 1.0};
-                        Mat4D T_mat = TransformMat(extrinsic);
-                        Vec3D lidar_point = (T_mat * lidar_point4).head(3);
-                        Vec2D projection = IntrinsicTransform(intrinsic, lidar_point);
-                        kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
-                        step_res += pow(weight * val, 2);
+                    for (int n = -int((steps[2]-1)/2); n < int((steps[2]-1)/2)+1; n++) {
+                        offset[2] = n * step_size[2];
+                        intrinsic(param_idx[2]-6) = params_mat(param_idx[2]) + offset[2];
+                    
+                        double step_res = 0;
+                        /** Evaluate cost funstion **/
+                        for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
+                            double val;
+                            double weight = normalize_weight;
+                            Eigen::Vector4d lidar_point4 = {point.x, point.y, point.z, 1.0};
+                            Mat4D T_mat = TransformMat(extrinsic);
+                            Vec3D lidar_point = (T_mat * lidar_point4).head(3);
+                            Vec2D projection = IntrinsicTransform(intrinsic, lidar_point);
+                            kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
+                            step_res += pow(weight * val, 2);
+                        }
+                        // cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
+                        if (steps[0] > 1) {
+                            outfile << offset[0] + params_mat(param_idx[0]) << "\t";
+                        }
+                        if (steps[1] > 1) {
+                            outfile << offset[1] + params_mat(param_idx[1]) << "\t";
+                        }
+                        if (steps[2] > 1) {
+                            outfile << offset[2] + params_mat(param_idx[2]) << "\t";
+                        }
+                        outfile << step_res << endl;
                     }
-                    // cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
-                    if (steps[0] > 1) {
-                        outfile << offset[0] + params_mat(param_idx[0]) << "\t";
-                    }
-                    if (steps[1] > 1) {
-                        outfile << offset[1] + params_mat(param_idx[1]) << "\t";
-                    }
-                    outfile << step_res << endl;
                 }
             }
             outfile.close();

@@ -180,8 +180,8 @@ public:
 
     /***** LiDAR Pre-Processing *****/
     void LidarToSphere(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud);
-    void SphereToPlane(const CloudI::Ptr& cart_cloud, const CloudI::Ptr& polar_cloud);
-    void PixLookUp(CloudI::Ptr cart_cloud);
+    void SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud);
+    void PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud);
 
     /***** Edge Process *****/
     void EdgeExtraction();
