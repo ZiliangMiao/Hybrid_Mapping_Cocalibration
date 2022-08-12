@@ -913,7 +913,7 @@ void LidarProcess::FullViewMapping() {
     CloudPtr radius_outlier_cloud(new CloudT);
     pcl::RadiusOutlierRemoval<PointT> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
-    radius_outlier_filter.setRadiusSearch(1);
+    radius_outlier_filter.setRadiusSearch(0.1);
     radius_outlier_filter.setMinNeighborsInRadius(200);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
