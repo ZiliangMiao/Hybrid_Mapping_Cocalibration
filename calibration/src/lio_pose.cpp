@@ -37,8 +37,7 @@ void path_callback(const nav_msgs::Path &path_msg) {
 int main(int argc, char *argv[]) {
     ros::init(argc, argv, "lio_pose");
     ros::NodeHandle nh;
-    string txt_path;
-    nh.param<string>("txt_path", txt_path);
+    string txt_path = ros::package::getPath("calibration") + "/data/lio_spot_trans_mat.txt";
     ros::Rate loop_rate(100);
     time_stamp = ros::Time::now().toSec();
     ros::Subscriber sub = nh.subscribe("/path", 1, path_callback);

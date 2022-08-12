@@ -9,9 +9,12 @@
 
 using namespace std;
 using namespace tk;
-typedef pcl::PointXYZRGB RGBPointT;
-typedef pcl::PointCloud<RGBPointT> RGBCloudT;
-typedef pcl::PointCloud<RGBPointT>::Ptr RGBCloudPtr;
+
+/** typedef **/
+typedef pcl::PointXYZI PointI;
+typedef pcl::PointXYZRGB PointRGB;
+typedef pcl::PointCloud<PointI> CloudI;
+typedef pcl::PointCloud<PointRGB> CloudRGB;
 
 class FisheyeProcess{
 public:
@@ -95,15 +98,15 @@ public:
     FisheyeProcess();
     /** Fisheye Pre-Processing **/
     cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
-    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere();
-    std::tuple<RGBCloudPtr, RGBCloudPtr> FisheyeImageToSphere(cv::Mat &image, tk::spline spline);
-    void SphereToPlane(RGBCloudPtr fisheye_polar_cloud);
-    void SphereToPlane(RGBCloudPtr fisheye_polar_cloud, double bandwidth);
+    std::tuple<CloudRGB::Ptr, CloudRGB::Ptr> FisheyeImageToSphere();
+    std::tuple<CloudRGB::Ptr, CloudRGB::Ptr> FisheyeImageToSphere(cv::Mat &image, tk::spline spline);
+    void SphereToPlane(CloudRGB::Ptr fisheye_polar_cloud);
+    void SphereToPlane(CloudRGB::Ptr fisheye_polar_cloud, double bandwidth);
 
     /** Edge Related **/
     void ReadEdge();
     void EdgeToPixel();
-    void PixLookUp(RGBCloudPtr fisheye_pixel_cloud);
+    void PixLookUp(CloudRGB::Ptr fisheye_pixel_cloud);
     std::vector<double> Kde(double bandwidth, double scale);
     void EdgeExtraction();
 

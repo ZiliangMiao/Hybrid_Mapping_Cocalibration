@@ -10,28 +10,35 @@ switch:
     kFullViewMapping: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kMultiSpotsOptimization: false
-    kParamsAnalysis: false
+    kCeresOptimization: true
+    kMultiSpotsOptimization: true
+    kParamsAnalysis: true
     
     # spot
-    kSpotRegistration: true
-    kGlobalMapping: true
+    kSpotRegistration: false
+    kGlobalMapping: false
 
     # colorization
-    kFullViewColorization: true
-    kGlobalColoredMapping: true
+    kFullViewColorization: false
+    kGlobalColoredMapping: false
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "parking"
-    kNumSpots: 6
+    kDatasetName: "lh3_global"
+    kNumSpots: 5
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
     kAngleInit: -50
     kAngleStep: 25
 
+transform:
+    rx: 0.012864
+    ry: -0.001143
+    rz: 0.160874
+    tx: 0.299831
+    ty: 0.230617
+    tz: -0.029438

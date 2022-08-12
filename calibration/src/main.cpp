@@ -18,13 +18,10 @@
 #include <pcl/filters/conditional_removal.h>
 /** heading **/
 #include "optimization.h"
-#include "utils.h"
+#include "common_lib.h"
 /** namespace **/
 using namespace std;
 using namespace cv;
-typedef pcl::PointXYZI PointT;
-typedef pcl::PointCloud<PointT> CloudT;
-typedef pcl::PointCloud<PointT>::Ptr CloudPtr;
 
 int main(int argc, char** argv) {
     /***** ROS Initialization *****/
@@ -155,8 +152,8 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                CloudPtr lidar_cart_cloud(new CloudT);
-                CloudPtr lidar_polar_cloud(new CloudT);
+                CloudI::Ptr lidar_cart_cloud(new CloudI);
+                CloudI::Ptr lidar_polar_cloud(new CloudI);
                 lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.SphereToPlane(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.EdgeExtraction();
@@ -171,9 +168,9 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx);
-                std::tuple<RGBCloudPtr, RGBCloudPtr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-                RGBCloudPtr fisheye_pixel_cloud;
-                RGBCloudPtr fisheye_polar_cloud;
+                std::tuple<CloudRGB::Ptr, CloudRGB::Ptr> fisheye_clouds = fisheye.FisheyeImageToSphere();
+                CloudRGB::Ptr fisheye_pixel_cloud;
+                CloudRGB::Ptr fisheye_polar_cloud;
                 std::tie(fisheye_pixel_cloud, fisheye_polar_cloud) = fisheye_clouds;
                 fisheye.SphereToPlane(fisheye_polar_cloud);
                 fisheye.EdgeExtraction();
@@ -255,7 +252,8 @@ int main(int argc, char** argv) {
         for (int i = lidar.num_spots - 1; i > 0; --i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
+                // lidar.SpotRegistration();
+                lidar.FineToCoarseReg();
             }
         }
     }
@@ -271,13 +269,13 @@ int main(int argc, char** argv) {
         //         1.00176, -0.00863924, 0.00846056
         // };
         // parking:
-        // params_calib = {
-        //         0.001335, -3.139391, 1.559892,
-        //         0.281820, -0.006560, 0.044851,
-        //         1024.081111, 1197.734465,
-        //         1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
-        //         1.000177, -0.005878, 0.006144
-        // };
+        params_calib = {
+                0.001335, -3.139391, 1.559892,
+                0.281820, -0.006560, 0.044851,
+                1024.081111, 1197.734465,
+                1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
+                1.000177, -0.005878, 0.006144
+        };
         
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -292,7 +290,8 @@ int main(int argc, char** argv) {
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        lidar.GlobalMapping();
+        // lidar.GlobalMapping();
+        lidar.MappingEval();
     }
 
     if (kGlobalColoredMapping) {

@@ -1,4 +1,5 @@
 from cProfile import label
+from unittest import case
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -35,10 +36,8 @@ def visualization(data, name, bw, pt_label=False):
     if data[0, 0] < -np.pi / 2:
         data[0, 0] = data[0, 0] + np.pi
 
-    # print(np.min(data[1:, 0]), end="")
-    # print(data[0, :], end="")
-    # print(np.max(data[1:, 0]))
     data[1:, 1] = data[1:, 1] * scale
+
     f = interpolate.interp1d(data[1:, 0], data[1:, 1])
     plt.plot(data[1:, 0], data[1:, 1], label=("bw="+str(bw)))
     if pt_label:
@@ -84,15 +83,17 @@ if __name__=="__main__":
         # idx1 = int(sys.argv[1])
         for idx1 in range(6):
             bw_list = [16, 4, 1]
-            for i in range(len(bw_list) - 1):
+            for i in range(len(bw_list) - 2):
                 plt.figure(figsize=(10.24, 7.68))
                 data = load_data(tag1=names[idx1], bw=bw_list[i], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i], pt_label=True)
                 data = load_data(tag1=names[idx1], bw=bw_list[i+1], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i+1], pt_label=False)
+                data = load_data(tag1=names[idx1], bw=bw_list[i+2], spot=int(sys.argv[1]))
+                visualization(data, names[idx1], bw=bw_list[i+2], pt_label=False)
                 plt.legend()
-                # plt.show()
-                plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
+                plt.show()
+                # plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
                 plt.close()
     if (len(sys.argv) > 2):
         idx1 = int(sys.argv[1])

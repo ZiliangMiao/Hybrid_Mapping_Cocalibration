@@ -62,9 +62,9 @@ pcl::PointCloud<PointType>::Ptr flatFeaturePointsAlter(new pcl::PointCloud<Point
 
 bool compare(int i, int j) { return (cloudCurvature[i] <  cloudCurvature[j]); }
 
-template <typename PointT>
+template <typename PointI>
 void VisualizeCurvature(float *v_curv, int *v_label,
-                        const pcl::PointCloud<PointT> &pcl_in) {
+                        const pcl::PointCloud<PointI> &pcl_in) {
 //    ROS_ASSERT(pcl_in.size() < 400000);
 
     /// Same marker attributes

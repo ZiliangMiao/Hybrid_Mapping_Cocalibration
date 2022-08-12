@@ -2,7 +2,6 @@
   <arg name="rviz" default="true" />
 
 	<rosparam command="load" file="$(find fast_lio)/config/mid360.yaml" />
-	<param name="txt_path" type="bool" value="/home/halsey/catkin_ws/lio_spot_trans_mat"/>
 
 	<param name="feature_extract_enable" type="bool" value="0"/>
 	<param name="point_filter_num" type="int" value="3"/>

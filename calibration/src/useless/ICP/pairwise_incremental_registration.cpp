@@ -22,8 +22,8 @@ using pcl::visualization::PointCloudColorHandlerCustom;
 using namespace std;
 
 //convenient typedefs
-typedef pcl::PointXYZ PointT;
-typedef pcl::PointCloud<PointT> PointCloud;
+typedef pcl::PointXYZ PointI;
+typedef pcl::PointCloud<PointI> PointCloud;
 typedef pcl::PointNormal PointNormalT;
 typedef pcl::PointCloud<PointNormalT> PointCloudWithNormals;
 
@@ -83,8 +83,8 @@ void showCloudsLeft(const PointCloud::Ptr cloud_target, const PointCloud::Ptr cl
   p->removePointCloud ("vp1_target");
   p->removePointCloud ("vp1_source");
 
-  PointCloudColorHandlerCustom<PointT> tgt_h (cloud_target, 0, 255, 0);
-  PointCloudColorHandlerCustom<PointT> src_h (cloud_source, 255, 0, 0);
+  PointCloudColorHandlerCustom<PointI> tgt_h (cloud_target, 0, 255, 0);
+  PointCloudColorHandlerCustom<PointI> src_h (cloud_source, 255, 0, 0);
   p->addPointCloud (cloud_target, tgt_h, "vp1_target", vp_1);
   p->addPointCloud (cloud_source, src_h, "vp1_source", vp_1);
 
@@ -159,7 +159,7 @@ void pairAlign (const PointCloud::Ptr cloud_src, const PointCloud::Ptr cloud_tgt
   // \note enable this for large datasets
   PointCloud::Ptr src (new PointCloud);
   PointCloud::Ptr tgt (new PointCloud);
-  pcl::VoxelGrid<PointT> grid;
+  pcl::VoxelGrid<PointI> grid;
   if (downsample)
   {
     grid.setLeafSize (0.05, 0.05, 0.05);
@@ -180,7 +180,7 @@ void pairAlign (const PointCloud::Ptr cloud_src, const PointCloud::Ptr cloud_tgt
   PointCloudWithNormals::Ptr points_with_normals_src (new PointCloudWithNormals);
   PointCloudWithNormals::Ptr points_with_normals_tgt (new PointCloudWithNormals);
 
-  pcl::NormalEstimation<PointT, PointNormalT> norm_est;
+  pcl::NormalEstimation<PointI, PointNormalT> norm_est;
   pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
   norm_est.setSearchMethod (tree);
   norm_est.setKSearch (30);
@@ -257,8 +257,8 @@ void pairAlign (const PointCloud::Ptr cloud_src, const PointCloud::Ptr cloud_tgt
   p->removePointCloud ("source");
   p->removePointCloud ("target");
 
-  PointCloudColorHandlerCustom<PointT> cloud_tgt_h (output, 0, 255, 0);
-  PointCloudColorHandlerCustom<PointT> cloud_src_h (cloud_src, 255, 0, 0);
+  PointCloudColorHandlerCustom<PointI> cloud_tgt_h (output, 0, 255, 0);
+  PointCloudColorHandlerCustom<PointI> cloud_src_h (cloud_src, 255, 0, 0);
   p->addPointCloud (output, cloud_tgt_h, "target", vp_2);
   p->addPointCloud (cloud_src, cloud_src_h, "source", vp_2);
 

@@ -33,8 +33,7 @@
 
 using namespace std;
 
-static const int kExtrinsics = 7;
-static const int kIntrinsics = 10;
+#define Q_LIM   (0.15)
 
 inline double getDouble(double x) {
     return static_cast<double>(x);
