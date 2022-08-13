@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata, interpolate
 import os, sys
 
-dataset = "lh3_global"
+dataset = "ug"
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
 data_path = root_path + "/data/" + dataset + "/log"
 
@@ -39,7 +39,7 @@ def visualization(data, name, bw, pt_label=False):
     data[1:, 1] = data[1:, 1] * scale
 
     f = interpolate.interp1d(data[1:, 0], data[1:, 1])
-    plt.plot(data[1:, 0], data[1:, 1], label=("bw="+str(bw)))
+    plt.plot(data[1:, 0], data[1:, 1], label=("bw="+str(bw)+", max="+ str(1/scale)))
     if pt_label:
         plt.scatter(data[0, 0], f(data[0, 0]), c='r', label="start point")
         plt.scatter(data[0, 1], f(data[0, 1]), c='g', label="end point")
@@ -92,8 +92,8 @@ if __name__=="__main__":
                 data = load_data(tag1=names[idx1], bw=bw_list[i+2], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i+2], pt_label=False)
                 plt.legend()
-                plt.show()
-                # plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
+                # plt.show()
+                plt.savefig("/home/isee/catkin_ws/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
                 plt.close()
     if (len(sys.argv) > 2):
         idx1 = int(sys.argv[1])
