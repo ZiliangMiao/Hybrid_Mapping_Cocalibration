@@ -353,8 +353,8 @@ void FisheyeProcess::PixLookUp(CloudRGB::Ptr fisheye_pixel_cloud) {
             invalid_edge_pix++;
         }
         else {
-            for (int j = 0; j < num_pts; ++j) {
-                PointRGB &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
+            for (auto &idx : tags_map[u][v].pts_indices) {
+                PointRGB &pt = fisheye_pixel_cloud->points[idx];
                 x += pt.x;
                 y += pt.y;
             }

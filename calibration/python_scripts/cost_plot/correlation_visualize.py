@@ -23,29 +23,35 @@ def visualization(data, name, bw, pt_label=False):
     # print(data)
     scale = 1 / np.max(data[1:, 1])
     
-    if (np.max(data[1:, 0]) > np.pi / 2):
-        data[1:, 0] = data[1:, 0] - np.pi
-    if (np.min(data[1:, 0]) < -np.pi / 2):
-        data[1:, 0] = data[1:, 0] + np.pi
-    if data[0, 1] > np.pi / 2:
-        data[0, 1] = data[0, 1] - np.pi
-    if data[0, 1] < -np.pi / 2:
-        data[0, 1] = data[0, 1] + np.pi
-    if data[0, 0] > np.pi / 2:
-        data[0, 0] = data[0, 0] - np.pi
-    if data[0, 0] < -np.pi / 2:
-        data[0, 0] = data[0, 0] + np.pi
+    if name in ["rx", "ry", "rz"]:
+        # print(name)
+        if (np.max(data[1:, 0]) > np.pi / 2):
+            data[1:, 0] = data[1:, 0] - np.pi
+        if (np.min(data[1:, 0]) < -np.pi / 2):
+            data[1:, 0] = data[1:, 0] + np.pi
+        if data[0, 1] > np.pi / 2:
+            data[0, 1] = data[0, 1] - np.pi
+        if data[0, 1] < -np.pi / 2:
+            data[0, 1] = data[0, 1] + np.pi
+        if data[0, 0] > np.pi / 2:
+            data[0, 0] = data[0, 0] - np.pi
+        if data[0, 0] < -np.pi / 2:
+            data[0, 0] = data[0, 0] + np.pi
 
     data[1:, 1] = data[1:, 1] * scale
 
-    f = interpolate.interp1d(data[1:, 0], data[1:, 1])
-    plt.plot(data[1:, 0], data[1:, 1], label=("bw="+str(bw)))
+    interp_scale = 2
+    f = interpolate.interp1d(data[1:, 0], data[1:, 1], kind='cubic')
+    plot_x = np.linspace(np.min(data[1:, 0]), np.max(data[1:, 0]), int(data[1:, 0].size * interp_scale))
+    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str(1/scale)))
+    p1 = np.clip(data[0, 0], np.min(data[1:, 0]), np.max(data[1:, 0]))
+    p2 = np.clip(data[0, 1], np.min(data[1:, 0]), np.max(data[1:, 0]))
     if pt_label:
-        plt.scatter(data[0, 0], f(data[0, 0]), c='r', label="start point")
-        plt.scatter(data[0, 1], f(data[0, 1]), c='g', label="end point")
+        plt.scatter(p1, f(p1), c='r', label="start point")
+        plt.scatter(p2, f(p2), c='g', label="end point")
     else:
-        plt.scatter(data[0, 0], f(data[0, 0]), c='r')
-        plt.scatter(data[0, 1], f(data[0, 1]), c='g')
+        plt.scatter(p1, f(p1), c='r')
+        plt.scatter(p2, f(p2), c='g')
     plt.title(name)
 
 
@@ -92,8 +98,8 @@ if __name__=="__main__":
                 data = load_data(tag1=names[idx1], bw=bw_list[i+2], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i+2], pt_label=False)
                 plt.legend()
-                plt.show()
-                # plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
+                # plt.show()
+                plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
                 plt.close()
     if (len(sys.argv) > 2):
         idx1 = int(sys.argv[1])

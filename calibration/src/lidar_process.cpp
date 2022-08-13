@@ -124,7 +124,7 @@ void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_clo
     /** Initial Transformation **/
     Eigen::Matrix<float, 6, 1> extrinsic_vec;
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-            0.0, 0.0, 0.0;
+                    0.0, 0.0, 0.0;
     Mat4F T_mat = TransformMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
@@ -175,6 +175,7 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_clo
     int invalid_idx_num = 0; /** index invalid count **/
     const float kScale = sqrt(2);
     const float kSearchRadius = kScale * (kRadPerPix / 2);
+    const float sensitivity = 0.02;
 
     // int hidden_pt_cnt = 0;
     // const float sensitivity = 0.02f;
@@ -205,35 +206,33 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_clo
                 tags_map[u][v].pts_indices = {};
             }
             else { /** corresponding points are found in the radius neighborhood **/
-                // int hidden_pt_num = 0;
-                // float dist_mean = 0;
+                int hidden_pt_num = 0;
+                float dist_mean = 0;
                 float intensity_mean = 0;
-                // vector<int> zero_vec(search_num, 0);
-                // tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
+                vector<int> zero_vec(search_num, 0);
+                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
 
-                // for (int i = 0; i < search_num; ++i) {
-                //     dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
-                // }
-                // dist_mean = dist_mean / search_num;
+                for (int i = 0; i < search_num; ++i) {
+                    dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
+                }
+                dist_mean = dist_mean / search_num;
 
-                // for (int i = 0; i < search_num; ++i) {
-                //     PointI &local_pt = polar_cloud->points[search_pt_idx_vec[i]];
-                //     float dist = local_pt.z;
-                //     if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
-                //         hidden_pt_num++;
-                //         tags_map[u][v].pts_indices[i] = 0;
-                //     }
-                //     else {
-                //         intensity_mean += local_pt.intensity;
-                //         tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
-                //     }
-                // }
-                 
+                for (int i = 0; i < search_num; ++i) {
+                    PointI &local_pt = polar_cloud->points[search_pt_idx_vec[i]];
+                    float dist = local_pt.z;
+                    if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
+                        hidden_pt_num++;
+                        tags_map[u][v].pts_indices[i] = 0;
+                    }
+                    else {
+                        intensity_mean += local_pt.intensity;
+                        tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
+                    }
+                }
+
                 /** add tags **/
-                tags_map[u][v].num_pts = search_num;
-
-                // tags_map[u][v].num_pts = search_num - hidden_pt_num;
-                // tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
+                tags_map[u][v].num_pts = search_num - hidden_pt_num;
+                tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
                 
                 if (tags_map[u][v].num_pts > 0) {
                     flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].num_pts;
@@ -305,7 +304,7 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
     /** generate edge_pts and edge_cloud, push back into vec **/
     cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int num_invalid_pixels = 0;
-    const float sensitivity = 0.01;
+    
     EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     EdgePts edge_pts;
@@ -321,30 +320,37 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
         }
         else { /** normal pixels **/
 
-            float dist_mean = 0;
-            float intensity_mean = 0;
+            // float dist_mean = 0;
+            // float intensity_mean = 0;
             float x_avg = 0;
             float y_avg = 0;
             float z_avg = 0;
 
-            for (int i = 0; i < num_pts; ++i) {
-                dist_mean += polar_cloud->points[tags_map[u][v].pts_indices[i]].z;
-            }
-            dist_mean = dist_mean / num_pts;
+            // for (int i = 0; i < num_pts; ++i) {
+            //     dist_mean += polar_cloud->points[tags_map[u][v].pts_indices[i]].z;
+            // }
+            // dist_mean = dist_mean / num_pts;
+
+            // for (int i = 0; i < num_pts; ++i) {
+            //     PointI &local_pt = polar_cloud->points[tags_map[u][v].pts_indices[i]];
+            //     PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
+            //     float dist = local_pt.z;
+            //     if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
+            //         continue;
+            //     }
+            //     else {
+            //         x_avg += pixel_pt.x;
+            //         y_avg += pixel_pt.y;
+            //         z_avg += pixel_pt.z;
+            //         intensity_mean += pixel_pt.intensity;
+            //     }
+            // }
 
             for (int i = 0; i < num_pts; ++i) {
-                PointI &local_pt = polar_cloud->points[tags_map[u][v].pts_indices[i]];
                 PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
-                float dist = local_pt.z;
-                if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
-                    continue;
-                }
-                else {
-                    x_avg += pixel_pt.x;
-                    y_avg += pixel_pt.y;
-                    z_avg += pixel_pt.z;
-                    intensity_mean += pixel_pt.intensity;
-                }
+                x_avg += pixel_pt.x;
+                y_avg += pixel_pt.y;
+                z_avg += pixel_pt.z;
             }
 
             /** average coordinates->unbiased estimation of center position **/
@@ -729,42 +735,12 @@ void LidarProcess::SpotRegAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src,
     // cout << "knn search." << endl;
     tgt_effe_indices.erase(std::remove(tgt_effe_indices.begin(), tgt_effe_indices.end(), 0), tgt_effe_indices.end());
     pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
-    // cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->size() << endl;
-    // cout << "Run time of effective point filter: " << timer_effe.getTimeSeconds() << " s" << endl;
 
-    /** load icp transformation matrix **/
-    Mat4F icp_spot_trans_mat = Mat4F::Identity();
-    for (int load_idx = src_spot_idx; load_idx > 0; --load_idx) {
-        string trans_file_path = this->poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
-        Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
-        icp_spot_trans_mat = tmp_spot_trans_mat * icp_spot_trans_mat;
-        // cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
-    }
 
-    /** get the init trans cloud & init fitness score **/
-    CloudI::Ptr cloud_init_trans_us (new CloudI);
-    pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, icp_spot_trans_mat);
     // cout << "\nInit Trans Mat: \n " << icp_spot_trans_mat << endl;
     pcl::StopWatch timer_fs;
-    cout << "ICP Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
+    cout << "Coarse to fine fitness score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_us_src_effe, max_fitness_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
-
-    /** load lio transformation matrix **/
-    Mat4F lio_spot_trans_mat = Mat4F::Identity();
-    for (int load_idx = src_spot_idx; load_idx > 0; --load_idx) {
-        string trans_file_path = this->poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
-        Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
-        lio_spot_trans_mat = tmp_spot_trans_mat * lio_spot_trans_mat;
-        // cout << "Load spot LIO trans mat: \n" << tmp_spot_trans_mat << endl;
-    }
-
-    /** get the init trans cloud & init fitness score **/
-    pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, lio_spot_trans_mat);
-    // cout << "\nInit Trans Mat: \n " << lio_spot_trans_mat << endl;
-    pcl::StopWatch timer_fs_2;
-    cout << "LIO Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
-    cout << "Get fitness score time: " << timer_fs_2.getTimeSeconds() << " s" << endl;
-
 }
 
 double LidarProcess::GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range) {
@@ -970,8 +946,6 @@ void LidarProcess::SpotRegistration() {
     cout << "Euler angle by LIO: \n" << lio_euler_angle << endl;
     cout << "Initial Trans Mat by LIO: \n" << lio_spot_trans_mat << endl;
 
-    // SpotRegAnalysis(spot_cloud_tgt, spot_cloud_src, this->spot_idx);
-
     /** ICP **/
     std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, triangulatePoints);
     Mat4F icp_spot_trans_mat;
@@ -1031,10 +1005,14 @@ void LidarProcess::FineToCoarseReg() {
     lio_spot_trans_mat = lio_static_trans_mat * lio_spot_trans_mat;
     cout << "Load spot LIO trans mat: \n" << lio_spot_trans_mat << endl;
 
-    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(global_coarse_cloud, spot_cloud, lio_spot_trans_mat, 1, triangulatePoints);
-    Mat4F icp_spot_trans_mat;
-    CloudI::Ptr spot_cloud_icp_trans;
-    std::tie(icp_spot_trans_mat, spot_cloud_icp_trans) = icp_result;
+    pcl::transformPointCloud(*spot_cloud, *spot_cloud, lio_spot_trans_mat);
+
+    SpotRegAnalysis(global_coarse_cloud, spot_cloud, 0);
+
+    // std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(global_coarse_cloud, spot_cloud, lio_spot_trans_mat, 1, triangulatePoints);
+    // Mat4F icp_spot_trans_mat;
+    // CloudI::Ptr spot_cloud_icp_trans;
+    // std::tie(icp_spot_trans_mat, spot_cloud_icp_trans) = icp_result;
 }
 
 void LidarProcess::GlobalColoredMapping() {
@@ -1107,6 +1085,7 @@ void LidarProcess::GlobalMapping() {
             cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
         }
         pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_src, icp_spot_trans_mat);
+        
         /** for view coloring & viz only **/
         for (auto & pt : spot_cloud_src->points) {
             pt.intensity = src_idx * 40;
@@ -1155,14 +1134,6 @@ void LidarProcess::MappingEval(){
     std::vector<int> null_indices_src;
     (*cloud_us_src).is_dense = false;
     pcl::removeNaNFromPointCloud(*global_registered_cloud, *cloud_us_src, null_indices_src);
-
-    // /** load icp transformation matrix **/
-    // string trans_file_path = this->poses_files_path_vec[0][0].fullview_recon_folder_path + "/static_trans_mat.txt";
-    // Mat4F icp_spot_trans_mat = LoadTransMat(trans_file_path);
-    // cout << "\nInit Trans Mat: \n " << icp_spot_trans_mat << endl;
-    // Mat3F rotation = icp_spot_trans_mat.topLeftCorner(3, 3);
-    // Vec3F angle = rotation.eulerAngles(2,1,0).reverse();
-    // cout << "Euler angles: \n" << angle << endl;
 
     Eigen::Matrix<float, 6, 1> transform;
     ros::param::get("transform/rx", transform(0));

@@ -11,7 +11,7 @@ switch:
 
     ## Calibration and Optimization cost analysis
     kCeresOptimization: true
-    kMultiSpotsOptimization: true
+    kMultiSpotsOptimization: false
     kParamsAnalysis: true
     
     # spot
@@ -23,7 +23,7 @@ switch:
     kGlobalColoredMapping: false
 
 spot:
-    kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 2  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
