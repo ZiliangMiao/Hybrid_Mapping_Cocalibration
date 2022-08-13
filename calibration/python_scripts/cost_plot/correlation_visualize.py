@@ -28,18 +28,20 @@ def visualization(data, name, bw, pt_label=False):
     
     if name in ["rx", "ry", "rz"]:
         # print(name)
+        if name in ["rx", "ry", "rz"]:
+        # print(name)
         if (np.max(data[1:, 0]) > np.pi / 2):
-            data[1:, 0] = data[1:, 0] - np.pi
-        if (np.min(data[1:, 0]) < -np.pi / 2):
-            data[1:, 0] = data[1:, 0] + np.pi
-        if data[0, 1] > np.pi / 2:
-            data[0, 1] = data[0, 1] - np.pi
-        if data[0, 1] < -np.pi / 2:
-            data[0, 1] = data[0, 1] + np.pi
-        if data[0, 0] > np.pi / 2:
-            data[0, 0] = data[0, 0] - np.pi
-        if data[0, 0] < -np.pi / 2:
-            data[0, 0] = data[0, 0] + np.pi
+                data[1:, 0] = data[1:, 0] - np.pi
+            if (np.min(data[1:, 0]) < -np.pi / 2):
+                data[1:, 0] = data[1:, 0] + np.pi
+            if data[0, 1] > np.pi / 2:
+                data[0, 1] = data[0, 1] - np.pi
+            if data[0, 1] < -np.pi / 2:
+                data[0, 1] = data[0, 1] + np.pi
+            if data[0, 0] > np.pi / 2:
+                data[0, 0] = data[0, 0] - np.pi
+            if data[0, 0] < -np.pi / 2:
+                data[0, 0] = data[0, 0] + np.pi
 
     data[1:, 1] = data[1:, 1] * scale
 
