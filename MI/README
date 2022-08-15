@@ -1,0 +1,53 @@
+AUTHOR
+======  
+  Gaurav Pandey.
+  email: pgaurav@umich.edu
+
+  Redistribution and use in source and binary forms, with 
+  or without modification, are permitted under the GNU
+  Lesses General Public License (see LICENSE)
+
+ABOUT
+=====
+  This is a reference implementation of mutual information 
+  (MI) based algorithm for automatic extrinsic calibration 
+  of a 3D laser scanner and optical camera system. You can 
+  find specific details in the original paper:
+  
+  "Automatic Targetless Extrinsic Calibration of a 3D Lidar 
+  and Camera by Maximizing Mutual Information." in AAAI, 
+  special track on robotics, July 2012, Toronto, Canada.
+
+LIBRARIES USED
+==============
+  This version is implemented with the help of some external 
+  code:
+  1) GSL          : http://www.gnu.org/software/gsl/
+  2) OpenCV 2.3.1 : http://opencv.willowgarage.com/wiki/
+                    (Lower versions of opencv might not work)
+  3) Glib         : http://developer.gnome.org/glib/stable/  
+  4) CMake        : http://www.cmake.org/
+
+COMPILATION INSTRUCTIONS
+========================
+  1. Go to build/ and run "cmake ../". It will generate the 
+     required make files.
+  2. Run "make". It will generate the binary "mi-extrinsic-calib"
+     in the directory bin/
+
+USAGE INSTRUCTIONS
+==================
+  1. Go to config/ and update the default config file (if needed). 
+     The config file contains all the inputs required by the algorithm.
+     This config file contains intrinsic parameters of a laser scanner
+     and an omnidirectional camera used for developing this algorithm. 
+     Sample data from this laser scanner and the omnidirectional camera
+     is provided in bin/data/.   
+  2. Go to bin/ and run "./mi-extrinsic-calib". If you do not
+     provide any argument then it will use the default config
+     file "config/master.cfg" that corresponds to a Ladybug3 omni-
+     directional camera. A sample config file for a monocular camera 
+     setup is given as "config/monocular-cam.cfg"
+  3. At the end of the program two output files are created in bin/.
+     "calib_param.txt" stores the estimated calibration parameters.
+     "calib_cov.txt" stores the estimated 6x6 covariance matrix.

@@ -18,6 +18,10 @@ fast_lio/cmake-build-debug/*
 fast_lio/.idea/*
 fast_lio/.vscode/*
 
+MI/bin/outputs/*
+MI/build/*
+MI/lib/*
+
 build/*
 .idea/*
 .vscode/*
