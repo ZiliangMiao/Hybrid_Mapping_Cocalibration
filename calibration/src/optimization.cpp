@@ -197,7 +197,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     std::vector<int> spot_vec,
                                     std::vector<double> init_params_vec,
                                     std::vector<double> lb,
-                                    std::vector<double> ub) {
+                                    std::vector<double> ub,
+                                    bool lock_intrinsic) {
     Param_D init_params = Eigen::Map<Param_D>(init_params_vec.data());
     Ext_D extrinsic = init_params.head(6);
     MatD(K_INT+(K_EXT+1), 1) q_vector;
@@ -207,7 +208,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     
     const int kParams = q_vector.size();
     const int kViews = fisheye.num_views;
-    const double scale = 1;
+    const double scale = 2;
     q_vector.tail(K_INT + 3) = init_params.tail(K_INT + 3);
     q_vector.head(4) << quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w();
     double params[kParams];
@@ -250,7 +251,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     for (int idx = 0; idx < spot_vec.size(); idx++) {
         fisheye.SetSpotIdx(spot_vec[idx]);
         lidar.SetSpotIdx(spot_vec[idx]);
-        double normalize_weight = 30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+        double normalize_weight = sqrt(30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
             double weight = normalize_weight;
             Vec3D lid_point = {point.x, point.y, point.z};
@@ -258,6 +259,10 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     loss_function,
                                     params, params+((K_EXT+1)-3), params+(K_EXT+1));
         }
+    }
+
+    if (lock_intrinsic) {
+        problem.SetParameterBlockConstant(params + (K_EXT+1));
     }
 
     for (int i = 0; i < kParams; ++i) {
@@ -269,7 +274,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
             problem.SetParameterLowerBound(params+((K_EXT+1)-3), i-((K_EXT+1)-3), lb[i-1]);
             problem.SetParameterUpperBound(params+((K_EXT+1)-3), i-((K_EXT+1)-3), ub[i-1]);
         }
-        else if (i >= (K_EXT+1)) {
+        else if (i >= (K_EXT+1) && !lock_intrinsic) {
             problem.SetParameterLowerBound(params+(K_EXT+1), i-(K_EXT+1), lb[i-1]);
             problem.SetParameterUpperBound(params+(K_EXT+1), i-(K_EXT+1), ub[i-1]);
         }
@@ -281,8 +286,8 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 300;
-    options.gradient_tolerance = 1e-9;
+    options.max_num_iterations = 100;
+    options.gradient_tolerance = 1e-6;
     options.function_tolerance = 1e-9;
     options.use_nonmonotonic_steps = true;
 
@@ -315,7 +320,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                          std::vector<double> result_vec,
                          double bandwidth) {
     const int kViews = fisheye.num_views;
-    const double scale = 1;
+    const double scale = 2;
 
     /********* Fisheye KDE *********/
     std::vector<double> ref_vals;
@@ -361,7 +366,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
     double offset[3] = {0, 0, 0};
 
     /** update evaluate points in 2D grid **/
-    for (int m = 0; m < 16; m++) {
+    for (int m = 0; m < 6; m++) {
         extrinsic = params_mat.head(6);
         intrinsic = params_mat.tail(K_INT);
         if (m < 3) {
@@ -391,7 +396,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
         for (int k = 0; k < spot_vec.size(); k++) {
             lidar.SetSpotIdx(spot_vec[k]);
-            double normalize_weight = 30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size();
+            double normalize_weight = sqrt(30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
 
             /** Save & terminal output **/
             string analysis_filepath = lidar.kDatasetPath + "/log/";

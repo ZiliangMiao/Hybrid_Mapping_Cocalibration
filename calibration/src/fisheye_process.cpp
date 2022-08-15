@@ -40,14 +40,21 @@ using namespace tk;
 
 FisheyeProcess::FisheyeProcess() {
     /** parameter server **/
+    // this->dataset_name = "liyuan";
+    // this->num_spots = 7;
+    // this->num_views = 5;
+    // this->kFisheyeRows = 2448;
+    // this->kFisheyeCols = 2048;
+    // this->view_angle_init = -50;
+    // this->view_angle_step = 25;
     ros::param::get("essential/kDatasetName", this->dataset_name);
-    this->kDatasetPath = this->kPkgPath + "/data/" + this->dataset_name;
     ros::param::get("essential/kNumSpots", this->num_spots);
     ros::param::get("essential/kNumViews", this->num_views);
     ros::param::get("essential/kFisheyeRows", this->kFisheyeRows);
     ros::param::get("essential/kFisheyeCols", this->kFisheyeCols);
     ros::param::get("essential/kAngleInit", this->view_angle_init);
     ros::param::get("essential/kAngleStep", this->view_angle_step);
+    this->kDatasetPath = this->kPkgPath + "/data/" + this->dataset_name;
     this->fullview_idx = (this->num_views - 1) / 2;
 
     cout << "----- Fisheye: ImageProcess -----" << endl;
@@ -353,8 +360,8 @@ void FisheyeProcess::PixLookUp(CloudRGB::Ptr fisheye_pixel_cloud) {
             invalid_edge_pix++;
         }
         else {
-            for (int j = 0; j < num_pts; ++j) {
-                PointRGB &pt = (*fisheye_pixel_cloud)[tags_map[u][v].pts_indices[j]];
+            for (auto &idx : tags_map[u][v].pts_indices) {
+                PointRGB &pt = fisheye_pixel_cloud->points[idx];
                 x += pt.x;
                 y += pt.y;
             }

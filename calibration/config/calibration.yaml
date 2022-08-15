@@ -1,7 +1,7 @@
 switch:
     ## Data Process
-    kLidarFlatProcess: false
-    kFisheyeFlatProcess: false
+    kLidarFlatProcess: true
+    kFisheyeFlatProcess: true
 
     ## Registration, Colorization and Mapping
     # view
@@ -11,7 +11,7 @@ switch:
 
     ## Calibration and Optimization cost analysis
     kCeresOptimization: true
-    kMultiSpotsOptimization: true
+    kMultiSpotsOptimization: false
     kParamsAnalysis: true
     
     # spot
@@ -27,8 +27,8 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "lh3_global"
-    kNumSpots: 5
+    kDatasetName: "rb1"
+    kNumSpots: 1
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
