@@ -52,7 +52,7 @@ def visualization(data, name, bw, pt_label=False):
     else:
         plt.scatter(p1, f(p1), c='r')
         plt.scatter(p2, f(p2), c='g')
-    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str("%.5e".format(f(p2)/scale))))
+    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str(format(f(p2)/scale,".5e"))))
     plt.title(name)
 
 

@@ -250,8 +250,6 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_clo
         }
     }
 
-    // cout << "hidden points: " << hidden_pt_cnt << "/" << polar_cloud->points.size() << endl;
-
     /** add the tags_map of this specific pose to maps **/
     this->tags_map_vec[this->spot_idx][this->view_idx] = tags_map;
     string tags_map_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].tags_map_path;
@@ -277,8 +275,7 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_clo
 void LidarProcess::EdgeExtraction() {
     std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
     std::string kSpots = to_string(this->spot_idx);
-    std::string cmd_str = "python3 "
-                          + script_path + " " + this->kDatasetPath + " " + "lidar" + " " + kSpots;
+    std::string cmd_str = "python3 " + script_path + " " + this->kDatasetPath + " " + "lidar" + " " + kSpots;
     system(cmd_str.c_str());
 }
 
@@ -312,8 +309,7 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
     EdgePts edge_pts;
     CloudI::Ptr edge_cloud(new CloudI);
-    /** visualization for weight check**/
-    CloudI::Ptr weight_rgb_cloud(new CloudI);
+
     for (auto &edge_pixel : edge_pixels) {
         int u = edge_pixel[0];
         int v = edge_pixel[1];
@@ -346,12 +342,6 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
             pt.z = z_avg;
             pt.intensity = 1; /** note: I is used to store the point weight **/
             edge_cloud->points.push_back(pt);
-
-            if (kEdgeAnalysis) {
-                /** visualization for weight check**/
-                pt.intensity = 255;
-                weight_rgb_cloud->points.push_back(pt);
-            }
         }
     }
     cout << "number of invalid lookups(lidar): " << num_invalid_pixels << endl;
@@ -377,14 +367,14 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
         /** visualization for weight check**/
         string edge_cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_cart_pcd_path;
         cout << edge_cart_pcd_path << endl;
-        pcl::io::savePCDFileBinary(edge_cart_pcd_path, *weight_rgb_cloud);
+        pcl::io::savePCDFileBinary(edge_cart_pcd_path, *edge_cloud);
 
         CloudI::Ptr polar_rgb_cloud(new CloudI);
         Eigen::Matrix<float, 6, 1> extrinsic_vec;
         extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-                0.0f, 0.0f, 0.0f;
+                        0.0f, 0.0f, 0.0f;
         Mat4F T_mat = TransformMat(extrinsic_vec);
-        pcl::transformPointCloud(*weight_rgb_cloud, *polar_rgb_cloud, T_mat);
+        pcl::transformPointCloud(*edge_cloud, *polar_rgb_cloud, T_mat);
 
         float radius, phi, theta;
         for (auto &point : polar_rgb_cloud->points) {
@@ -592,13 +582,11 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
         Mat3F icp_rotation_mat = icp_trans_mat.topLeftCorner<3, 3>();
         Vec3F icp_euler_angle = icp_rotation_mat.eulerAngles(2, 1, 0); /** zyx euler angle **/
         cout << "Euler angle by ICP: \n" << icp_euler_angle << endl;
-        // // cout << "debug1" << endl;
     }
     else {
         PCL_ERROR("\nICP has not converged.\n");
     }
 
-    // // cout << "debug2" << endl;
     /** visualization **/
     if (kIcpViz) {
         pcl::visualization::PCLVisualizer viewer("ICP demo");
@@ -629,11 +617,8 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
             viewer.spinOnce();
         }
     }
-    // cout << "debug3" << endl;
     tuple<Mat4F, CloudI::Ptr> result;
-    // cout << "debug4" << endl;
     result = make_tuple(icp_trans_mat, cloud_icp_trans_us);
-    // // cout << "debug5" << endl;
     return result;
 }
 
@@ -688,10 +673,8 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
             src_effe_indices[i] = 0;
         }
     }
-    // cout << "knn search." << endl;
     src_effe_indices.erase(std::remove(src_effe_indices.begin(), src_effe_indices.end(), 0), src_effe_indices.end());
     pcl::copyPointCloud(*cloud_us_src, src_effe_indices, *cloud_us_src_effe);
-    // cout << "Size of source cloud after effective point filter: " << cloud_us_src_effe->size() << endl;
 
     pcl::KdTreeFLANN<PointI> kdtree_src;
     kdtree_src.setInputCloud (cloud_us_src);
@@ -705,12 +688,9 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
             tgt_effe_indices[i] = 0;
         }
     }
-    // cout << "knn search." << endl;
     tgt_effe_indices.erase(std::remove(tgt_effe_indices.begin(), tgt_effe_indices.end(), 0), tgt_effe_indices.end());
     pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
 
-
-    // cout << "\nInit Trans Mat: \n " << icp_spot_trans_mat << endl;
     pcl::StopWatch timer_fs;
     cout << "Coarse to fine fitness score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_us_src_effe, max_fitness_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
@@ -880,7 +860,7 @@ void LidarProcess::FullViewMapping() {
     CloudI::Ptr radius_outlier_cloud(new CloudI);
     pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
-    radius_outlier_filter.setRadiusSearch(1);
+    radius_outlier_filter.setRadiusSearch(0.1);
     radius_outlier_filter.setMinNeighborsInRadius(200);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.setKeepOrganized(false);
