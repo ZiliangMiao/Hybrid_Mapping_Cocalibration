@@ -70,9 +70,6 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         projection = IntrinsicTransform(intrinsic, lidar_point);
         int u = std::clamp((int)round(projection(0)), 0, raw_image.rows - 1);
         int v = std::clamp((int)round(projection(1)), 0, raw_image.cols - 1);
-        point.x = u;
-        point.y = v;
-        point.z = 0;
         raw_image.at<cv::Vec3b>(u, v)[0] = 0;    // b
         raw_image.at<cv::Vec3b>(u, v)[1] = 0;    // g
         raw_image.at<cv::Vec3b>(u, v)[2] = 255;  // r
@@ -434,6 +431,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                         intrinsic(param_idx[2]-6) = params_mat(param_idx[2]) + offset[2];
                     
                         double step_res = 0;
+                        int num_valid = 0;
                         /** Evaluate cost funstion **/
                         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
                             double val;

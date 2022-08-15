@@ -130,7 +130,7 @@ void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_clo
     /** Initial Transformation **/
     Eigen::Matrix<float, 6, 1> extrinsic_vec;
     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-                    0.0, 0.0, 0.0;
+                            0.0, 0.0, 0.0;
     Mat4F T_mat = TransformMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
@@ -372,7 +372,7 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
         CloudI::Ptr polar_rgb_cloud(new CloudI);
         Eigen::Matrix<float, 6, 1> extrinsic_vec;
         extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-                        0.0f, 0.0f, 0.0f;
+                                0.0f, 0.0f, 0.0f;
         Mat4F T_mat = TransformMat(extrinsic_vec);
         pcl::transformPointCloud(*edge_cloud, *polar_rgb_cloud, T_mat);
 
@@ -650,6 +650,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     std::vector<int> null_indices_src;
     (*cloud_us_src).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
+    
 
     CloudI::Ptr cloud_us_tgt_effe (new CloudI);
     CloudI::Ptr cloud_us_src_effe (new CloudI);
@@ -1040,6 +1041,7 @@ void LidarProcess::GlobalMapping() {
             cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
         }
         pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_src, icp_spot_trans_mat);
+        
         
         /** for view coloring & viz only **/
         for (auto & pt : spot_cloud_src->points) {

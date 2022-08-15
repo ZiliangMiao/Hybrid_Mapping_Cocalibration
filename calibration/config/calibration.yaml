@@ -23,7 +23,7 @@ switch:
     kGlobalColoredMapping: false
 
 spot:
-    kOneSpot: 0  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: 5  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
@@ -33,8 +33,8 @@ essential:
     # kNumSpots: 1
     # kDatasetName: "rb1"
     # kNumSpots: 1
-    kDatasetName: "ug"
-    kNumSpots: 1
+    kDatasetName: "parking"
+    kNumSpots: 6
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
