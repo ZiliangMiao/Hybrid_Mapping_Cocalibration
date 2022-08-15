@@ -622,26 +622,24 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
     return result;
 }
 
-void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, int src_spot_idx) {
-    /** params **/
-    float uniform_radius = 0.01;
-    int max_iters = 200;
-    float max_corr_dis = 0.2;
-    float trans_epsilon = 1e-10;
-    float eucidean_epsilon = 0.01;
-    float max_fitness_range = 0.5;
+void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range) {
 
-    /** uniform sampling **/
     CloudI::Ptr cloud_us_tgt (new CloudI);
     CloudI::Ptr cloud_us_src (new CloudI);
-    pcl::UniformSampling<PointI> us;
-    us.setRadiusSearch(uniform_radius);
-    us.setInputCloud(cloud_tgt);
-    us.filter(*cloud_us_tgt);
-    us.setInputCloud(cloud_src);
-    us.filter(*cloud_us_src);
-    // PCL_INFO("Size of Uniform Sampling Filtered Target Cloud: %d\n", cloud_us_tgt->size());
-    // PCL_INFO("Size of Uniform Sampling Filtered Source Cloud: %d\n", cloud_us_src->size());
+
+    /** uniform sampling **/
+    if (uniform_radius > 0) {
+        pcl::UniformSampling<PointI> us;
+        us.setRadiusSearch(uniform_radius);
+        us.setInputCloud(cloud_tgt);
+        us.filter(*cloud_us_tgt);
+        us.setInputCloud(cloud_src);
+        us.filter(*cloud_us_src);
+    }
+    else {
+        pcl::copyPointCloud(*cloud_src, *cloud_us_src);
+        pcl::copyPointCloud(*cloud_tgt, *cloud_us_tgt);
+    }
 
     /** invalid point filter **/
     std::vector<int> null_indices_tgt;
@@ -650,7 +648,6 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     std::vector<int> null_indices_src;
     (*cloud_us_src).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
-    
 
     CloudI::Ptr cloud_us_tgt_effe (new CloudI);
     CloudI::Ptr cloud_us_src_effe (new CloudI);
@@ -667,7 +664,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     #pragma omp parallel for num_threads(16)
     for (int i = 0; i < cloud_us_src->size(); ++i) {
         kdtree_tgt.nearestKSearch (cloud_us_src->points[i], 1, nn_indices, nn_dists);
-        if (nn_dists[0] <= max_fitness_range && i < cloud_us_src->size()) {
+        if (nn_dists[0] <= max_range && i < cloud_us_src->size()) {
             src_effe_indices[i] = i;
         }
         else {
@@ -682,7 +679,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     #pragma omp parallel for num_threads(16)
     for (int i = 0; i < cloud_us_tgt->size(); ++i) {
         kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
-        if (nn_dists[0] <= max_fitness_range && i < cloud_us_tgt->size()) {
+        if (nn_dists[0] <= max_range && i < cloud_us_tgt->size()) {
             tgt_effe_indices[i] = i;
         }
         else {
@@ -693,7 +690,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
 
     pcl::StopWatch timer_fs;
-    cout << "Coarse to fine fitness score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_us_src_effe, max_fitness_range) << endl;
+    cout << "Coarse to fine fitness score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_us_src_effe, max_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
 }
 
@@ -961,7 +958,7 @@ void LidarProcess::FineToCoarseReg() {
 
     pcl::transformPointCloud(*spot_cloud, *spot_cloud, lio_spot_trans_mat);
 
-    DistanceAnalysis(global_coarse_cloud, spot_cloud, 0);
+    DistanceAnalysis(global_coarse_cloud, spot_cloud, 0.01, 0.5);
 
     // std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(global_coarse_cloud, spot_cloud, lio_spot_trans_mat, 1, triangulatePoints);
     // Mat4F icp_spot_trans_mat;
@@ -1034,8 +1031,8 @@ void LidarProcess::GlobalMapping() {
         /** load transformation matrix **/
         Mat4F icp_spot_trans_mat = Mat4F::Identity();
         for (int load_idx = src_idx; load_idx > 0; --load_idx) {
-            string trans_file_path = this->poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
-            // string trans_file_path = this->poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
+            // string trans_file_path = this->poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
+            string trans_file_path = this->poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
             Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
             icp_spot_trans_mat = tmp_spot_trans_mat * icp_spot_trans_mat;
             cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;

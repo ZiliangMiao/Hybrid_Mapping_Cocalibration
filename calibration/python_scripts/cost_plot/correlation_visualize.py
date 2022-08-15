@@ -99,8 +99,8 @@ if __name__=="__main__":
                 data = load_data(tag1=names[idx1], bw=bw_list[i+2], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i+2], pt_label=False)
                 plt.legend()
-                # plt.show()
-                plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
+                plt.show()
+                # plt.savefig("/home/halsey/Desktop/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
                 plt.close()
     if (len(sys.argv) > 2):
         idx1 = int(sys.argv[1])
