@@ -4,10 +4,10 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy.interpolate import griddata, interpolate
 import os, sys
 
-# dataset = "lh3_global"
+dataset = "lh3_global"
 # dataset = "crf"
-dataset = "rb1"
-# dataset = "ug"
+# dataset = "rb1"
+# dataset = "parking"
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
 data_path = root_path + "/data/" + dataset + "/log"
 
@@ -44,7 +44,6 @@ def visualization(data, name, bw, pt_label=False):
     interp_scale = 2
     f = interpolate.interp1d(data[1:, 0], data[1:, 1], kind='cubic')
     plot_x = np.linspace(np.min(data[1:, 0]), np.max(data[1:, 0]), int(data[1:, 0].size * interp_scale))
-    
     p1 = np.clip(data[0, 0], np.min(data[1:, 0]), np.max(data[1:, 0]))
     p2 = np.clip(data[0, 1], np.min(data[1:, 0]), np.max(data[1:, 0]))
     if pt_label:
@@ -53,7 +52,7 @@ def visualization(data, name, bw, pt_label=False):
     else:
         plt.scatter(p1, f(p1), c='r')
         plt.scatter(p2, f(p2), c='g')
-    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str("{:.5e}".format(f(p2)/scale))))
+    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str(format(f(p2)/scale,".5e"))))
     plt.title(name)
 
 

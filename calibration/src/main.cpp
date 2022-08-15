@@ -230,7 +230,6 @@ int main(int argc, char** argv) {
                 else {
                     spot_vec = {spot};
                 }
-                // spot_vec = {spot};
 
                 for (int i = 0; i < bw.size(); i++) {
                     double bandwidth = bw[i];
@@ -247,9 +246,6 @@ int main(int argc, char** argv) {
                 if (kMultiSpotsOptimization) { break;}
             }
         }
-
-        
-        
     }
 
     /***** Registration, Colorization and Mapping *****/
@@ -297,8 +293,8 @@ int main(int argc, char** argv) {
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        // lidar.GlobalMapping();
-        lidar.MappingEval();
+        lidar.GlobalMapping();
+        // lidar.MappingEval();
     }
 
     if (kGlobalColoredMapping) {

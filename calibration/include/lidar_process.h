@@ -191,7 +191,7 @@ public:
 
     /***** Registration and Mapping *****/
     tuple<Eigen::Matrix4f, CloudI::Ptr> ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
-    void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, bool uniform_sampling = false, float max_fitness_range = 0.5, float uniform_radius = 0.01);
+    void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
     double GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     void CreateDensePcd();
     void ViewRegistration();

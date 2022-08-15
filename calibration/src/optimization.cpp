@@ -268,7 +268,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     for (int idx = 0; idx < spot_vec.size(); idx++) {
         fisheye.SetSpotIdx(spot_vec[idx]);
         lidar.SetSpotIdx(spot_vec[idx]);
-        double normalize_weight = sqrt(30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
+        double normalize_weight = sqrt(50000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
         for (auto &point : lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points) {
             double weight = normalize_weight;
             Vec3D lid_point = {point.x, point.y, point.z};
@@ -413,7 +413,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
         for (int k = 0; k < spot_vec.size(); k++) {
             lidar.SetSpotIdx(spot_vec[k]);
-            double normalize_weight = sqrt(30000.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
+            double normalize_weight = sqrt(1.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx]->points.size());
 
             /** Save & terminal output **/
             string analysis_filepath = lidar.kDatasetPath + "/log/";
@@ -461,14 +461,11 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                             Vec3D lidar_point = (T_mat * lidar_point4).head(3);
                             Vec2D projection = IntrinsicTransform(intrinsic, lidar_point);
                             kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
-                            if (sqrt(pow((projection(0)-intrinsic(0)),2)+pow((projection(0)-intrinsic(0)),2)) > 325 &&
-                                sqrt(pow((projection(0)-intrinsic(0)),2)+pow((projection(0)-intrinsic(0)),2)) < 1100){
-                                step_res += pow(val, 2);
-                                num_valid++;
-                            } 
+                            if (sqrt(pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(1), 2)) > 325
+                             && sqrt(pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(1), 2)) < 1100) {
+                                step_res += pow(weight * val, 2);
+                            }
                         }
-                        step_res = step_res / num_valid;
-                        // cout << "spot: " << spot_vec[k] << ", " << name[param_idx[0]]<< ": " << offset[0] << ", " << name[param_idx[1]]<< ": " << offset[1] << endl;
                         if (steps[0] > 1) {
                             outfile << offset[0] + params_mat(param_idx[0]) << "\t";
                         }

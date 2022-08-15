@@ -9,8 +9,8 @@
   <param name="rz" type="double" value="0" />
   <param name="tx" type="double" value="0" />
   <param name="ty" type="double" value="0" />
-  <param name="tz" type="double" value="-0" /> -->
-  <!-- <param name="data_path" type="string" value="/data/liyuan/scans.pcd" /> -->
+  <param name="tz" type="double" value="-0" />
+  <param name="data_path" type="string" value="/data/liyuan/scans.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_tf_cloud.pcd" /> -->
 
   <param name="rx" type="double" value="0.012864" />
@@ -20,6 +20,8 @@
   <param name="ty" type="double" value="0.230617" />
   <param name="tz" type="double" value="-0.029438" />
   <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/fullview_dense_cloud.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_lio_registered_cloud.pcd" /> -->
   
   <param name="mono_color" type="bool" value="true" />
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">

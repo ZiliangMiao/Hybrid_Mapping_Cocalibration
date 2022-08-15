@@ -40,6 +40,13 @@ using namespace tk;
 
 FisheyeProcess::FisheyeProcess() {
     /** parameter server **/
+    // this->dataset_name = "liyuan";
+    // this->num_spots = 7;
+    // this->num_views = 5;
+    // this->kFisheyeRows = 2448;
+    // this->kFisheyeCols = 2048;
+    // this->view_angle_init = -50;
+    // this->view_angle_step = 25;
     ros::param::get("essential/kDatasetName", this->dataset_name);
     ros::param::get("essential/kNumSpots", this->num_spots);
     ros::param::get("essential/kNumViews", this->num_views);
