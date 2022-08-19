@@ -5,13 +5,13 @@ switch:
 
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: true
+    kCreateDensePcd: false
     kViewRegistration: false
-    kFullViewMapping: true
+    kFullViewMapping: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kMultiSpotsOptimization: false
+    kCeresOptimization: true
+    kMultiSpotsOptimization: true
     kParamsAnalysis: false
     
     # spot
@@ -19,8 +19,8 @@ switch:
     kGlobalMapping: false
 
     # colorization
-    kFullViewColorization: false
-    kGlobalColoredMapping: false
+    kFullViewColorization: true
+    kGlobalColoredMapping: true
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 

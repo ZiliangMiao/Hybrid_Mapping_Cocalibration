@@ -1,6 +1,7 @@
 /** headings **/
-#include "lidar_process.h"
-#include "common_lib.h"
+#include <lidar_process.h>
+#include <common_lib.h>
+
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -22,23 +23,20 @@ LidarProcess::LidarProcess() {
     string pose_folder_path_temp;
     PoseFilePath pose_files_path_temp;
     EdgePixels edge_pixels_temp;
-    EdgePts edge_pts_temp;
-    CloudI::Ptr edge_cloud_temp;
+    EdgeCloud::Ptr edge_cloud_temp;
     TagsMap tags_map_temp;
     Mat4F pose_trans_mat_temp;
     for (int i = 0; i < this->num_spots; ++i) {
         vector<string> poses_folder_path_vec_temp;
         vector<PoseFilePath> poses_file_path_vec_temp;
         vector<EdgePixels> edge_pixels_vec_temp;
-        vector<EdgePts> edge_pts_vec_temp;
-        vector<CloudI::Ptr> edge_cloud_vec_temp;
+        vector<EdgeCloud::Ptr> edge_cloud_vec_temp;
         vector<TagsMap> tags_map_vec_temp;
         vector<Mat4F> poses_trans_mat_vec_temp;
         for (int j = 0; j < num_views; ++j) {
             poses_folder_path_vec_temp.push_back(pose_folder_path_temp);
             poses_file_path_vec_temp.push_back(pose_files_path_temp);
             edge_pixels_vec_temp.push_back(edge_pixels_temp);
-            edge_pts_vec_temp.push_back(edge_pts_temp);
             edge_cloud_vec_temp.push_back(edge_cloud_temp);
             tags_map_vec_temp.push_back(tags_map_temp);
             poses_trans_mat_vec_temp.push_back(pose_trans_mat_temp);
@@ -46,7 +44,6 @@ LidarProcess::LidarProcess() {
         this->poses_folder_path_vec.push_back(poses_folder_path_vec_temp);
         this->poses_files_path_vec.push_back(poses_file_path_vec_temp);
         this->edge_pixels_vec.push_back(edge_pixels_vec_temp);
-        this->edge_pts_vec.push_back(edge_pts_vec_temp);
         this->edge_cloud_vec.push_back(edge_cloud_vec_temp);
         this->tags_map_vec.push_back(tags_map_vec_temp);
         this->pose_trans_mat_vec.push_back(poses_trans_mat_vec_temp);
@@ -113,7 +110,7 @@ void LidarProcess::BagToPcd(string bag_file) {
 void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_cloud) {
     cout << "----- LiDAR: LidarToSphere -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the initial projection mode - by intensity or by depth **/
-    const bool projByIntensity = this->kProjByIntensity;
+    // const bool projByIntensity = this->kProjByIntensity;
     float theta_min = M_PI, theta_max = -M_PI;
     float proj_param;
 
@@ -122,10 +119,9 @@ void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_clo
     pcl::io::loadPCDFile(fullview_cloud_path, *cart_cloud);
 
     /** Initial Transformation **/
-    Eigen::Matrix<float, 6, 1> extrinsic_vec;
-    extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-                            0.0, 0.0, 0.0;
-    Mat4F T_mat = TransformMat(extrinsic_vec);
+    Ext_D extrinsic_vec;
+    extrinsic_vec << ext_.head(3), 0, 0, 0;
+    Mat4D T_mat = TransformMat(extrinsic_vec);
     pcl::transformPointCloud(*cart_cloud, *polar_cloud, T_mat);
 
     for (auto &point : polar_cloud->points) {
@@ -156,7 +152,7 @@ void LidarProcess::LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_clo
 
 }
 
-void LidarProcess::SphereToPlane(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) {
+void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
     cout << "----- LiDAR: SphereToPlane -----" << " Spot Index: " << this->spot_idx << endl;
     /** define the data container **/
     cv::Mat flat_img = cv::Mat::zeros(kFlatRows, kFlatCols, CV_32FC1); /** define the flat image **/
@@ -287,27 +283,29 @@ void LidarProcess::EdgeToPixel() {
     for (int u = 0; u < edge_img.rows; ++u) {
         for (int v = 0; v < edge_img.cols; ++v) {
             if (edge_img.at<uchar>(u, v) > 127) {
-                vector<int> pixel{u, v};
-                edge_pixels.push_back(pixel);
+                pcl::PointXYZ edge_pixel;
+                edge_pixel.x = u;
+                edge_pixel.y = v;
+                edge_pixel.z = 0;
+                edge_pixels.push_back(edge_pixel);
             }
         }
     }
     this->edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
 }
 
-void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) {
+void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud) {
     /** generate edge_pts and edge_cloud, push back into vec **/
     cout << "----- LiDAR: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
     int num_invalid_pixels = 0;
     
-    EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
     TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
-    EdgePts edge_pts;
-    CloudI::Ptr edge_cloud(new CloudI);
+    EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
+    EdgeCloud::Ptr edge_cloud(new EdgeCloud);
 
     for (auto &edge_pixel : edge_pixels) {
-        int u = edge_pixel[0];
-        int v = edge_pixel[1];
+        int u = edge_pixel.x;
+        int v = edge_pixel.y;
         int num_pts = tags_map[u][v].num_pts;
         if (num_pts == 0) { /** invalid pixels **/
             num_invalid_pixels ++;
@@ -327,20 +325,15 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
             z_avg = z_avg / num_pts;
             
             /** store the spatial coordinates into vector **/
-            vector<double> coordinates {x_avg, y_avg, z_avg};
-            edge_pts.push_back(coordinates);
-
-            /** store the spatial coordinates into vector **/
-            PointI pt;
+            pcl::PointXYZ pt;
             pt.x = x_avg;
             pt.y = y_avg;
             pt.z = z_avg;
-            pt.intensity = 1; /** note: I is used to store the point weight **/
+            // pt.intensity = 1; /** note: I is used to store the point weight **/
             edge_cloud->points.push_back(pt);
         }
     }
     cout << "number of invalid lookups(lidar): " << num_invalid_pixels << endl;
-    this->edge_pts_vec[this->spot_idx][this->view_idx] = edge_pts;
     this->edge_cloud_vec[this->spot_idx][this->view_idx] = edge_cloud;
 
     /** write the coordinates and weights into .txt file **/
@@ -353,46 +346,45 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud) 
     for (auto &point : edge_cloud->points) {
         outfile << point.x << "\t"
                 << point.y << "\t"
-                << point.z << "\t"
-                << point.intensity << endl;
+                << point.z << endl;
     }
     outfile.close();
 
-    if (kEdgeAnalysis) {
-        /** visualization for weight check**/
-        string edge_cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_cart_pcd_path;
-        cout << edge_cart_pcd_path << endl;
-        pcl::io::savePCDFileBinary(edge_cart_pcd_path, *edge_cloud);
+    // if (kEdgeAnalysis) {
+    //     /** visualization for weight check**/
+    //     string edge_cart_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_cart_pcd_path;
+    //     cout << edge_cart_pcd_path << endl;
+    //     pcl::io::savePCDFileBinary(edge_cart_pcd_path, *edge_cloud);
 
-        CloudI::Ptr polar_rgb_cloud(new CloudI);
-        Eigen::Matrix<float, 6, 1> extrinsic_vec;
-        extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
-                                0.0f, 0.0f, 0.0f;
-        Mat4F T_mat = TransformMat(extrinsic_vec);
-        pcl::transformPointCloud(*edge_cloud, *polar_rgb_cloud, T_mat);
+    //     CloudI::Ptr polar_rgb_cloud(new CloudI);
+    //     Eigen::Matrix<float, 6, 1> extrinsic_vec;
+    //     extrinsic_vec << (float)this->extrinsic.rx, (float)this->extrinsic.ry, (float)this->extrinsic.rz,
+    //                             0.0f, 0.0f, 0.0f;
+    //     Mat4F T_mat = TransformMat(extrinsic_vec);
+    //     pcl::transformPointCloud(*edge_cloud, *polar_rgb_cloud, T_mat);
 
-        float radius, phi, theta;
-        for (auto &point : polar_rgb_cloud->points) {
-            radius = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
-            phi = atan2(point.y, point.x);
-            theta = acos(point.z / radius);
-            point.x = theta;
-            point.y = phi;
-            point.z = 0;
-            point.intensity = 200;
-        }
+    //     float radius, phi, theta;
+    //     for (auto &point : polar_rgb_cloud->points) {
+    //         radius = sqrt(pow(point.x, 2) + pow(point.y, 2) + pow(point.z, 2));
+    //         phi = atan2(point.y, point.x);
+    //         theta = acos(point.z / radius);
+    //         point.x = theta;
+    //         point.y = phi;
+    //         point.z = 0;
+    //         point.intensity = 200;
+    //     }
 
-        string edge_polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_polar_pcd_path;
-        cout << edge_polar_pcd_path << endl;
-        pcl::io::savePCDFileBinary(edge_polar_pcd_path, *polar_rgb_cloud);
-    }
+    //     string edge_polar_pcd_path = this -> poses_files_path_vec[this->spot_idx][this->view_idx].edge_polar_pcd_path;
+    //     cout << edge_polar_pcd_path << endl;
+    //     pcl::io::savePCDFileBinary(edge_polar_pcd_path, *polar_rgb_cloud);
+    // }
 
 }
 
 void LidarProcess::ReadEdge() {
     cout << "----- LiDAR: ReadEdge -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
     string edge_cloud_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_pts_coordinates_path;
-    EdgePts edge_pts;
+    vector<vector<double>> edge_pts;
     ifstream infile(edge_cloud_txt_path);
     string line;
     while (getline(infile, line)) {
@@ -403,27 +395,26 @@ void LidarProcess::ReadEdge() {
             /** split string with "\t" **/
             v.push_back(stod(tmp)); /** string->double **/
         }
-        if (v.size() == 4) {
+        if (v.size() == 3) {
             edge_pts.push_back(v);
         }
     }
 
     ROS_ASSERT_MSG(!edge_pts.empty(), "LiDAR Read Edge Incorrect! View Index: %d", this->view_idx);
     cout << "Imported LiDAR points: " << edge_pts.size() << endl;
+
     /** remove duplicated points **/
     std::sort(edge_pts.begin(), edge_pts.end());
     edge_pts.erase(unique(edge_pts.begin(), edge_pts.end()), edge_pts.end());
     cout << "LiDAR Edge Points after Duplicated Removed: " << edge_pts.size() << endl;
-    this->edge_pts_vec[this->spot_idx][this->view_idx] = edge_pts;
 
     /** construct pcl point cloud **/
-    PointI pt;
-    CloudI::Ptr edge_cloud(new CloudI);
+    pcl::PointXYZ pt;
+    EdgeCloud::Ptr edge_cloud(new EdgeCloud);
     for (auto &edge_pt : edge_pts) {
         pt.x = edge_pt[0];
         pt.y = edge_pt[1];
         pt.z = edge_pt[2];
-        pt.intensity = edge_pt[3];
         edge_cloud->points.push_back(pt);
     }
     cout << "Filtered LiDAR points: " << edge_cloud -> points.size() << endl;

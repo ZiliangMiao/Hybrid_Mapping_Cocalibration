@@ -28,8 +28,9 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 // headings
-#include "fisheye_process.h"
-#include "lidar_process.h"
+#include <fisheye_process.h>
+#include <lidar_process.h>
+#include <define.h>
 
 using namespace std;
 
@@ -47,6 +48,8 @@ inline double getDouble(const ceres::Jet<SCALAR, N> &x) {
 void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
 
 void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
+
+bool CheckCorrespondance(FisheyeProcess &fisheye, LidarProcess &lidar, Vec3D &lidar_point);
 
 std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     LidarProcess &lidar,

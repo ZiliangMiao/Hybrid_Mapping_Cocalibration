@@ -13,38 +13,8 @@
 #include <pcl/point_cloud.h>
 
 // headings
+#include "define.h"
 #include "spline.h"
-
-#define K_EXT       (6)
-#define K_INT       (10)
-#define PI_M        (3.14159265358)
-#define KDE_SCALE   (2)
-
-#define MatD(a,b)  Eigen::Matrix<double, (a), (b)>
-#define MatF(a,b)  Eigen::Matrix<float, (a), (b)>
-
-typedef MatD(2,1)       Vec2D;
-typedef MatF(2,1)       Vec2F;
-typedef MatD(3,1)       Vec3D;
-typedef MatF(3,1)       Vec3F;
-
-typedef MatD(3,3)       Mat3D;
-typedef MatF(3,3)       Mat3F;
-typedef MatD(4,4)       Mat4D;
-typedef MatF(4,4)       Mat4F;
-
-typedef MatD(K_INT,1)      Int_D;
-typedef MatF(K_INT,1)      Int_F;
-typedef MatD(K_EXT,1)       Ext_D;
-typedef MatF(K_EXT,1)       Ext_F;
-typedef MatD(K_EXT+K_INT,1)    Param_D;
-typedef MatF(K_EXT+K_INT,1)    Param_F;
-
-/** typedef **/
-typedef pcl::PointXYZI PointI;
-typedef pcl::PointXYZRGB PointRGB;
-typedef pcl::PointCloud<PointI> CloudI;
-typedef pcl::PointCloud<PointRGB> CloudRGB;
 
 using namespace std;
 
@@ -165,33 +135,4 @@ void SaveResults(std::string &record_path, std::vector<double> params, double ba
     write.close();
     
     cout << output << endl;
-}
-
-static bool cmp(const std::vector<double>& a, const std::vector<double>& b) {
-    return a.back() < b.back();
-}
-
-tk::spline InverseSpline(std::vector<double> &params) {
-    int idx = params.size() - 8;
-    Eigen::Matrix<double, 5, 1> a_;
-    a_ << params[idx], params[idx+1], params[idx+2], params[idx+3], params[idx+4];
-    int theta_ub = 180;
-    // extend the range to get a stable cubic spline
-    int extend = 2;
-    std::vector<std::vector<double>> r_theta_pts(theta_ub + extend * 2, std::vector<double>(2));
-
-    for (double theta = 0; theta < theta_ub + extend * 2; ++theta) {
-        double theta_rad = (theta - extend) * M_PI / 180;
-        r_theta_pts[theta][0] = theta_rad;
-        r_theta_pts[theta][1] = a_(0) + a_(1) * theta_rad + a_(2) * pow(theta_rad, 2) + a_(3) * pow(theta_rad, 3) + a_(4) * pow(theta_rad, 4);
-    }
-    sort(r_theta_pts.begin(), r_theta_pts.end(), cmp);
-    std::vector<double> input_radius, input_theta;
-    for (int i = 0; i < r_theta_pts.size(); i++) {
-        input_theta.push_back(r_theta_pts[i][0]);
-        input_radius.push_back(r_theta_pts[i][1]);
-    }
-    // default cubic spline (C^2) with natural boundary conditions (f''=0)
-    tk::spline spline(input_radius, input_theta);			// X needs to be strictly increasing
-    return spline;
 }
