@@ -636,14 +636,13 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
         pcl::copyPointCloud(*cloud_tgt, *cloud_us_tgt);
     }
 
-        /** invalid point filter **/
-        std::vector<int> null_indices_tgt;
-        (*cloud_us_tgt).is_dense = false;
-        pcl::removeNaNFromPointCloud(*cloud_us_tgt, *cloud_us_tgt, null_indices_tgt);
-        std::vector<int> null_indices_src;
-        (*cloud_us_src).is_dense = false;
-        pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
-    }
+    /** invalid point filter **/
+    std::vector<int> null_indices_tgt;
+    (*cloud_us_tgt).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_tgt, *cloud_us_tgt, null_indices_tgt);
+    std::vector<int> null_indices_src;
+    (*cloud_us_src).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
 
     CloudI::Ptr cloud_us_tgt_effe (new CloudI);
     CloudI::Ptr cloud_us_src_effe (new CloudI);
@@ -660,12 +659,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     #pragma omp parallel for num_threads(16)
     for (int i = 0; i < cloud_us_src->size(); ++i) {
         kdtree_tgt.nearestKSearch (cloud_us_src->points[i], 1, nn_indices, nn_dists);
-        if (nn_dists[0] <= max_range && i < cloud_us_src->size()) {
-            src_effe_indices[i] = i;
-        }
-        else {
-            src_effe_indices[i] = 0;
-        }
+        src_effe_indices[i] = (nn_dists[0] <= max_range) ? i : 0;
     }
     src_effe_indices.erase(std::remove(src_effe_indices.begin(), src_effe_indices.end(), 0), src_effe_indices.end());
     pcl::copyPointCloud(*cloud_us_src, src_effe_indices, *cloud_us_src_effe);
@@ -675,12 +669,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     #pragma omp parallel for num_threads(16)
     for (int i = 0; i < cloud_us_tgt->size(); ++i) {
         kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
-        if (nn_dists[0] <= max_range && i < cloud_us_tgt->size()) {
-            tgt_effe_indices[i] = i;
-        }
-        else {
-            tgt_effe_indices[i] = 0;
-        }
+        tgt_effe_indices[i] = (nn_dists[0] <= max_range) ? i : 0;
     }
     tgt_effe_indices.erase(std::remove(tgt_effe_indices.begin(), tgt_effe_indices.end(), 0), tgt_effe_indices.end());
     pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
@@ -968,9 +957,10 @@ void LidarProcess::GlobalColoredMapping() {
     CloudRGB::Ptr global_registered_rgb_cloud(new CloudRGB);
     string init_rgb_cloud_path = this->poses_files_path_vec[0][0].fullview_rgb_cloud_path;
     LoadPcd(init_rgb_cloud_path, *global_registered_rgb_cloud, "fullview rgb");
+    /** source index and target index (align to spot 0) **/
+    int tgt_idx = 0;
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index (align to spot 0) (align to spot 0) **/
-        int tgt_idx = 0;
+        
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
         /** create point cloud container  **/
@@ -1012,9 +1002,10 @@ void LidarProcess::GlobalMapping() {
     cout << init_dense_cloud_path << endl;
     LoadPcd(init_dense_cloud_path, *global_registered_cloud, "fullview dense");
 
+    /** source index and target index (align to spot 0) **/
+    int tgt_idx = 0;
+
     for (int src_idx = 1; src_idx < this->num_spots; ++src_idx) {
-        /** source index and target index (align to spot 0) (align to spot 0) **/
-        int tgt_idx = 0;
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
         /** create point cloud container  **/

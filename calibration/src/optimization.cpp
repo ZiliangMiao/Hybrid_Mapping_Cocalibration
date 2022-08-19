@@ -54,7 +54,7 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     string edge_proj_txt_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].edge_fisheye_projection_path;
     outfile.open(edge_proj_txt_path, ios::out);
     
-    Ext_D extrinsic = Eigen::Map<Param_D>(params.data()).head(6);
+    Ext_D extrinsic = Eigen::Map<Param_D>(params.data()).head(K_EXT);
     Int_D intrinsic = Eigen::Map<Param_D>(params.data()).tail(K_INT);
     
     CloudI::Ptr fisheye_edge_cloud (new CloudI);
@@ -131,7 +131,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     pcl::copyPointCloud(*fullview_xyz_cloud, *input_cloud);
 
     /** Loading optimized parameters and initial transform matrix **/
-    extrinsic = Eigen::Map<Param_D>(params.data()).head(6).cast<float>();
+    extrinsic = Eigen::Map<Param_D>(params.data()).head(K_EXT).cast<float>();
     intrinsic = Eigen::Map<Param_D>(params.data()).tail(K_INT).cast<float>();
     T_mat = TransformMat(extrinsic);
     T_mat_inv = T_mat.inverse();
@@ -217,7 +217,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     std::vector<double> ub,
                                     bool lock_intrinsic) {
     Param_D init_params = Eigen::Map<Param_D>(init_params_vec.data());
-    Ext_D extrinsic = init_params.head(6);
+    Ext_D extrinsic = init_params.head(K_EXT);
     MatD(K_INT+(K_EXT+1), 1) q_vector;
     Mat3D rotation_mat = TransformMat(extrinsic).topLeftCorner(3, 3);
     Eigen::Quaterniond quaternion(rotation_mat);
@@ -320,7 +320,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                         + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
     SaveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
 
-    extrinsic = result.head(6);
+    extrinsic = result.head(K_EXT);
     for (int &spot_idx : spot_vec) {
         fisheye.SetSpotIdx(spot_idx);
         lidar.SetSpotIdx(spot_idx);
@@ -384,7 +384,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
 
     /** update evaluate points in 2D grid **/
     for (int m = 0; m < 6; m++) {
-        extrinsic = params_mat.head(6);
+        extrinsic = params_mat.head(K_EXT);
         intrinsic = params_mat.tail(K_INT);
         if (m < 3) {
             steps[0] = 201;
