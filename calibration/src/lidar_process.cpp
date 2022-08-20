@@ -515,6 +515,8 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
         pcl::copyPointCloud(*cloud_us_tgt, tgt_effe_indices, *cloud_us_tgt_effe);
         cout << "Size of target cloud after effective point filter: " << cloud_us_tgt_effe->size() << endl;
         cout << "Run time of effective point filter: " << timer_effe.getTimeSeconds() << " s" << endl;
+        // pcl::copyPointCloud(*cloud_us_tgt, *cloud_us_tgt_effe);
+        // pcl::copyPointCloud(*cloud_us_src, *cloud_us_src_effe);
     }
 
     /** invalid point filter **/
@@ -531,31 +533,52 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
     cout << "Initial Fitness Score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
 
-    /** ICP **/
+    /** ICP with normals **/
+
+    using PointIN = pcl::PointXYZINormal;
+    using CloudIN = pcl::PointCloud<PointIN>;
+    using PointToPlane = pcl::registration::TransformationEstimationPointToPlaneLLS<PointIN, PointIN>;
+
     pcl::StopWatch timer;
-    timer.reset(); /** timing **/
+
     CloudI::Ptr cloud_icp_trans_us (new CloudI);
+    CloudIN::Ptr src_trans_concat_cloud (new CloudIN);
     Mat4F icp_trans_mat;
-    pcl::IterativeClosestPoint <PointI, PointI> icp; /** original icp **/
+        
+    pcl::NormalEstimationOMP<PointI, pcl::Normal> normalEstimation;
+    pcl::search::KdTree<PointI>::Ptr kdtree(new pcl::search::KdTree<PointI>);
+    normalEstimation.setRadiusSearch(0.1);
+    normalEstimation.setSearchMethod(kdtree);
 
-    // pcl::GeneralizedIterativeClosestPoint<PointI, PointI> icp; /**  generalized icp **/
+    timer.reset();
+    pcl::PointCloud<PointIN>::Ptr tgt_concat_cloud(new pcl::PointCloud<PointIN>);
+    pcl::PointCloud<pcl::Normal>::Ptr tgt_norms(new pcl::PointCloud<pcl::Normal>);
+    normalEstimation.setInputCloud(cloud_us_tgt_effe);
+    normalEstimation.compute(*tgt_norms);
+    pcl::concatenateFields(*cloud_us_tgt_effe, *tgt_norms, *tgt_concat_cloud);
+    cout << "Normal estimation run time: " << timer.getTimeSeconds() << " s" << endl;
 
-    icp.setInputTarget(cloud_us_tgt_effe);
-    icp.setInputSource(cloud_us_src_effe);
+    timer.reset();
+    pcl::PointCloud<PointIN>::Ptr src_concat_cloud(new pcl::PointCloud<PointIN>);
+    pcl::PointCloud<pcl::Normal>::Ptr src_norms(new pcl::PointCloud<pcl::Normal>);
+    normalEstimation.setInputCloud(cloud_us_src_effe);
+    normalEstimation.compute(*src_norms);
+    pcl::concatenateFields(*cloud_us_src_effe, *src_norms, *src_concat_cloud);
+    cout << "Normal estimation run time: " << timer.getTimeSeconds() << " s" << endl;
+    
+    timer.reset();
+    pcl::IterativeClosestPoint<PointIN, PointIN> icp;
+    boost::shared_ptr<PointToPlane> point_to_plane(new PointToPlane);
+    
+    icp.setInputSource(src_concat_cloud);
+    icp.setInputTarget(tgt_concat_cloud);
+    icp.setTransformationEstimation(point_to_plane);
     icp.setMaximumIterations(max_iters);
     icp.setMaxCorrespondenceDistance(max_corr_dis);
     icp.setTransformationEpsilon(trans_epsilon);
     icp.setEuclideanFitnessEpsilon(eucidean_epsilon);
-    icp.align(*cloud_icp_trans_us, init_trans_mat);
-
-//    pcl::NormalDistributionsTransform<PointI, PointI> icp; /** ndt **/
-//    icp.setInputTarget(cloud_us_tgt);
-//    icp.setInputSource(cloud_us_src);
-//    icp.setMaximumIterations(max_iters);
-//    icp.setTransformationEpsilon (trans_epsilon);
-//    icp.setStepSize (1.0);
-//    icp.setResolution (0.5);
-//    icp.align(*cloud_icp_trans_us, init_trans_mat);
+    icp.align(*src_trans_concat_cloud, init_trans_mat);
+    pcl::copyPointCloud(*src_trans_concat_cloud, *cloud_icp_trans_us);
 
     if (icp.hasConverged()) {
         cout << "ICP run time: " << timer.getTimeSeconds() << " s" << endl;
@@ -602,6 +625,7 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
         while (!viewer.wasStopped()) {
             viewer.spinOnce();
         }
+        viewer.close();
     }
     tuple<Mat4F, CloudI::Ptr> result;
     result = make_tuple(icp_trans_mat, cloud_icp_trans_us);
@@ -668,32 +692,6 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
     pcl::StopWatch timer_fs;
     cout << "Coarse to fine fitness score: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_us_src_effe, max_range) << endl;
     cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
-}
-
-double LidarProcess::GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range) {
-    double fitness_score = 0.0;
-    std::vector<int> nn_indices(1);
-    std::vector<float> nn_dists(1);
-    // For each point in the source dataset
-    int nr = 0;
-    pcl::KdTreeFLANN<pcl::PointXYZI> kdtree;
-    kdtree.setInputCloud(cloud_tgt);
-
-    #pragma omp parallel for num_threads(16)
-    for (auto &point : cloud_src->points) {
-        // Find its nearest neighbor in the target
-        kdtree.nearestKSearch(point, 1, nn_indices, nn_dists);
-        // Deal with occlusions (incomplete targets)
-        if (nn_dists[0] <= max_range) {
-            // Add to the fitness score
-            fitness_score += nn_dists[0];
-            nr++;
-        }
-    }
-
-    if (nr > 0)
-        return (fitness_score / nr);
-    return (std::numeric_limits<double>::max());
 }
 
 void LidarProcess::CreateDensePcd() {
@@ -835,7 +833,7 @@ void LidarProcess::FullViewMapping() {
     pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
     radius_outlier_filter.setInputCloud(fullview_raw_cloud);
     radius_outlier_filter.setRadiusSearch(0.1);
-    radius_outlier_filter.setMinNeighborsInRadius(200);
+    radius_outlier_filter.setMinNeighborsInRadius(100);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.setKeepOrganized(false);
     radius_outlier_filter.filter(*radius_outlier_cloud);
@@ -1011,17 +1009,16 @@ void LidarProcess::GlobalMapping() {
         for (int load_idx = src_idx; load_idx > 0; --load_idx) {
             // string trans_file_path = this->poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
             string trans_file_path = this->poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
-            Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
-            icp_spot_trans_mat = tmp_spot_trans_mat * icp_spot_trans_mat;
-            cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
+            // Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
+            icp_spot_trans_mat = LoadTransMat(trans_file_path) * icp_spot_trans_mat;
         }
+        cout << "Load spot ICP trans mat: \n" << icp_spot_trans_mat << endl;
         pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_src, icp_spot_trans_mat);
         
-        
-        /** for view coloring & viz only **/
-        for (auto & pt : spot_cloud_src->points) {
-            pt.intensity = src_idx * 40;
-        }
+        // /** for view coloring & viz only **/
+        // for (auto & pt : spot_cloud_src->points) {
+        //     pt.intensity = src_idx * 40;
+        // }
         *global_registered_cloud += *spot_cloud_src;
 
     }
@@ -1121,4 +1118,30 @@ void LidarProcess::LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, c
     else {
         PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
     }
+}
+
+double LidarProcess::GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range) {
+    double fitness_score = 0.0;
+    std::vector<int> nn_indices(1);
+    std::vector<float> nn_dists(1);
+    // For each point in the source dataset
+    int nr = 0;
+    pcl::KdTreeFLANN<PointI> kdtree;
+    kdtree.setInputCloud(cloud_tgt);
+
+    #pragma omp parallel for num_threads(16)
+    for (auto &point : cloud_src->points) {
+        // Find its nearest neighbor in the target
+        kdtree.nearestKSearch(point, 1, nn_indices, nn_dists);
+        // Deal with occlusions (incomplete targets)
+        if (nn_dists[0] <= max_range) {
+            // Add to the fitness score
+            fitness_score += nn_dists[0];
+            nr++;
+        }
+    }
+
+    if (nr > 0)
+        return (fitness_score / nr);
+    return (std::numeric_limits<double>::max());
 }

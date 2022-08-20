@@ -10,16 +10,16 @@ switch:
     kFullViewMapping: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: true
-    kMultiSpotsOptimization: true
+    kCeresOptimization: false
+    kMultiSpotsOptimization: false
     kParamsAnalysis: false
     
     # spot
     kSpotRegistration: false
-    kGlobalMapping: false
+    kGlobalMapping: true
 
     # colorization
-    kFullViewColorization: true
+    kFullViewColorization: false
     kGlobalColoredMapping: true
 
 spot:
@@ -27,8 +27,8 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    kDatasetName: "lh3_global"
-    kNumSpots: 5
+    kDatasetName: "liyuan"
+    kNumSpots: 7
     # kDatasetName: "crf"
     # kNumSpots: 1
     # kDatasetName: "rb1"

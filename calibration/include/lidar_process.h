@@ -14,9 +14,7 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/PointCloud2.h>
 /** pcl **/
-#include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/common/common.h>
 #include <pcl/io/pcd_io.h>
@@ -36,6 +34,10 @@
 #include <pcl/filters/extract_indices.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
+
+#include <pcl/features/normal_3d.h>
+#include <pcl/features/normal_3d_omp.h>
+
 #include "define.h"
 
 /** namespace **/
@@ -189,7 +191,7 @@ public:
     /***** Registration and Mapping *****/
     tuple<Eigen::Matrix4f, CloudI::Ptr> ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
     void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
-    double GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
+
     void CreateDensePcd();
     void ViewRegistration();
     void FullViewMapping();
@@ -199,6 +201,7 @@ public:
     void GlobalMapping();
     void MappingEval();
 
+    double GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     template <typename PointType>
     void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name = "");
 };
