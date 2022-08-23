@@ -89,23 +89,34 @@ int LidarProcess::ReadFileList(const std::string &folder_path, std::vector<std::
     return num;
 }
 
-void LidarProcess::BagToPcd(string bag_file) {
+void LidarProcess::BagToPcd(string filepath, CloudI &cloud) {
     rosbag::Bag bag;
-    bag.open(bag_file, rosbag::bagmode::Read);
-    vector<string> topics;
-    topics.push_back(string(this->topic_name));
+    bag.open(filepath, rosbag::bagmode::Read);
+    vector<string> topics{topic_name};
     rosbag::View view(bag, rosbag::TopicQuery(topics));
     rosbag::View::iterator iterator = view.begin();
     pcl::PCLPointCloud2 pcl_pc2;
-    CloudI::Ptr intensityCloud(new CloudI);
+
+    CloudI::Ptr bag_cloud(new CloudI);
+    uint32_t cnt_pcds = 0; 
+    while (iterator != view.end()) {
+        iterator++;
+        cnt_pcds++;
+        ROS_ASSERT_MSG((cnt_pcds > 3.6e4), "More than 36000 pcds in a bag, aborted.");
+    }
+
+    uint32_t idx_start = (cnt_pcds - this->kNumRecPcds)/2;
+    uint32_t idx_end = idx_start + this->kNumRecPcds;
+    iterator = view.begin();
+    cout << idx_start << " " << idx_end << endl;
     for (int i = 0; iterator != view.end(); iterator++, i++) {
-        auto m = *iterator;
-        sensor_msgs::PointCloud2::ConstPtr input = m.instantiate<sensor_msgs::PointCloud2>();
-        pcl_conversions::toPCL(*input, pcl_pc2);
-        pcl::fromPCLPointCloud2(pcl_pc2, *intensityCloud);
-        string id_str = to_string(i);
-        string pcds_folder_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
-        pcl::io::savePCDFileBinary(pcds_folder_path + "/" + id_str + ".pcd", *intensityCloud);
+        if (i >= idx_start && i < idx_end) {
+            auto m = *iterator;
+            sensor_msgs::PointCloud2::ConstPtr input = m.instantiate<sensor_msgs::PointCloud2>();
+            pcl_conversions::toPCL(*input, pcl_pc2);
+            pcl::fromPCLPointCloud2(pcl_pc2, *bag_cloud);
+            cloud += *bag_cloud;
+        }
     }
 }
 
@@ -636,14 +647,13 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
         pcl::copyPointCloud(*cloud_tgt, *cloud_us_tgt);
     }
 
-        /** invalid point filter **/
-        std::vector<int> null_indices_tgt;
-        (*cloud_us_tgt).is_dense = false;
-        pcl::removeNaNFromPointCloud(*cloud_us_tgt, *cloud_us_tgt, null_indices_tgt);
-        std::vector<int> null_indices_src;
-        (*cloud_us_src).is_dense = false;
-        pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
-    }
+    /** invalid point filter **/
+    std::vector<int> null_indices_tgt;
+    (*cloud_us_tgt).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_tgt, *cloud_us_tgt, null_indices_tgt);
+    std::vector<int> null_indices_src;
+    (*cloud_us_src).is_dense = false;
+    pcl::removeNaNFromPointCloud(*cloud_us_src, *cloud_us_src, null_indices_src);
 
     CloudI::Ptr cloud_us_tgt_effe (new CloudI);
     CloudI::Ptr cloud_us_src_effe (new CloudI);
@@ -718,32 +728,14 @@ double LidarProcess::GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud
 
 void LidarProcess::CreateDensePcd() {
     cout << "----- LiDAR: CreateDensePcd -----" << " Spot Index: " << this->spot_idx << " View Index: " << this->view_idx << endl;
-    int num_pcds;
-    string folder_path, pcd_path;
 
-    num_pcds = LidarProcess::kNumRecPcds;
-    pcd_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcd_path;
-    folder_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].dense_pcds_folder_path;
-
-    pcl::PCDReader reader; /** used for read PCD files **/
-    vector<string> file_name_vec;
-    ReadFileList(folder_path, file_name_vec);
-    sort(file_name_vec.begin(), file_name_vec.end()); /** sort file names by order **/
-    const int kPcdsGroupSize = file_name_vec.size() / num_pcds; // always equal to 1?
-
-    /** PCL PointCloud pointer. Remember that the pointer need to be given a new space **/
-    CloudI::Ptr load_pcd_cloud(new CloudI);
+    string bag_path = poses_files_path_vec[spot_idx][view_idx].bag_folder_path
+                    + "/" + dataset_name + "_spot" + to_string(spot_idx) 
+                    + "_" + to_string(view_angle_init + view_idx * view_angle_step) + ".bag";
+    string pcd_path = poses_files_path_vec[spot_idx][view_idx].dense_pcd_path;
     CloudI::Ptr view_raw_cloud(new CloudI);
-    for (int i = 0; i < kPcdsGroupSize; i++) {
-        for (auto &name : file_name_vec) {
-            string file_name = folder_path + "/" + name;
-            if(reader.read(file_name, *load_pcd_cloud) < 0) {      // read PCD files, and save PointCloud in the pointer
-                PCL_ERROR("File is not exist!");
-                system("pause");
-            }
-            *view_raw_cloud += *load_pcd_cloud;
-        }
-    }
+    cout << bag_path << endl;
+    BagToPcd(bag_path, *view_raw_cloud);
     cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
 
     /** condition filter **/
@@ -894,7 +886,7 @@ void LidarProcess::SpotRegistration() {
     cout << "Initial Trans Mat by LIO: \n" << lio_spot_trans_mat << endl;
 
     /** ICP **/
-    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, triangulatePoints);
+    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false);
     Mat4F icp_spot_trans_mat;
     CloudI::Ptr spot_cloud_icp_trans;
     std::tie(icp_spot_trans_mat, spot_cloud_icp_trans) = icp_result;

@@ -66,7 +66,7 @@ public:
     const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud, 
                                        otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
     const bool kProjByIntensity = true;
-    static const int kNumRecPcds = 500; /** dense point cloud used for reconstruction **/
+    static const int kNumRecPcds = 250; /** dense point cloud used for reconstruction **/
     static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
@@ -106,6 +106,11 @@ public:
         PoseFilePath()= default;
         PoseFilePath(string& spot_path, string& pose_path) {
             this->fullview_recon_folder_path = spot_path + "/fullview_recon";
+            this->output_folder_path = pose_path + "/outputs/lidar_outputs";
+            // this->dense_pcds_folder_path = pose_path + "/dense_pcds";
+            this->bag_folder_path = pose_path + "/bags";
+            this->result_folder_path = pose_path + "/results";
+            
             this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";
             this->icp_spot_trans_mat_path = this->fullview_recon_folder_path + "/icp_spot_trans_mat.txt";
             this->fullview_dense_cloud_path = this->fullview_recon_folder_path + "/fullview_dense_cloud.pcd";
@@ -113,13 +118,9 @@ public:
             this->fullview_rgb_cloud_path = this->fullview_recon_folder_path + "/fullview_rgb_cloud.pcd";
             this->edge_polar_pcd_path = this->fullview_recon_folder_path + "/edge_polar.pcd";
             this->edge_cart_pcd_path = this->fullview_recon_folder_path + "/edge_cart.pcd";
-            this->output_folder_path = pose_path + "/outputs/lidar_outputs";
-            this->dense_pcds_folder_path = pose_path + "/dense_pcds";
-            this->icp_pcds_folder_path = pose_path + "/icp_pcds";
             this->edge_img_path = pose_path + "/edges/lidEdge.png";
-            this->result_folder_path = pose_path + "/results";
             this->dense_pcd_path = this->output_folder_path + "/lidDense" + to_string(kNumRecPcds) + ".pcd";
-            this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
+            // this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
             this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
             this->flat_img_path = this->output_folder_path + "/flatLidarImage.bmp";
             this->tags_map_path = this->output_folder_path + "/tags_map.txt";
@@ -129,12 +130,12 @@ public:
         }
         /** pose **/
         string output_folder_path;
-        string dense_pcds_folder_path;
-        string icp_pcds_folder_path;
-        string edge_img_path;
+        // string dense_pcds_folder_path;
         string result_folder_path;
+        string bag_folder_path;
+        string edge_img_path;
         string dense_pcd_path;
-        string icp_pcd_path;
+        // string icp_pcd_path;
         string pose_trans_mat_path;
         string flat_img_path;
         string edge_polar_pcd_path;
@@ -176,7 +177,7 @@ public:
 
     /***** Point Cloud Generation *****/
     static int ReadFileList(const string &folder_path, vector<string> &file_list);
-    void BagToPcd(string bag_file);
+    void BagToPcd(string filepath, CloudI &cloud);
 
     /***** LiDAR Pre-Processing *****/
     void LidarToSphere(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud);
