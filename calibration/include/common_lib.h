@@ -27,6 +27,25 @@ int CheckFolder(std::string spot_path) {
     return md;
 }
 
+// int ReadFileList(std::string &folder_path, std::vector<std::string> &file_list) {
+//     DIR *dp;
+//     struct dirent *dir_path;
+//     if ((dp = opendir(folder_path.c_str())) == nullptr) {
+//         return 0;
+//     }
+//     int num = 0;
+//     while ((dir_path = readdir(dp)) != nullptr) {
+//         std::string name = std::string(dir_path->d_name);
+//         if (name != "." && name != "..") {
+//             file_list.push_back(name);
+//             num++;
+//         }
+//     }
+//     closedir(dp);
+//     cout << "read file list success" << endl;
+//     return num;
+// }
+
 Eigen::Matrix4f LoadTransMat(std::string trans_path){
     std::ifstream load_stream;
     load_stream.open(trans_path);
