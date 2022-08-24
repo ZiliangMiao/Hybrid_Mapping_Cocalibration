@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
             CheckFolder(view_path + "/bags");
             CheckFolder(view_path + "/all_pcds");
             CheckFolder(view_path + "/dense_pcds");
-            CheckFolder(view_path + "/icp_pcds");
+            // CheckFolder(view_path + "/icp_pcds");
             CheckFolder(view_path + "/images");
             CheckFolder(view_path + "/edges");
             CheckFolder(view_path + "/outputs");
