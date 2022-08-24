@@ -19,16 +19,16 @@ switch:
     kGlobalMapping: true
 
     # colorization
-    kFullViewColorization: false
-    kGlobalColoredMapping: false
+    kFullViewColorization: true
+    kGlobalColoredMapping: true
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
-    # kDatasetName: "lh3_global"
-    # kNumSpots: 5
+    kDatasetName: "lh3_global"
+    kNumSpots: 5
     # kDatasetName: "crf"
     # kNumSpots: 1
     # kDatasetName: "rb1"

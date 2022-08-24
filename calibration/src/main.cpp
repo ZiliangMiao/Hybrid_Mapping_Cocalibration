@@ -80,9 +80,9 @@ int main(int argc, char** argv) {
 
     /***** Class Object Initialization *****/
     FisheyeProcess fisheye;
-    fisheye.SetIntrinsic(params_init);
     LidarProcess lidar;
-    lidar.SetExtrinsic(params_init);
+    lidar.ext_ = Eigen::Map<Param_D>(params_init.data()).head(K_EXT);
+    fisheye.int_ = Eigen::Map<Param_D>(params_init.data()).tail(K_INT);
 
     /***** Data Folder Check **/
     for (int i = 0; i < lidar.num_spots; ++i) {
@@ -154,15 +154,16 @@ int main(int argc, char** argv) {
     if (kLidarFlatProcess) {
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SetViewIdx(lidar.fullview_idx);
                 CloudI::Ptr lidar_cart_cloud(new CloudI);
                 CloudI::Ptr lidar_polar_cloud(new CloudI);
+
+                lidar.SetSpotIdx(i);
+                lidar.SetViewIdx(lidar.fullview_idx);
                 lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
-                lidar.SphereToPlane(lidar_cart_cloud, lidar_polar_cloud);
+                lidar.SphereToPlane(lidar_polar_cloud);
                 lidar.EdgeExtraction();
                 lidar.EdgeToPixel();
-                lidar.PixLookUp(lidar_cart_cloud, lidar_polar_cloud);
+                lidar.PixLookUp(lidar_cart_cloud);
             }
         }
     }
@@ -170,12 +171,11 @@ int main(int argc, char** argv) {
     if (kFisheyeFlatProcess) {
         for (int i = 0; i < fisheye.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
+                CloudRGB::Ptr fisheye_pixel_cloud(new CloudRGB);
+                CloudRGB::Ptr fisheye_polar_cloud(new CloudRGB);
                 fisheye.SetSpotIdx(i); /** spot idx **/
                 fisheye.SetViewIdx(fisheye.fullview_idx);
-                std::tuple<CloudRGB::Ptr, CloudRGB::Ptr> fisheye_clouds = fisheye.FisheyeImageToSphere();
-                CloudRGB::Ptr fisheye_pixel_cloud;
-                CloudRGB::Ptr fisheye_polar_cloud;
-                std::tie(fisheye_pixel_cloud, fisheye_polar_cloud) = fisheye_clouds;
+                fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud);
                 fisheye.SphereToPlane(fisheye_polar_cloud);
                 fisheye.EdgeExtraction();
                 fisheye.EdgeToPixel();
@@ -265,20 +265,20 @@ int main(int argc, char** argv) {
         cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
         // lh3_global:
         // params_calib = {
-        //         0.00326059, 3.13658, 1.56319, /** Rx Ry Rz **/
-        //         0.277415, -0.0112217, 0.046939, /** tx ty tz **/
-        //         1022.53, 1198.45, /** u0, v0 **/
-        //         1880.36, -536.721, -12.9298, -18.0154, 5.6414,
-        //         1.00176, -0.00863924, 0.00846056
+        //         0.000472, -3.139975, 1.563091, /** Rx Ry Rz **/
+        //         0.274670, -0.012239, 0.034630, /** tx ty tz **/
+        //         1022.412883, 1199.429484,       /** u0, v0 **/
+        //         1995.940476, -696.447201, 27.426648, 2.044011, -1.568044, 
+        //         0.999972, -0.008120, 0.007628
         // };
         // parking:
-        params_calib = {
-                0.001335, -3.139391, 1.559892,
-                0.281820, -0.006560, 0.044851,
-                1024.081111, 1197.734465,
-                1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
-                1.000177, -0.005878, 0.006144
-        };
+        // params_calib = {
+        //         0.001335, -3.139391, 1.559892,
+        //         0.281820, -0.006560, 0.044851,
+        //         1024.081111, 1197.734465,
+        //         1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
+        //         1.000177, -0.005878, 0.006144
+        // };
         
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
