@@ -5,7 +5,7 @@
 #define K_INT           (10)
 #define PI_M            (3.14159265358)
 #define KDE_SCALE       (1)
-#define MAPPING_RADIUS  (0.01)
+#define SAMPLING_RADIUS (0.01)
 
 #define MatD(a,b)  Eigen::Matrix<double, (a), (b)>
 #define MatF(a,b)  Eigen::Matrix<float, (a), (b)>

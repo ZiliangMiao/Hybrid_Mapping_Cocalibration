@@ -195,7 +195,7 @@ public:
 
     /***** Registration and Mapping *****/
     tuple<Eigen::Matrix4f, CloudI::Ptr> ICPRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
-    void CloudReg(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, Eigen::Matrix4f &reg_trans_mat);
+    void CloudRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, Eigen::Matrix4f &reg_trans_mat);
     void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
 
     void CreateDensePcd();
