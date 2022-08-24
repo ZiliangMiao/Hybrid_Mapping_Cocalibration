@@ -39,19 +39,21 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
 
-#include "define.h"
-/** Test **/
-#include <pcl/features/fpfh_omp.h>
-#include <pcl/features/normal_3d_omp.h>
+/** headings **/
+#include <define.h>
+
 
 /** namespace **/
 using namespace std;
 
 /** typedef **/
 typedef pcl::PointXYZI PointI;
+typedef pcl::PointXYZINormal PointIN;
 typedef pcl::PointXYZRGB PointRGB;
 typedef pcl::PointCloud<PointI> CloudI;
+typedef pcl::PointCloud<PointIN> CloudIN;
 typedef pcl::PointCloud<PointRGB> CloudRGB;
+typedef pcl::PointCloud<pcl::Normal> CloudN;
 typedef pcl::PointCloud<pcl::PointXYZ> EdgeCloud;
 typedef pcl::PointCloud<pcl::PointXYZ> EdgePixels;
 
@@ -207,7 +209,7 @@ public:
     void GlobalMapping();
     void MappingEval();
 
-    double GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
+    double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     template <typename PointType>
     void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name = "");
 };

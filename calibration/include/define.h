@@ -1,14 +1,15 @@
 #include <Eigen/Core>
 #include <pcl/common/common.h>
 
+#define PI_M            (3.14159265358)
+#define THREADS         (16)
 #define K_EXT           (6)
 #define K_INT           (10)
-#define PI_M            (3.14159265358)
 #define KDE_SCALE       (1)
 #define SAMPLING_RADIUS (0.01)
 
-#define MatD(a,b)  Eigen::Matrix<double, (a), (b)>
-#define MatF(a,b)  Eigen::Matrix<float, (a), (b)>
+#define MatD(a,b)       Eigen::Matrix<double, (a), (b)>
+#define MatF(a,b)       Eigen::Matrix<float, (a), (b)>
 
 typedef MatD(2,1)       Vec2D;
 typedef MatF(2,1)       Vec2F;

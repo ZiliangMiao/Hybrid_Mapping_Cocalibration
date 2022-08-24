@@ -6,8 +6,8 @@ switch:
     ## Registration, Colorization and Mapping
     # view
     kCreateDensePcd: false
-    kViewRegistration: true
-    kFullViewMapping: true
+    kViewRegistration: false
+    kFullViewMapping: false
 
     ## Calibration and Optimization cost analysis
     kCeresOptimization: false
@@ -20,10 +20,10 @@ switch:
 
     # colorization
     kFullViewColorization: false
-    kGlobalColoredMapping: true
+    kGlobalColoredMapping: false
 
 spot:
-    kOneSpot: 0  # -1: means run all the spots, other means run the specific spot index 
+    kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
 
 essential:
     kLidarTopic: "/livox/lidar"
