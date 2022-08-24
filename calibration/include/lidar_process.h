@@ -16,13 +16,13 @@
 /** pcl **/
 #include <pcl/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/filters/voxel_grid.h>
+// #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/uniform_sampling.h>
 #include <pcl/common/common.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/radius_outlier_removal.h>
-#include <pcl/filters/passthrough.h>
+// #include <pcl/filters/passthrough.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/common/transforms.h>
 #include <Eigen/Core>
@@ -36,6 +36,9 @@
 #include <pcl/filters/extract_indices.h>
 /** opencv **/
 #include <opencv2/opencv.hpp>
+/** Test **/
+#include <pcl/features/fpfh_omp.h>
+#include <pcl/features/normal_3d_omp.h>
 
 /** namespace **/
 using namespace std;
@@ -191,7 +194,8 @@ public:
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
 
     /***** Registration and Mapping *****/
-    tuple<Eigen::Matrix4f, CloudI::Ptr> ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
+    tuple<Eigen::Matrix4f, CloudI::Ptr> ICPRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
+    void CloudReg(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, Eigen::Matrix4f &reg_trans_mat);
     void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
     double GetIcpFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     void CreateDensePcd();

@@ -1,6 +1,7 @@
 /** headings **/
 #include "lidar_process.h"
 #include "common_lib.h"
+
 /** namespace **/
 using namespace std;
 using namespace cv;
@@ -108,7 +109,7 @@ void LidarProcess::BagToPcd(string filepath, CloudI &cloud) {
     uint32_t idx_start = (cnt_pcds - this->kNumRecPcds)/2;
     uint32_t idx_end = idx_start + this->kNumRecPcds;
     iterator = view.begin();
-    cout << idx_start << " " << idx_end << endl;
+
     for (int i = 0; iterator != view.end(); iterator++, i++) {
         if (i >= idx_start && i < idx_end) {
             auto m = *iterator;
@@ -442,7 +443,7 @@ void LidarProcess::ReadEdge() {
 }
 
 /** Point Cloud Registration **/
-tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz) {
+tuple<Mat4F, CloudI::Ptr> LidarProcess::ICPRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz) {
     /** params **/
     float uniform_radius = 0.01;
     int max_iters = 200;
@@ -558,8 +559,6 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
     Mat4F icp_trans_mat;
     pcl::IterativeClosestPoint <PointI, PointI> icp; /** original icp **/
 
-    // pcl::GeneralizedIterativeClosestPoint<PointI, PointI> icp; /**  generalized icp **/
-
     icp.setInputTarget(cloud_us_tgt_effe);
     icp.setInputSource(cloud_us_src_effe);
     icp.setMaximumIterations(max_iters);
@@ -567,31 +566,6 @@ tuple<Mat4F, CloudI::Ptr> LidarProcess::ICP(CloudI::Ptr cloud_tgt, CloudI::Ptr c
     icp.setTransformationEpsilon(trans_epsilon);
     icp.setEuclideanFitnessEpsilon(eucidean_epsilon);
     icp.align(*cloud_icp_trans_us, init_trans_mat);
-
-//    pcl::NormalDistributionsTransform<PointI, PointI> icp; /** ndt **/
-//    icp.setInputTarget(cloud_us_tgt);
-//    icp.setInputSource(cloud_us_src);
-//    icp.setMaximumIterations(max_iters);
-//    icp.setTransformationEpsilon (trans_epsilon);
-//    icp.setStepSize (1.0);
-//    icp.setResolution (0.5);
-//    icp.align(*cloud_icp_trans_us, init_trans_mat);
-
-    if (icp.hasConverged()) {
-        cout << "ICP run time: " << timer.getTimeSeconds() << " s" << endl;
-        icp_trans_mat = icp.getFinalTransformation();
-        cout << "\nICP has converged, calculated score is: " << GetIcpFitnessScore(cloud_us_tgt_effe, cloud_icp_trans_us, max_fitness_range) << endl;
-        cout << "\nICP has converged, Epsilon is: " << icp.getEuclideanFitnessEpsilon() << endl;
-        cout << "\nICP Trans Mat: \n " << icp_trans_mat << endl;
-
-        /** transfer rotation matrix to euler angle **/
-        Mat3F icp_rotation_mat = icp_trans_mat.topLeftCorner<3, 3>();
-        Vec3F icp_euler_angle = icp_rotation_mat.eulerAngles(2, 1, 0); /** zyx euler angle **/
-        cout << "Euler angle by ICP: \n" << icp_euler_angle << endl;
-    }
-    else {
-        PCL_ERROR("\nICP has not converged.\n");
-    }
 
     /** visualization **/
     if (kIcpViz) {
@@ -734,7 +708,7 @@ void LidarProcess::CreateDensePcd() {
                     + "_" + to_string(view_angle_init + view_idx * view_angle_step) + ".bag";
     string pcd_path = poses_files_path_vec[spot_idx][view_idx].dense_pcd_path;
     CloudI::Ptr view_raw_cloud(new CloudI);
-    cout << bag_path << endl;
+
     BagToPcd(bag_path, *view_raw_cloud);
     cout << "size of loaded point cloud: " << view_raw_cloud->points.size() << endl;
 
@@ -782,23 +756,29 @@ void LidarProcess::ViewRegistration() {
     cout << "Loaded " << view_cloud_src->size() << " points from source file" << endl;
 
     /** initial rigid transformation **/
-    float v_angle = (float)DEG2RAD(this->degree_map[this->view_idx]);
+    float v_angle = (float)DEG2RAD(degree_map[view_idx]);
     float radius = 0.15f;
     Eigen::Matrix<float, 6, 1> trans_params;
     trans_params << 0.0f, v_angle, 0.0f,
                     radius * (sin(v_angle) - 0.0f), 0.0f, radius * (cos(v_angle) - 1.0f); /** LiDAR x-axis: car front; Gimbal positive angle: car front **/
     Mat4F init_trans_mat = TransformMat(trans_params);
 
-    /** ICP **/
-    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(view_cloud_tgt, view_cloud_src, init_trans_mat, 0, false);
-    Mat4F icp_trans_mat;
-    CloudI::Ptr view_cloud_icp_trans;
-    std::tie(icp_trans_mat, view_cloud_icp_trans) = icp_result;
+    // /** ICP **/
+    // std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(view_cloud_tgt, view_cloud_src, init_trans_mat, 0, false);
+    // Mat4F icp_trans_mat;
+    // CloudI::Ptr view_cloud_icp_trans;
+    // std::tie(icp_trans_mat, view_cloud_icp_trans) = icp_result;
+
+    /** TEASER registration **/
+    Mat4F reg_trans_mat;
+    CloudI::Ptr view_cloud_icp_trans(new CloudI);
+    CloudReg(view_cloud_tgt, view_cloud_src, init_trans_mat, reg_trans_mat);
+    pcl::transformPointCloud(*view_cloud_src, *view_cloud_icp_trans, reg_trans_mat);
 
     /** save the view trans matrix by icp **/
     std::ofstream mat_out;
     mat_out.open(this->poses_files_path_vec[this->spot_idx][this->view_idx].pose_trans_mat_path);
-    mat_out << icp_trans_mat << endl;
+    mat_out << reg_trans_mat << endl;
     mat_out.close();
 
     /** save the registered point clouds **/
@@ -886,7 +866,7 @@ void LidarProcess::SpotRegistration() {
     cout << "Initial Trans Mat by LIO: \n" << lio_spot_trans_mat << endl;
 
     /** ICP **/
-    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICP(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false);
+    std::tuple<Mat4F, CloudI::Ptr> icp_result = ICPRegistration(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false);
     Mat4F icp_spot_trans_mat;
     CloudI::Ptr spot_cloud_icp_trans;
     std::tie(icp_spot_trans_mat, spot_cloud_icp_trans) = icp_result;

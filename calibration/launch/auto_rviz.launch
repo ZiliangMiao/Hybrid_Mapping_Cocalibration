@@ -1,4 +1,4 @@
 <launch>
-  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/isee/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
   </node>
 </launch>
