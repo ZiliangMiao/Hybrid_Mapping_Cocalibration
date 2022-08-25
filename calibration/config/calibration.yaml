@@ -34,7 +34,7 @@ essential:
     # kDatasetName: "rb1"
     # kNumSpots: 1
     kDatasetName: "bs_hall"
-    kNumSpots: 4
+    kNumSpots: 5
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448

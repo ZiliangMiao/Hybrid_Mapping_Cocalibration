@@ -196,8 +196,7 @@ public:
     vector<double> Kde(vector<vector<double>> edge_pixels, int row_samples, int col_samples);
 
     /***** Registration and Mapping *****/
-    tuple<Eigen::Matrix4f, CloudI::Ptr> ICPRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, int cloud_type, const bool kIcpViz);
-    void CloudRegistration(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Eigen::Matrix4f init_trans_mat, Eigen::Matrix4f &reg_trans_mat);
+    Mat4F Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz);
     void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
 
     void CreateDensePcd();
@@ -212,4 +211,5 @@ public:
     double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     template <typename PointType>
     void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name = "");
+    void RemoveInvalidPoints(CloudI::Ptr cloud);
 };

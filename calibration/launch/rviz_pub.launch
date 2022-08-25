@@ -14,8 +14,8 @@
   <param name="tx" type="double" value="0.299831" />
   <param name="ty" type="double" value="0.230617" />
   <param name="tz" type="double" value="-0.029438" /> -->
-  <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/fullview_dense_cloud.pcd" />
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/fullview_dense_cloud.pcd" /> -->
+  <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" />
   <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_lio_registered_cloud.pcd" /> -->
   
   <param name="mono_color" type="bool" value="false" />
