@@ -419,8 +419,8 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     float normal_radius = 0.1;
     int max_iters = 200;
     float max_corr_dis = 0.5;
-    float trans_epsilon = 1e-10;
-    float eucidean_epsilon = 1e-4;
+    float trans_epsilon = 1e-12;
+    float eucidean_epsilon = 1e-6;
     float max_fitness_range = 2.0;
     
     bool enable_auto_radius = true;
