@@ -26,7 +26,7 @@ root_path = data_path + "/" + dataset_name
 lidar_broadcast_cmd = "roslaunch livox_ros_driver livox_lidar_rviz.launch"
 lidar_msg_cmd = "roslaunch livox_ros_driver livox_lidar_msg.launch"
 lidar_sync_cmd = "roslaunch calibration lidar_sync.launch"
-fisheye_auto_capture_cmd = "roslaunch mindvision mindvision.launch"
+fisheye_auto_capture_cmd = "roslaunch mindvision mindvision.launch delay:="
 
 process_pids = []
 hCamera = 0
@@ -277,7 +277,7 @@ if __name__ == "__main__":
             time.sleep(view_delay + hold)
         if (spot_idx < num_spots - 1):
             # broadcast LiDAR messages to ROS (delay 20s)
-            CreateProcess(cmd=fisheye_auto_capture_cmd, t_process=spot_delay+2*gimbal_delay+hold)
+            CreateProcess(cmd=fisheye_auto_capture_cmd+str(spot_delay+2*gimbal_delay+hold), t_process=spot_delay+2*gimbal_delay+hold)
             CreateProcess(cmd=lidar_msg_cmd, t_process=spot_delay+2*gimbal_delay+hold)
         # reset gimbal to center position (maximum 20s)
         GimbalPublisher(view_idx='center', time_interval=2*gimbal_delay)

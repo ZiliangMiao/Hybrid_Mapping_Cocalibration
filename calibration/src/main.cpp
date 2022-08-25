@@ -256,21 +256,27 @@ int main(int argc, char** argv) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
                 lidar.SpotRegistration();
-                // lidar.FineToCoarseReg();
             }
         }
+        
+        // for (int i = lidar.num_spots - 1; i > 0; --i) {
+        //     if (kOneSpot == -1 || kOneSpot == i) {
+        //         lidar.SetSpotIdx(i);
+        //         lidar.SpotRegAnalysis(0, lidar.spot_idx);
+        //     }
+        // }
     }
 
     if (kFullViewColorization) {
         cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
         // lh3_global:
-        params_calib = {
-                0.000472, -3.139975, 1.563091, /** Rx Ry Rz **/
-                0.274670, -0.012239, 0.034630, /** tx ty tz **/
-                1022.412883, 1199.429484,       /** u0, v0 **/
-                1995.940476, -696.447201, 27.426648, 2.044011, -1.568044, 
-                0.999972, -0.008120, 0.007628
-        };
+        // params_calib = {
+        //         0.000472, -3.139975, 1.563091, /** Rx Ry Rz **/
+        //         0.274670, -0.012239, 0.034630, /** tx ty tz **/
+        //         1022.412883, 1199.429484,       /** u0, v0 **/
+        //         1995.940476, -696.447201, 27.426648, 2.044011, -1.568044, 
+        //         0.999972, -0.008120, 0.007628
+        // };
         // parking:
         // params_calib = {
         //         0.001335, -3.139391, 1.559892,
@@ -293,8 +299,8 @@ int main(int argc, char** argv) {
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        lidar.GlobalMapping();
         // lidar.MappingEval();
+        lidar.GlobalMapping();
     }
 
     if (kGlobalColoredMapping) {

@@ -49,15 +49,27 @@ LidarProcess::LidarProcess() {
         pose_trans_mat_vec.push_back(poses_trans_mat_vec_temp);
     }
 
+    // vector<vector<string>> poses_folder_path_vec_tmp(num_spots, vector<string>(num_views));
+    // vector<vector<PoseFilePath>> poses_file_path_vec_tmp(num_spots, vector<PoseFilePath>(num_views));
+    // vector<vector<EdgePixels>> edge_pixels_vec_tmp(num_spots, vector<EdgePixels>(num_views));
+    // vector<vector<EdgeCloud::Ptr>> edge_cloud_vec_tmp(num_spots, vector<EdgeCloud::Ptr>(num_views));
+    // vector<vector<TagsMap>> tags_map_vec_tmp(num_spots, vector<TagsMap>(num_views));
+    // vector<vector<Mat4F>> poses_trans_mat_vec_tmp(num_spots, vector<Mat4F>(num_views));
+    // poses_folder_path_vec = poses_folder_path_vec_tmp;
+    // poses_file_path_vec = poses_file_path_vec_tmp;
+    // edge_pixels_vec = edge_pixels_vec_tmp;
+    // edge_cloud_vec = edge_cloud_vec_tmp;
+    // tags_map_vec = tags_map_vec_tmp;
+    // poses_trans_mat_vec = poses_trans_mat_vec_tmp;
+
+
     for (int i = 0; i < num_spots; ++i) {
         for (int j = 0; j < num_views; ++j) {
             int v_degree = view_angle_init + view_angle_step * j;
-            this -> degree_map[j] = v_degree;
-            this -> poses_folder_path_vec[i][j] = kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
+            degree_map[j] = v_degree;
+            poses_folder_path_vec[i][j] = kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
         }
-    }
 
-    for (int i = 0; i < num_spots; ++i) {
         string spot_path = kDatasetPath + "/spot" + to_string(i);
         for (int j = 0; j < num_views; ++j) {
             struct PoseFilePath pose_file_path(spot_path, poses_folder_path_vec[i][j]);
@@ -160,7 +172,6 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
     /** define the invalid search parameters **/
     int invalid_search_num = 0; /** search invalid count **/
     int invalid_idx_num = 0; /** index invalid count **/
-    int hidden_pt_cnt = 0;
     const float kScale = sqrt(2);
     const float kSearchRadius = kScale * (kRadPerPix / 2);
     const float sensitivity = 0.02f;
@@ -194,8 +205,7 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
                 int hidden_pt_num = 0;
                 float dist_mean = 0;
                 float intensity_mean = 0;
-                vector<int> zero_vec(search_num, 0);
-                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), zero_vec.data(), zero_vec.data()+search_num);;
+                vector<int> local_vec(search_num, 0);
 
                 for (int i = 0; i < search_num; ++i) {
                     dist_mean += polar_cloud->points[search_pt_idx_vec[i]].z;
@@ -207,18 +217,18 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
                     float dist = local_pt.z;
                     if ((abs(dist_mean - dist) > dist * sensitivity) || ((dist_mean - dist) > dist * sensitivity && local_pt.intensity < 20)) {
                         hidden_pt_num++;
-                        tags_map[u][v].pts_indices[i] = 0;
                     }
                     else {
                         intensity_mean += local_pt.intensity;
-                        tags_map[u][v].pts_indices[i] = search_pt_idx_vec[i];
+                        local_vec[i] = search_pt_idx_vec[i];
                     }
                 }
 
                 /** add tags **/
-                tags_map[u][v].num_pts = search_num - hidden_pt_num;
-                tags_map[u][v].pts_indices.erase(std::remove(tags_map[u][v].pts_indices.begin(), tags_map[u][v].pts_indices.end(), 0), tags_map[u][v].pts_indices.end());
-                
+                local_vec.erase(std::remove(local_vec.begin(), local_vec.end(), 0), local_vec.end());
+                tags_map[u][v].num_pts = local_vec.size();
+                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), local_vec.data(), local_vec.data()+local_vec.size());
+
                 if (tags_map[u][v].num_pts > 0) {
                     flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].num_pts;
                 }
@@ -226,27 +236,26 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
                     flat_img.at<float>(u, v) = 0;
                 }
                 
-                // hidden_pt_cnt += hidden_pt_num;
-                ROS_ASSERT_MSG((tags_map[u][v].pts_indices.size() == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
+                ROS_ASSERT_MSG((search_num - hidden_pt_num == tags_map[u][v].num_pts), "size of the vectors in a pixel region is not the same!");
             }
         }
     }
 
     /** add the tags_map of this specific pose to maps **/
     tags_map_vec[spot_idx][view_idx] = tags_map;
-    string tags_map_path = poses_files_path_vec[spot_idx][view_idx].tags_map_path;
-    ofstream outfile;
-    outfile.open(tags_map_path, ios::out);
-    if (!outfile.is_open()) {
-        cout << "Open file failure" << endl;
-    }
+    // string tags_map_path = poses_files_path_vec[spot_idx][view_idx].tags_map_path;
+    // ofstream outfile;
+    // outfile.open(tags_map_path, ios::out);
+    // if (!outfile.is_open()) {
+    //     cout << "Open file failure" << endl;
+    // }
 
-    for (int u = 0; u < kFlatRows; ++u) {
-        for (int v = 0; v < kFlatCols; ++v) {
-            outfile << "size: " << tags_map[u][v].num_pts << endl;
-        }
-    }
-    outfile.close();
+    // for (int u = 0; u < kFlatRows; ++u) {
+    //     for (int v = 0; v < kFlatCols; ++v) {
+    //         outfile << "size: " << tags_map[u][v].num_pts << endl;
+    //     }
+    // }
+    // outfile.close();
 
     string flat_img_path = poses_files_path_vec[spot_idx][view_idx].flat_img_path;
     cout << "LiDAR flat image path: " << flat_img_path << endl;
@@ -304,10 +313,12 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud) {
         else { /** normal pixels **/
             float x_avg = 0, y_avg = 0, z_avg = 0;
             for (int i = 0; i < num_pts; ++i) {
-                PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
-                x_avg += pixel_pt.x;
-                y_avg += pixel_pt.y;
-                z_avg += pixel_pt.z;
+                if (tags_map[u][v].pts_indices[i] < cart_cloud->size()) {
+                    PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
+                    x_avg += pixel_pt.x;
+                    y_avg += pixel_pt.y;
+                    z_avg += pixel_pt.z;
+                }
             }
 
             /** average coordinates->unbiased estimation of center position **/
@@ -327,7 +338,7 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud) {
     cout << "number of invalid lookups(lidar): " << num_invalid_pixels << endl;
     edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
 
-    /** write the coordinates and weights into .txt file **/
+    /** save edge coordinates into .txt file **/
     string edge_pts_coordinates_path = poses_files_path_vec[spot_idx][view_idx].edge_pts_coordinates_path;
     ofstream outfile;
     outfile.open(edge_pts_coordinates_path, ios::out);
@@ -417,13 +428,15 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     /** params **/
     float uniform_radius = 0.05;
     float normal_radius = 0.1;
+
     int max_iters = 200;
     float max_corr_dis = 0.5;
     float trans_epsilon = 1e-12;
     float eucidean_epsilon = 1e-6;
     float max_fitness_range = 2.0;
-    
+
     bool enable_auto_radius = true;
+    bool auto_radius_trig = false;
     float target_size = 2.5e6;
 
     pcl::StopWatch timer;
@@ -433,17 +446,22 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     CloudI::Ptr cloud_us_src (new CloudI);
     CloudI::Ptr cloud_src_init_trans (new CloudI);
     pcl::UniformSampling<PointI> us;
+    us.setRadiusSearch(uniform_radius);
     pcl::transformPointCloud(*cloud_src, *cloud_src_init_trans, init_trans_mat);
-    while (cloud_us_tgt->size() + cloud_us_src->size() < 2e6 && uniform_radius >= 0.005){
+
+    while (enable_auto_radius){
         us.setRadiusSearch(uniform_radius);
         us.setInputCloud(cloud_tgt);
         us.filter(*cloud_us_tgt);
         us.setInputCloud(cloud_src_init_trans);
         us.filter(*cloud_us_src);
-        uniform_radius /= 2;
-        PCL_INFO("Uniform sampling for target cloud: %d -> %d\n", cloud_tgt->size(), cloud_us_tgt->size());
-        PCL_INFO("Uniform sampling for source cloud: %d -> %d\n", cloud_src->size(), cloud_us_src->size());
+        uniform_radius *= sqrt((cloud_us_tgt->size() + cloud_us_src->size()) / (2 * target_size));
+        if (auto_radius_trig) {break;}
+        auto_radius_trig = true;
     }
+    normal_radius = uniform_radius * 5;
+    PCL_INFO("Uniform sampling for target cloud: %d -> %d\n", cloud_tgt->size(), cloud_us_tgt->size());
+    PCL_INFO("Uniform sampling for source cloud: %d -> %d\n", cloud_src->size(), cloud_us_src->size());
     pcl::transformPointCloud(*cloud_us_src, *cloud_us_src, init_trans_mat.inverse());
 
     /** invalid point filter **/
@@ -458,7 +476,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     
     if (cloud_type == 0) { /** view point cloud **/
         cout << "Range effective filter" << endl;
-        const float squared_range_limit = 100;
+        const float squared_range_limit = pow(10, 2);
         for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
             auto &pt = cloud_us_src->points[idx];
             src_indices[idx] = (pt.getVector3fMap().squaredNorm() < squared_range_limit && pt.z > -1) ? idx : 0;
@@ -497,8 +515,8 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     src_indices.erase(std::remove(src_indices.begin(), src_indices.end(), 0), src_indices.end());
     pcl::copyPointCloud(*cloud_us_tgt, tgt_indices, *cloud_us_tgt_effe);
     pcl::copyPointCloud(*cloud_us_src, src_indices, *cloud_us_src_effe);
-    PCL_INFO("Effective filter for source cloud: %d -> %d\n", cloud_us_src->size(), cloud_us_src_effe->size());
     PCL_INFO("Effective filter for target cloud: %d -> %d\n", cloud_us_tgt->size(), cloud_us_tgt_effe->size());
+    PCL_INFO("Effective filter for source cloud: %d -> %d\n", cloud_us_src->size(), cloud_us_src_effe->size());
     PCL_INFO("Run time: %f s\n", timer.getTimeSeconds());
 
     /** invalid point filter **/
@@ -536,7 +554,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     normal_est.setInputCloud(cloud_us_src_effe);
     normal_est.compute(*src_norms);
     pcl::concatenateFields(*cloud_us_src_effe, *src_norms, *cloud_src_in);
-    PCL_INFO("Run time: %f s\n", timer.getTimeSeconds()*0.5);
+    PCL_INFO("Run time: %f s\n", timer.getTimeSeconds());
     
     timer.reset();
     PCL_INFO("ICP alignment ... \n");
@@ -561,7 +579,6 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
         PCL_INFO("Epsilon: %f \n", align.getEuclideanFitnessEpsilon());
         align_trans_mat = align.getFinalTransformation();
         cout << align_trans_mat << endl;
-        PCL_INFO("Checkpoint.");
     }
     else {
         PCL_ERROR("ICP: Fail to converge. \n");
@@ -598,7 +615,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
         }
     }
 
-    PCL_INFO("Align completed.");
+    PCL_INFO("Align completed.\n");
     return align_trans_mat;
 }
 
@@ -821,6 +838,119 @@ void LidarProcess::SpotRegistration() {
     pcl::io::savePCDFileBinary(pair_registered_cloud_path, *spot_cloud_icp_trans + *spot_cloud_tgt);
 }
 
+void LidarProcess::SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx) {
+    /** params **/
+    float uniform_radius = 0.05;
+    bool enable_auto_radius = true;
+    bool auto_radius_trig = false;
+    float target_size = 2.5e6;
+
+    float max_fitness_range = 2;
+
+    /** load icp transformation matrix **/
+    Mat4F icp_spot_trans_mat = Mat4F::Identity();
+    for (int load_idx = src_spot_idx; load_idx > 0; --load_idx) {
+        string trans_file_path = this->poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
+        Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
+        icp_spot_trans_mat = tmp_spot_trans_mat * icp_spot_trans_mat;
+    }
+    cout << "Load spot ICP trans mat: \n" << icp_spot_trans_mat << endl;
+
+    /** load lio transformation matrix **/
+    Mat4F lio_spot_trans_mat = Mat4F::Identity();
+    for (int load_idx = src_spot_idx; load_idx > 0; --load_idx) {
+        string trans_file_path = this->poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
+        Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
+        lio_spot_trans_mat = tmp_spot_trans_mat * lio_spot_trans_mat;
+    }
+    cout << "Load spot LIO trans mat: \n" << lio_spot_trans_mat << endl;
+
+    CloudI::Ptr cloud_tgt (new CloudI);
+    CloudI::Ptr cloud_src (new CloudI);
+    string tgt_spot_path = poses_files_path_vec[tgt_spot_idx][0].fullview_dense_cloud_path;
+    string src_spot_path = poses_files_path_vec[src_spot_idx][0].fullview_dense_cloud_path;
+    LoadPcd(tgt_spot_path, *cloud_tgt);
+    LoadPcd(src_spot_path, *cloud_src);
+
+    pcl::StopWatch timer;
+
+    /** uniform sampling **/
+    CloudI::Ptr cloud_us_tgt (new CloudI);
+    CloudI::Ptr cloud_us_src (new CloudI);
+    CloudI::Ptr cloud_src_init_trans (new CloudI);
+    pcl::UniformSampling<PointI> us;
+    pcl::transformPointCloud(*cloud_src, *cloud_src_init_trans, lio_spot_trans_mat);
+    while (cloud_us_tgt->size() + cloud_us_src->size() < 2e6 && uniform_radius >= 0.005){
+        us.setRadiusSearch(uniform_radius);
+        us.setInputCloud(cloud_tgt);
+        us.filter(*cloud_us_tgt);
+        us.setInputCloud(cloud_src_init_trans);
+        us.filter(*cloud_us_src);
+        uniform_radius *= sqrt((cloud_us_tgt->size() + cloud_us_src->size()) / (2 * target_size));
+        if (auto_radius_trig) {break;}
+        auto_radius_trig = true;
+    }
+    pcl::transformPointCloud(*cloud_us_src, *cloud_us_src, lio_spot_trans_mat.inverse());
+    PCL_INFO("Uniform sampling for target cloud: %d -> %d\n", cloud_tgt->size(), cloud_us_tgt->size());
+    PCL_INFO("Uniform sampling for source cloud: %d -> %d\n", cloud_src->size(), cloud_us_src->size());
+
+    /** invalid point filter **/
+    RemoveInvalidPoints(cloud_us_tgt);
+    RemoveInvalidPoints(cloud_us_src);
+
+    CloudI::Ptr cloud_us_tgt_effe (new CloudI);
+    CloudI::Ptr cloud_us_src_effe (new CloudI);
+    std::vector<int> tgt_indices(cloud_us_tgt->size());
+    std::vector<int> src_indices(cloud_us_src->size());
+    timer.reset();
+
+    std::vector<int> nn_indices(1);
+    std::vector<float> nn_dists(1);
+
+    pcl::KdTreeFLANN<PointI> kdtree_tgt;
+    pcl::KdTreeFLANN<PointI> kdtree_src;
+    kdtree_tgt.setInputCloud (cloud_us_tgt);
+    kdtree_src.setInputCloud (cloud_us_src);
+    #pragma omp parallel for num_threads(16)
+    for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
+        kdtree_tgt.nearestKSearch (cloud_us_src->points[idx], 1, nn_indices, nn_dists);
+        if (nn_dists[0] <= max_fitness_range) {
+            src_indices[idx] = idx;
+            tgt_indices[nn_indices[0]] = nn_indices[0];
+        }
+    }
+    #pragma omp parallel for num_threads(16)
+    for (int idx = 0; idx < cloud_us_tgt->size(); ++idx) {
+        if (tgt_indices[idx] == 0) {
+            kdtree_src.nearestKSearch (cloud_us_tgt->points[idx], 1, nn_indices, nn_dists);
+            tgt_indices[idx] = (nn_dists[0] <= max_fitness_range) ? idx : 0;
+        }
+    }
+    
+    tgt_indices.erase(std::remove(tgt_indices.begin(), tgt_indices.end(), 0), tgt_indices.end());
+    src_indices.erase(std::remove(src_indices.begin(), src_indices.end(), 0), src_indices.end());
+    pcl::copyPointCloud(*cloud_us_tgt, tgt_indices, *cloud_us_tgt_effe);
+    pcl::copyPointCloud(*cloud_us_src, src_indices, *cloud_us_src_effe);
+    PCL_INFO("Effective filter for target cloud: %d -> %d\n", cloud_us_tgt->size(), cloud_us_tgt_effe->size());
+    PCL_INFO("Effective filter for source cloud: %d -> %d\n", cloud_us_src->size(), cloud_us_src_effe->size());
+    PCL_INFO("Run time: %f s\n", timer.getTimeSeconds());
+
+    /** invalid point filter **/
+    RemoveInvalidPoints(cloud_us_tgt_effe);
+    RemoveInvalidPoints(cloud_us_src_effe);
+
+    /** get the init trans cloud & init fitness score **/
+    CloudI::Ptr cloud_init_trans_us (new CloudI);
+    pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, icp_spot_trans_mat);
+    cout << "ICP Fitness Score: " << GetFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
+
+    /** get the init trans cloud & init fitness score **/
+    pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, lio_spot_trans_mat);
+    cout << "LIO Fitness Score: " << GetFitnessScore(cloud_us_tgt_effe, cloud_init_trans_us, max_fitness_range) << endl;
+
+
+}
+
 void LidarProcess::FineToCoarseReg() {
 
     cout << "----- LiDAR: FineToCoarseReg -----" << " Spot Index: " << spot_idx << endl;
@@ -925,11 +1055,10 @@ void LidarProcess::GlobalMapping() {
         /** load transformation matrix **/
         Mat4F icp_spot_trans_mat = Mat4F::Identity();
         for (int load_idx = src_idx; load_idx > 0; --load_idx) {
-            // string trans_file_path = poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
-            string trans_file_path = poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
+            string trans_file_path = poses_files_path_vec[load_idx][0].lio_spot_trans_mat_path;
+            // string trans_file_path = poses_files_path_vec[load_idx][0].icp_spot_trans_mat_path;
             Mat4F tmp_spot_trans_mat = LoadTransMat(trans_file_path);
             icp_spot_trans_mat = tmp_spot_trans_mat * icp_spot_trans_mat;
-            cout << "Load spot ICP trans mat: \n" << tmp_spot_trans_mat << endl;
         }
         cout << "Load spot ICP trans mat: \n" << icp_spot_trans_mat << endl;
         pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_src, icp_spot_trans_mat);
@@ -939,7 +1068,6 @@ void LidarProcess::GlobalMapping() {
         //     pt.intensity = src_idx * 40;
         // }
         *global_registered_cloud += *spot_cloud_src;
-
     }
 
     /** down sampling **/
@@ -949,7 +1077,8 @@ void LidarProcess::GlobalMapping() {
     us.filter(*global_registered_cloud);
 
     string global_registered_cloud_path = poses_files_path_vec[0][0].fullview_recon_folder_path +
-                                          "/global_registered_cloud.pcd";
+                                        //   "/global_registered_cloud.pcd";
+                                          "/global_lio_registered_cloud.pcd";
     pcl::io::savePCDFileBinary(global_registered_cloud_path, *global_registered_cloud);
 }
 
@@ -960,15 +1089,11 @@ void LidarProcess::MappingEval(){
     LoadPcd(global_registered_cloud_path, *global_registered_cloud, "global registered");
 
     string global_lio_cloud_path = poses_files_path_vec[0][0].fullview_recon_folder_path +
-                                          "/scans.pcd";
+                                          "/roi_scans_xyzi.pcd";
     CloudI::Ptr global_lio_cloud(new CloudI);
     LoadPcd(global_lio_cloud_path, *global_lio_cloud, "global lio");
 
     /** params **/
-    int max_iters = 200;
-    float max_corr_dis = 0.2;
-    float trans_epsilon = 1e-10;
-    float eucidean_epsilon = 0.01;
     float max_fitness_range = 2.0;
 
     /** uniform sampling **/
@@ -997,11 +1122,15 @@ void LidarProcess::MappingEval(){
     pcl::transformPointCloud(*cloud_us_src, *cloud_trans_us, icp_spot_trans_mat);
 
     pcl::StopWatch timer_fs;
-    cout << "Map Fitness Score: " << GetFitnessScore(cloud_us_tgt, cloud_trans_us, max_fitness_range) << endl;
-    cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
+    // cout << "Map Fitness Score: " << GetFitnessScore(cloud_us_tgt, cloud_trans_us, max_fitness_range) << endl;
+    // cout << "Get fitness score time: " << timer_fs.getTimeSeconds() << " s" << endl;
+    Mat4F align_trans_mat = Align(cloud_us_tgt, cloud_us_src, icp_spot_trans_mat, 1, false);
 
+    Vec3F euler_angle_mat = align_trans_mat.topLeftCorner<3, 3>().eulerAngles(2, 1, 0).reverse();
+    cout << euler_angle_mat << endl;
+    
     string global_tf_cloud_path = poses_files_path_vec[0][0].fullview_recon_folder_path +
-                                          "/global_tf_cloud.pcd";
+                                    "/global_tf_cloud.pcd";
     pcl::io::savePCDFileBinary(global_tf_cloud_path, *cloud_trans_us);
 
     pcl::visualization::PCLVisualizer viewer("ICP demo");

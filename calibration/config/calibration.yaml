@@ -15,12 +15,12 @@ switch:
     kParamsAnalysis: false
     
     # spot
-    kSpotRegistration: true
-    kGlobalMapping: true
+    kSpotRegistration: false
+    kGlobalMapping: false
 
     # colorization
-    kFullViewColorization: false
-    kGlobalColoredMapping: false
+    kFullViewColorization: true
+    kGlobalColoredMapping: true
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
@@ -42,9 +42,9 @@ essential:
     kAngleStep: 25
 
 transform:
-    rx: 0.012864
-    ry: -0.001143
-    rz: 0.160874
-    tx: 0.299831
-    ty: 0.230617
-    tz: -0.029438
+    rx: -0.0228948
+    ry: 0.027074
+    rz: 0.776748
+    tx: -4.83285
+    ty: -2.08588
+    tz: -0.110397
