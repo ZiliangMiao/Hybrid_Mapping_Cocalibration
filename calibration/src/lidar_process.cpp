@@ -415,7 +415,7 @@ void LidarProcess::ReadEdge() {
 /** Point Cloud Registration **/
 Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz) {
     /** params **/
-    float uniform_radius = 0.02;
+    float uniform_radius = 0.05;
     float normal_radius = 0.1;
     int max_iters = 200;
     float max_corr_dis = 0.5;
@@ -434,20 +434,16 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     CloudI::Ptr cloud_src_init_trans (new CloudI);
     pcl::UniformSampling<PointI> us;
     pcl::transformPointCloud(*cloud_src, *cloud_src_init_trans, init_trans_mat);
-    bool auto_radius_trig = false;
-    while (enable_auto_radius){
+    while (cloud_us_tgt->size() + cloud_us_src->size() < 2e6 && uniform_radius >= 0.005){
         us.setRadiusSearch(uniform_radius);
         us.setInputCloud(cloud_tgt);
         us.filter(*cloud_us_tgt);
         us.setInputCloud(cloud_src_init_trans);
         us.filter(*cloud_us_src);
-        uniform_radius *= sqrt((cloud_us_tgt->size() + cloud_us_src->size()) / (2 * target_size));
-        if (auto_radius_trig) {break;}
-        auto_radius_trig = true;
+        uniform_radius /= 2;
+        PCL_INFO("Uniform sampling for target cloud: %d -> %d\n", cloud_tgt->size(), cloud_us_tgt->size());
+        PCL_INFO("Uniform sampling for source cloud: %d -> %d\n", cloud_src->size(), cloud_us_src->size());
     }
-    normal_radius = uniform_radius * 5;
-    PCL_INFO("Uniform sampling for target cloud: %d -> %d\n", cloud_tgt->size(), cloud_us_tgt->size());
-    PCL_INFO("Uniform sampling for source cloud: %d -> %d\n", cloud_src->size(), cloud_us_src->size());
     pcl::transformPointCloud(*cloud_us_src, *cloud_us_src, init_trans_mat.inverse());
 
     /** invalid point filter **/
@@ -505,6 +501,10 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     PCL_INFO("Effective filter for target cloud: %d -> %d\n", cloud_us_tgt->size(), cloud_us_tgt_effe->size());
     PCL_INFO("Run time: %f s\n", timer.getTimeSeconds());
 
+    /** invalid point filter **/
+    RemoveInvalidPoints(cloud_us_tgt_effe);
+    RemoveInvalidPoints(cloud_us_src_effe);
+
     /** get the init trans cloud & init fitness score **/
     CloudI::Ptr cloud_init_trans_us (new CloudI);
     pcl::transformPointCloud(*cloud_us_src_effe, *cloud_init_trans_us, init_trans_mat);
@@ -556,14 +556,12 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     pcl::copyPointCloud(*cloud_icp_trans_n, *cloud_icp_trans_us);
 
      if (align.hasConverged()) {
-        double curr_time = timer.getTimeSeconds();
-        double fitness = GetFitnessScore(cloud_us_tgt_effe, cloud_icp_trans_us, max_fitness_range);
-        double epsilon = align.getEuclideanFitnessEpsilon();
-        PCL_INFO("ICP: Converged in %f s\n", curr_time);
-        PCL_INFO("Fitness score: %f \n", fitness);
-        PCL_INFO("Epsilon: %f \n", epsilon);
+        PCL_INFO("ICP: Converged in %f s.\n", timer.getTimeSeconds());
+        PCL_INFO("Fitness score: %f \n", GetFitnessScore(cloud_us_tgt_effe, cloud_icp_trans_us, max_fitness_range));
+        PCL_INFO("Epsilon: %f \n", align.getEuclideanFitnessEpsilon());
         align_trans_mat = align.getFinalTransformation();
         cout << align_trans_mat << endl;
+        PCL_INFO("Checkpoint.");
     }
     else {
         PCL_ERROR("ICP: Fail to converge. \n");
@@ -600,7 +598,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
         }
     }
 
-    PCL_INFO("Align completed. \n");
+    PCL_INFO("Align completed.");
     return align_trans_mat;
 }
 
@@ -666,8 +664,7 @@ void LidarProcess::CreateDensePcd() {
     cout << "----- LiDAR: CreateDensePcd -----" << " Spot Index: " << spot_idx << " View Index: " << view_idx << endl;
 
     string pcd_path = poses_files_path_vec[spot_idx][view_idx].dense_pcd_path;
-    string bag_path = poses_files_path_vec[spot_idx][view_idx].bag_folder_path + "/" +
-        dataset_name + "_spot" + std::to_string(spot_idx) + "_" + std::to_string(view_idx * view_angle_step + view_angle_init) + ".bag";
+    string bag_path = poses_files_path_vec[spot_idx][view_idx].bag_folder_path;
     CloudI::Ptr view_cloud(new CloudI);
     BagToPcd(bag_path, *view_cloud);
     cout << "size of loaded point cloud: " << view_cloud->points.size() << endl;
@@ -678,7 +675,7 @@ void LidarProcess::CreateDensePcd() {
     vector<int> indices(view_cloud->size());
     for (int idx = 0; idx < view_cloud->size(); ++idx) {
         PointI &pt = view_cloud->points[idx];
-        indices[idx] = (pt.getVector3fMap().squaredNorm() > squared_range_limit) ? idx : 0;
+        indices[idx] = (pt.getVector3fMap().squaredNorm() < squared_range_limit) ? idx : 0;
     }
     indices.erase(std::remove(indices.begin(), indices.end(), 0), indices.end());
     pcl::copyPointCloud(*view_cloud, indices, *view_cloud_f);
@@ -798,8 +795,7 @@ void LidarProcess::SpotRegistration() {
     Mat4F lio_spot_trans_mat = LoadTransMat(lio_trans_path);
     
     /** ICP **/
-    Mat4F align_spot_trans_mat(Align(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false));
-    PCL_INFO("Checkpoint\n");
+    Mat4F align_spot_trans_mat = Align(spot_cloud_tgt, spot_cloud_src, lio_spot_trans_mat, 1, false);
     CloudI::Ptr spot_cloud_icp_trans(new CloudI);
     pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_icp_trans, align_spot_trans_mat);
 
