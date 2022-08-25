@@ -33,16 +33,17 @@ using namespace std;
 //     return T_mat;
 // }
 
+template <typename PointT>
 void getMessage(sensor_msgs::PointCloud2 &msg,
-                pcl::PointCloud<pcl::PointXYZI>::Ptr cloud,
+                pcl::PointCloud<PointT> &cloud,
                 size_t msg_size,
                 size_t partition) {
-    size_t cloud_size = cloud->points.size();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr msg_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    size_t cloud_size = cloud.size();
+    pcl::PointCloud<PointT> msg_cloud;
     for (size_t i = (partition * msg_size); i < ((partition + 1) * msg_size) && i < cloud_size; ++i) {
-        msg_cloud->points.push_back(cloud->points[i]);
+        msg_cloud.points.push_back(cloud.points[i]);
     }
-    pcl::toROSMsg(*msg_cloud, msg);
+    pcl::toROSMsg(msg_cloud, msg);
     msg.header.frame_id = "livox_frame"; //this has been done in order to be able to visualize our PointCloud2 message on the RViz visualizer
     msg.header.stamp = ros::Time::now();
     msg.header.seq = partition;
@@ -52,7 +53,7 @@ int main (int argc, char **argv) {
     ros::init (argc, argv, "rviz_pub");
     ros::NodeHandle nh;
     double rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0; 
-    bool mono_color;
+    bool mono_color, enable_rgb;
 
     std::string currPkgDir = ros::package::getPath("calibration");
     std::string data_path;
@@ -64,41 +65,55 @@ int main (int argc, char **argv) {
     nh.getParam("tx", tx);
     nh.getParam("ty", ty);
     nh.getParam("tz", tz);
-    nh.getParam("mono_color", mono_color);
+    nh.getParam("rgb", enable_rgb);
     data_path = currPkgDir + data_path;
 
     ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 1e5);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
-
-    pcl::io::loadPCDFile(data_path, *cloud);
 
     Eigen::Matrix<float, 6, 1> transform;
     transform << (float)rx, (float)ry, (float)rz, (float)tx, (float)ty, (float)tz;
     Eigen::Matrix4f tf_mat = TransformMat(transform);
     cout << tf_mat << endl;
-    pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
 
-    if (mono_color) {
-        for (int idx = 0; idx < cloud->points.size(); ++idx) {
-            cloud->points[idx].intensity = (2 * idx > cloud->points.size()) ? 200 : 40;
-        }
-    }
-
-    sensor_msgs::PointCloud2 msg;
+    sensor_msgs ::PointCloud2 msg;
 
     ros::Rate loop_rate(50);
     size_t msg_size = 1e5;
-    size_t limit = int(cloud->points.size() / msg_size) + 1;
     size_t cnt = 0;
-    while (ros::ok()) {
-        // fltPub.publish(fltMsg);
-        if (cnt < limit) {
-            getMessage(msg, cloud, msg_size, cnt);
-            orgPub.publish(msg);
-            cnt++;
+
+    if (!enable_rgb) {
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+        pcl::io::loadPCDFile(data_path, *cloud);
+        pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
+
+        size_t limit = int(cloud->points.size() / msg_size) + 1;
+        
+        while (ros::ok()) {
+            if (cnt < limit) {
+                getMessage(msg, *cloud, msg_size, cnt);
+                orgPub.publish(msg);
+                cnt++;
+            }
+            ros::spinOnce();
+            loop_rate.sleep();
         }
-        ros::spinOnce();
-        loop_rate.sleep();
+    }
+    else {
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        pcl::io::loadPCDFile(data_path, *cloud);
+        pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
+
+        size_t limit = int(cloud->points.size() / msg_size) + 1;
+        
+        while (ros::ok()) {
+            if (cnt < limit) {
+                getMessage(msg, *cloud, msg_size, cnt);
+                orgPub.publish(msg);
+                cnt++;
+            }
+            ros::spinOnce();
+            loop_rate.sleep();
+        }
     }
     return 0;
 }
