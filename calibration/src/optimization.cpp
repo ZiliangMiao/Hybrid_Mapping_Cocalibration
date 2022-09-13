@@ -113,8 +113,8 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     Int_F intrinsic;
 
     cv::Mat target_view_img;
-    CloudI::Ptr fullview_xyz_cloud(new CloudI);
-    CloudRGB::Ptr input_cloud(new CloudRGB), fullview_rgb_cloud(new CloudRGB);
+    CloudI::Ptr spot_cloud(new CloudI);
+    CloudRGB::Ptr input_cloud(new CloudRGB), spot_rgb_cloud(new CloudRGB);
 
     Mat4F T_mat, T_mat_inv;
     Mat4F pose_mat, pose_mat_inv;
@@ -122,10 +122,10 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     Vec3F lidar_point;
     Vec2F projection;
 
-    fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].fullview_dense_cloud_path;
+    fullview_cloud_path = lidar.poses_files_path_vec[lidar.spot_idx][lidar.view_idx].spot_cloud_path;
 
-    pcl::io::loadPCDFile(fullview_cloud_path, *fullview_xyz_cloud);
-    pcl::copyPointCloud(*fullview_xyz_cloud, *input_cloud);
+    pcl::io::loadPCDFile(fullview_cloud_path, *spot_cloud);
+    pcl::copyPointCloud(*spot_cloud, *input_cloud);
 
     /** Loading optimized parameters and initial transform matrix **/
     extrinsic = Eigen::Map<Param_D>(params.data()).head(K_EXT).cast<float>();
@@ -141,8 +141,8 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     {
         int fullview_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
         CloudRGB::Ptr output_cloud(new CloudRGB);
-        std::vector<int> colored_point_idx(fullview_xyz_cloud->points.size());
-        std::vector<int> blank_point_idx(fullview_xyz_cloud->points.size());
+        std::vector<int> colored_point_idx(spot_cloud->points.size());
+        std::vector<int> blank_point_idx(spot_cloud->points.size());
 
         /** Loading transform matrix between different views **/
         pose_mat_path = lidar.poses_files_path_vec[lidar.spot_idx][fullview_idx].pose_trans_mat_path;
@@ -192,17 +192,17 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         }
         colored_point_idx.erase(std::remove(colored_point_idx.begin(), colored_point_idx.end(), 0), colored_point_idx.end());
         blank_point_idx.erase(std::remove(blank_point_idx.begin(), blank_point_idx.end(), 0), blank_point_idx.end());
-        pcl::copyPointCloud(*input_cloud, colored_point_idx, *output_cloud);
-        pcl::transformPointCloud(*output_cloud, *output_cloud, (T_mat * pose_mat * T_mat_inv));
-	    pcl::copyPointCloud(*input_cloud, blank_point_idx, *input_cloud);
         pcl::transformPointCloud(*input_cloud, *input_cloud, (T_mat * pose_mat * T_mat_inv));
-        *fullview_rgb_cloud += *output_cloud;
-        cout << input_cloud->points.size() << " " << fullview_rgb_cloud->points.size() << " " << fullview_xyz_cloud->points.size() << endl;
+        pcl::copyPointCloud(*input_cloud, colored_point_idx, *output_cloud);
+	    pcl::copyPointCloud(*input_cloud, blank_point_idx, *input_cloud);
+        
+        *spot_rgb_cloud += *output_cloud;
+        cout << input_cloud->points.size() << " " << spot_rgb_cloud->points.size() << " " << spot_cloud->points.size() << endl;
     }
 
-    pcl::transformPointCloud(*fullview_rgb_cloud, *fullview_rgb_cloud, T_mat_inv);
+    pcl::transformPointCloud(*spot_rgb_cloud, *spot_rgb_cloud, T_mat_inv);
 
-    pcl::io::savePCDFileBinary(lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].fullview_rgb_cloud_path, *fullview_rgb_cloud);
+    pcl::io::savePCDFileBinary(lidar.poses_files_path_vec[lidar.spot_idx][lidar.fullview_idx].spot_rgb_cloud_path, *spot_rgb_cloud);
 }
 
 bool CheckCorrespondance(FisheyeProcess &fisheye, LidarProcess &lidar, Vec3D &lid_point) {
@@ -321,7 +321,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 100;
+    options.max_num_iterations = 200;
     options.gradient_tolerance = 1e-6;
     options.function_tolerance = 1e-12;
     options.use_nonmonotonic_steps = true;

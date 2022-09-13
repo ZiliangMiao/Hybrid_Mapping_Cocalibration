@@ -74,14 +74,10 @@ public:
     vector<vector<string>> poses_folder_path_vec;
 
     /** const parameters - original data - images and point clouds **/
-    const bool kDenseCloud = true; /** true means merge the dense cloud and create fullview dense cloud, 
-                                       otherwise it will create icp sparse cloud and fullview sparse cloud to be used in visualization **/
-    const bool kProjByIntensity = true;
-    static const int kNumRecPcds = 250; /** dense point cloud used for reconstruction **/
-    static const int kNumIcpPcds = 20; /** sparse point cloud used for ICP registration **/
+    const int kNumRecPcds = 250; /** dense point cloud used for reconstruction **/
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
-    const float kRadPerPix = (M_PI * 2) / 4000;
+    const float kRadPerPix = (M_PI * 2) / kFlatCols;
     const bool kEdgeAnalysis = true; /** enable edge cloud output in polar/3D space for visualization **/
 
     /** tags and maps **/
@@ -112,20 +108,17 @@ public:
         PoseFilePath(string& spot_path, string& pose_path) {
             this->fullview_recon_folder_path = spot_path + "/fullview_recon";
             this->output_folder_path = pose_path + "/outputs/lidar_outputs";
-            // this->dense_pcds_folder_path = pose_path + "/dense_pcds";
             this->bag_folder_path = pose_path + "/bags";
             this->result_folder_path = pose_path + "/results";
             
             this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";
             this->icp_spot_trans_mat_path = this->fullview_recon_folder_path + "/icp_spot_trans_mat.txt";
-            this->fullview_dense_cloud_path = this->fullview_recon_folder_path + "/fullview_dense_cloud.pcd";
-            this->fullview_sparse_cloud_path = this->fullview_recon_folder_path + "/fullview_sparse_cloud.pcd";
-            this->fullview_rgb_cloud_path = this->fullview_recon_folder_path + "/fullview_rgb_cloud.pcd";
+            this->spot_cloud_path = this->fullview_recon_folder_path + "/spot_cloud.pcd";
+            this->spot_rgb_cloud_path = this->fullview_recon_folder_path + "/spot_rgb_cloud.pcd";
             this->edge_polar_pcd_path = this->fullview_recon_folder_path + "/edge_polar.pcd";
             this->edge_cart_pcd_path = this->fullview_recon_folder_path + "/edge_cart.pcd";
             this->edge_img_path = pose_path + "/edges/lidEdge.png";
-            this->dense_pcd_path = this->output_folder_path + "/lidDense" + to_string(kNumRecPcds) + ".pcd";
-            // this->icp_pcd_path = this->output_folder_path + "/icp_cloud.pcd";
+            this->view_cloud_path = this->output_folder_path + "/view_cloud.pcd";
             this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
             this->flat_img_path = this->output_folder_path + "/flatLidarImage.bmp";
             this->tags_map_path = this->output_folder_path + "/tags_map.txt";
@@ -135,11 +128,11 @@ public:
         }
         /** pose **/
         string output_folder_path;
-        // string dense_pcds_folder_path;
+        // string view_clouds_folder_path;
         string result_folder_path;
         string bag_folder_path;
         string edge_img_path;
-        string dense_pcd_path;
+        string view_cloud_path;
         // string icp_pcd_path;
         string pose_trans_mat_path;
         string flat_img_path;
@@ -151,9 +144,9 @@ public:
         string params_record_path;
         /** spot **/
         string fullview_recon_folder_path;
-        string fullview_dense_cloud_path;
+        string spot_cloud_path;
         string fullview_sparse_cloud_path;
-        string fullview_rgb_cloud_path;
+        string spot_rgb_cloud_path;
         string lio_spot_trans_mat_path;
         string icp_spot_trans_mat_path;
     };

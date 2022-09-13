@@ -36,11 +36,11 @@ using namespace std;
 template <typename PointT>
 void getMessage(sensor_msgs::PointCloud2 &msg,
                 pcl::PointCloud<PointT> &cloud,
-                size_t msg_size,
-                size_t partition) {
-    size_t cloud_size = cloud.size();
+                int msg_size,
+                int partition) {
+    int cloud_size = cloud.size();
     pcl::PointCloud<PointT> msg_cloud;
-    for (size_t i = (partition * msg_size); i < ((partition + 1) * msg_size) && i < cloud_size; ++i) {
+    for (int i = (partition * msg_size); i < ((partition + 1) * msg_size) && i < cloud_size; ++i) {
         msg_cloud.points.push_back(cloud.points[i]);
     }
     pcl::toROSMsg(msg_cloud, msg);
@@ -54,6 +54,7 @@ int main (int argc, char **argv) {
     ros::NodeHandle nh;
     double rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0; 
     bool mono_color, enable_rgb;
+    int msg_size;
 
     std::string currPkgDir = ros::package::getPath("calibration");
     std::string data_path;
@@ -65,6 +66,7 @@ int main (int argc, char **argv) {
     nh.getParam("tx", tx);
     nh.getParam("ty", ty);
     nh.getParam("tz", tz);
+    nh.getParam("msg_size", msg_size);
     nh.getParam("rgb", enable_rgb);
     data_path = currPkgDir + data_path;
 
@@ -78,15 +80,13 @@ int main (int argc, char **argv) {
     sensor_msgs ::PointCloud2 msg;
 
     ros::Rate loop_rate(50);
-    size_t msg_size = 1e5;
-    size_t cnt = 0;
+    int cnt = 0;
 
     if (!enable_rgb) {
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
         pcl::io::loadPCDFile(data_path, *cloud);
         pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
-
-        size_t limit = int(cloud->points.size() / msg_size) + 1;
+        int limit = int(cloud->points.size() / msg_size) + 1;
         
         while (ros::ok()) {
             if (cnt < limit) {
@@ -103,7 +103,7 @@ int main (int argc, char **argv) {
         pcl::io::loadPCDFile(data_path, *cloud);
         pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
 
-        size_t limit = int(cloud->points.size() / msg_size) + 1;
+        int limit = int(cloud->points.size() / msg_size) + 1;
         
         while (ros::ok()) {
             if (cnt < limit) {

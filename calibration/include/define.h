@@ -3,6 +3,7 @@
 
 #define PI_M            (3.14159265358)
 #define THREADS         (16)
+
 #define K_EXT           (6)
 #define K_INT           (10)
 #define KDE_SCALE       (1)

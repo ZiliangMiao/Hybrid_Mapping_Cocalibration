@@ -9,10 +9,10 @@ def draw_registration_result(source, target, transformation):
 
 
 print("Load two point clouds and show initial pose ...")
-# source = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/spot1/fullview_recon/fullview_rgb_cloud.pcd")
-# target = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/spot0/fullview_recon/fullview_rgb_cloud.pcd")
-source = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/fullview_dense_rgb_clouds/fullview_rgb_cloud_spot1.pcd")
-target = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/fullview_dense_rgb_clouds/fullview_rgb_cloud_spot0.pcd")
+# source = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/spot1/fullview_recon/spot_rgb_cloud.pcd")
+# target = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/spot0/fullview_recon/spot_rgb_cloud.pcd")
+source = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/fullview_dense_rgb_clouds/spot_rgb_cloud_spot1.pcd")
+target = o3d.io.read_point_cloud("/home/godm/catkin_ws/src/lidar_fisheye_fusion_github/calibration/data/lh3_global/fullview_dense_rgb_clouds/spot_rgb_cloud_spot0.pcd")
 
 
 if __name__ == "__main__":

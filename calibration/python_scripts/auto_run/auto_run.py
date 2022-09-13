@@ -36,7 +36,7 @@ def _checkFolder(dir):
         os.mkdir(dir)
 
 def CheckFolders():
-    view_folders = ["bags", "all_pcds", "dense_pcds", "icp_pcds",
+    view_folders = ["bags", "all_pcds", "view_clouds", "icp_pcds",
                     "images", "edges", "outputs", "results"]
     _checkFolder(data_path)
     _checkFolder(root_path)

@@ -40,7 +40,7 @@ def DataCleaner(clean_path):
 # def MovePcds(path):
 #     target_length = 250
 #     source_path = os.path.abspath(os.path.join(path, "../all_pcds/"))
-#     target_path = os.path.abspath(os.path.join(path, "../dense_pcds/"))
+#     target_path = os.path.abspath(os.path.join(path, "../view_clouds/"))
 #     print(source_path)
 #     for _, _, files in os.walk(source_path):
 #         start_idx = int((len(files) - target_length) / 2)

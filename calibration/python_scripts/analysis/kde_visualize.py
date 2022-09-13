@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-data_path = data_path = root_path + "/data/lh3_global/spot1/0/outputs"
+data_path = data_path = root_path + "/data/rb1/spot0/0/outputs"
 
 ########################################################################################################################
 # load files #
@@ -32,8 +32,8 @@ def load_data(sample_shape, mode):
 # visualization #
 def visualization(img_rows, img_cols, cam):
 
-    fig, ax = plt.subplots(figsize=(42, 10))
-    ax.scatter(cam[:, 1], img_cols-cam[:, 0])
+    fig, ax = plt.subplots(figsize=(5.12, 5.12))
+    ax.scatter(cam[:, 1], img_cols-cam[:, 0], s=0.1, c='black')
     ax.set_xlim([0, img_cols-1])
     ax.set_ylim([0, img_rows-1])
     plt.show()
@@ -57,20 +57,27 @@ def joint_visualization(img_rows, img_cols, lid, kde):
     # plt.show()
     # plt.close()
 
-    fig, ax = plt.subplots(figsize=(24.48, 20.48))
+    fig, ax = plt.subplots(figsize=(5.12, 5.12))
     
     ax.imshow(lid, cmap=plt.cm.gist_earth_r,
               interpolation='nearest',
               origin="upper",
               )
+
+    ax.set_xlim([0, img_cols-1])
+    ax.set_ylim([0, img_rows-1])
+    plt.show()
+    plt.close()
+
+    fig, ax = plt.subplots(figsize=(5.12, 5.12))
     ax.imshow(kde, cmap=plt.cm.gist_earth_r,
               interpolation='nearest',
               origin="upper",
-              extent=[0, img_cols-1, 0, img_rows-1],
-              alpha = 0.5,)
+              extent=[0, img_cols-1, 0, img_rows-1]
+              )
     ax.set_xlim([0, img_cols-1])
     ax.set_ylim([0, img_rows-1])
-    plt.savefig("/home/halsey/Desktop/pytest.png")
+    # plt.savefig("/home/halsey/Desktop/pytest.png")
     plt.show()
 
 
@@ -86,8 +93,8 @@ if __name__=="__main__":
     lid_mode = "lid"
     # load and visualize
     
-    # cam = load_data(cam_sample_shape, "cam")
-    # visualization(img_rows, img_cols, cam)
+    cam = load_data(cam_sample_shape, "cam")
+    visualization(img_rows, img_cols, cam)
 
     lid = load_data(lid_sample_shape, "lid")
     kde = load_data(cam_sample_shape, "kde")

@@ -64,11 +64,6 @@ FisheyeProcess::FisheyeProcess() {
             int v_degree = this->view_angle_init + this->view_angle_step * j;
             this -> degree_map[j] = v_degree;
             this -> poses_folder_path_vec[i][j] = this->kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
-        }
-    }
-
-    for (int i = 0; i < this -> num_spots; ++i) {
-        for (int j = 0; j < this -> num_views; ++j) {
             struct PoseFilePath pose_file_path(poses_folder_path_vec[i][j]);
             this -> poses_files_path_vec[i][j] = pose_file_path;
         }
@@ -393,6 +388,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     kde.Evaluate(query, kde_estimations);
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
+
     // string kde_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
     // ofstream outfile;
     // outfile.open(kde_txt_path, ios::out);
@@ -408,6 +404,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     //     }
     // }
     // outfile.close();
+
     cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
          <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
     return img;

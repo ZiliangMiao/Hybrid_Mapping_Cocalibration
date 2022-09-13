@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from scipy.interpolate import griddata, interpolate
+from scipy.interpolate import interpolate
 import os, sys
 
-dataset = "lh3_global"
+# dataset = "lh3_global"
+dataset = "bs_hall"
 # dataset = "crf"
 # dataset = "rb1"
 # dataset = "parking"
@@ -52,8 +53,10 @@ def visualization(data, name, bw, pt_label=False):
     else:
         plt.scatter(p1, f(p1), c='r')
         plt.scatter(p2, f(p2), c='g')
-    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str(format(f(p2)/scale,".5e"))))
-    plt.title(name)
+    print(str(format(f(p2)/scale,".5e")))
+    # plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)+", max="+str(format(f(p2)/scale,".5e"))))
+    plt.plot(plot_x, f(plot_x), label=("bw="+str(bw)))
+    # plt.title(name)
 
 
 def visualization3D(data, name="2-axis", cubic_interp=False):
@@ -75,7 +78,7 @@ def visualization3D(data, name="2-axis", cubic_interp=False):
     X, Y = np.meshgrid(x, y)
     Z = z.reshape(int(np.sqrt(z.size)), int(np.sqrt(z.size)))
     ax.plot_surface(X, Y, -Z, rstride=1, cstride=1, cmap=plt.get_cmap('viridis'))
-    plt.title(name)
+    # plt.title(name)
 
 
 if __name__=="__main__":
@@ -91,7 +94,8 @@ if __name__=="__main__":
         for idx1 in range(6):
             bw_list = [16, 4, 1]
             for i in range(len(bw_list) - 2):
-                plt.figure(figsize=(10.24, 7.68))
+                plt.figure(figsize=(4.80, 3.20))
+                plt.tick_params(labelsize=11)
                 data = load_data(tag1=names[idx1], bw=bw_list[i], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i], pt_label=True)
                 data = load_data(tag1=names[idx1], bw=bw_list[i+1], spot=int(sys.argv[1]))
@@ -99,8 +103,8 @@ if __name__=="__main__":
                 data = load_data(tag1=names[idx1], bw=bw_list[i+2], spot=int(sys.argv[1]))
                 visualization(data, names[idx1], bw=bw_list[i+2], pt_label=False)
                 plt.legend()
-                # plt.show()
-                plt.savefig("/home/isee/catkin_ws/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
+                plt.show()
+                # plt.savefig("/home/isee/catkin_ws/cost_plot/" + names[idx1] + "_bw_" + str(bw_list[i]) + "_" + str(bw_list[i+1]) + ".png")
                 plt.close()
     if (len(sys.argv) > 2):
         idx1 = int(sys.argv[1])

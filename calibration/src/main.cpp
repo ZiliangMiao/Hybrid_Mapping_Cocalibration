@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
     bool kCreateDensePcd = false;
     bool kViewRegistration = false;
     bool kFullViewMapping = false;
-    bool kFullViewColorization = false;
+    bool kSpotColorization = false;
     bool kSpotRegistration = false;
     bool kGlobalMapping = false;
     bool kGlobalColoredMapping = false;
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     nh.param<bool>("switch/kCreateDensePcd", kCreateDensePcd, false);
     nh.param<bool>("switch/kViewRegistration", kViewRegistration, false);
     nh.param<bool>("switch/kFullViewMapping", kFullViewMapping, false);
-    nh.param<bool>("switch/kFullViewColorization", kFullViewColorization, false);
+    nh.param<bool>("switch/kSpotColorization", kSpotColorization, false);
     nh.param<bool>("switch/kSpotRegistration", kSpotRegistration, false);
     nh.param<bool>("switch/kGlobalMapping", kGlobalMapping, false);
     nh.param<bool>("switch/kGlobalColoredMapping", kGlobalColoredMapping, false);
@@ -96,9 +96,6 @@ int main(int argc, char** argv) {
             string fullview_path = spot_path + "/fullview_recon";
             CheckFolder(view_path);
             CheckFolder(view_path + "/bags");
-            // CheckFolder(view_path + "/all_pcds");
-            // CheckFolder(view_path + "/dense_pcds");
-            // CheckFolder(view_path + "/icp_pcds");
             CheckFolder(view_path + "/images");
             CheckFolder(view_path + "/edges");
             CheckFolder(view_path + "/outputs");
@@ -110,53 +107,37 @@ int main(int argc, char** argv) {
     }
 
     /***** Registration, Colorization and Mapping *****/
-    /** view **/
-    if (kCreateDensePcd) {
-        cout << "----------------- Merge Dense Point Cloud ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                for (int j = 0; j < lidar.num_views; ++j) {
-                    lidar.SetViewIdx(j);
+    for (int i = 0; i < lidar.num_spots; ++i) {
+        if (kOneSpot == -1 || kOneSpot == i) {
+            lidar.SetSpotIdx(i);
+            for (int j = 0; j < lidar.num_views; ++j) {
+                lidar.SetViewIdx(j);
+                if (kCreateDensePcd) {
+                    cout << "----------------- Merge Dense Point Cloud ---------------------" << endl;
                     lidar.CreateDensePcd();
                 }
             }
-        }
-    }
-    
-    if (kViewRegistration) {
-        cout << "----------------- View Registration ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                for (int j = 0; j < lidar.num_views; ++j) {
-                    if (j == lidar.fullview_idx) {
-                        continue;
-                    }
-                    lidar.SetViewIdx(j);
+            for (int j = 0; j < lidar.num_views; ++j) {
+                lidar.SetViewIdx(j);
+                if (kViewRegistration && j != lidar.fullview_idx) {
+                    cout << "----------------- View Registration ---------------------" << endl;
                     lidar.ViewRegistration();
                 }
             }
-        }
-    }
-    /** full view **/
-    if (kFullViewMapping) {
-        cout << "----------------- Full View Mapping ---------------------" << endl;
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.FullViewMapping(); /** generate fullview pcds **/
+            if (kFullViewMapping) {
+                cout << "----------------- Full View Mapping ---------------------" << endl;
+                lidar.FullViewMapping();
             }
         }
     }
 
     /***** Data Process *****/
-    if (kLidarFlatProcess) {
-        for (int i = 0; i < lidar.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
+    
+    for (int i = 0; i < lidar.num_spots; ++i) {
+        if (kOneSpot == -1 || kOneSpot == i) {
+            if (kLidarFlatProcess) {
                 CloudI::Ptr lidar_cart_cloud(new CloudI);
                 CloudI::Ptr lidar_polar_cloud(new CloudI);
-
                 lidar.SetSpotIdx(i);
                 lidar.SetViewIdx(lidar.fullview_idx);
                 lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
@@ -165,12 +146,7 @@ int main(int argc, char** argv) {
                 lidar.EdgeToPixel();
                 lidar.PixLookUp(lidar_cart_cloud);
             }
-        }
-    }
-
-    if (kFisheyeFlatProcess) {
-        for (int i = 0; i < fisheye.num_spots; ++i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
+            if (kFisheyeFlatProcess) {
                 CloudRGB::Ptr fisheye_pixel_cloud(new CloudRGB);
                 CloudRGB::Ptr fisheye_polar_cloud(new CloudRGB);
                 fisheye.SetSpotIdx(i); /** spot idx **/
@@ -183,6 +159,7 @@ int main(int argc, char** argv) {
             }
         }
     }
+    
 
     /***** Calibration and Optimization Cost Analysis *****/
     if (kCeresOptimization) {
@@ -235,9 +212,9 @@ int main(int argc, char** argv) {
                     double bandwidth = bw[i];
                     vector<double> init_params_vec(params_calib);
                     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, false);
-                    if (i == bw.size() - 1) {
-                        params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, true);
-                    }
+                    // if (i == bw.size() - 1) {
+                    //     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, true);
+                    // }
                     if (kParamsAnalysis) {
                         CorrelationAnalysis(fisheye, lidar, spot_vec, init_params_vec, params_calib, bandwidth);
                     }
@@ -250,24 +227,7 @@ int main(int argc, char** argv) {
 
     /***** Registration, Colorization and Mapping *****/
     /** spot **/
-    if (kSpotRegistration) {
-        cout << "----------------- Spot Registration ---------------------" << endl;
-        for (int i = lidar.num_spots - 1; i > 0; --i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
-            }
-        }
-        
-        // for (int i = lidar.num_spots - 1; i > 0; --i) {
-        //     if (kOneSpot == -1 || kOneSpot == i) {
-        //         lidar.SetSpotIdx(i);
-        //         lidar.SpotRegAnalysis(0, lidar.spot_idx);
-        //     }
-        // }
-    }
-
-    if (kFullViewColorization) {
+        if (kSpotColorization) {
         cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
         // lh3_global:
         // params_calib = {
@@ -285,6 +245,14 @@ int main(int argc, char** argv) {
         //         1986.768694, -691.831611, 37.178636, -6.742971, 0.362401,
         //         1.000177, -0.005878, 0.006144
         // };
+        // bs_hall:
+        // params_calib = {
+        //         0.000990, -3.138274, 1.560729,
+        //         0.291672, -0.005141, 0.038923,
+        //         1021.553425, 1196.789762,
+        //         1995.359807, -666.475065, -13.940682, 20.000000, -4.049823,
+        //         0.998262, -0.005735, 0.005314
+        // };
         
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -295,6 +263,23 @@ int main(int argc, char** argv) {
                 Visualization3D(fisheye, lidar, params_calib);
             }
         }
+    }
+
+    if (kSpotRegistration) {
+        cout << "----------------- Spot Registration ---------------------" << endl;
+        for (int i = lidar.num_spots - 1; i > 0; --i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                lidar.SpotRegistration();
+            }
+        }
+        
+        // for (int i = lidar.num_spots - 1; i > 0; --i) {
+        //     if (kOneSpot == -1 || kOneSpot == i) {
+        //         lidar.SetSpotIdx(i);
+        //         lidar.SpotRegAnalysis(0, lidar.spot_idx);
+        //     }
+        // }
     }
 
     if (kGlobalMapping) {
