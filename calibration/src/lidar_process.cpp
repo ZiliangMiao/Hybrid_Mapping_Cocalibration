@@ -654,11 +654,20 @@ void LidarProcess::CreateDensePcd() {
     /** invalid point filter **/
     RemoveInvalidPoints(view_cloud);
 
+    /** radius outlier filter **/
+    pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
+    radius_outlier_filter.setInputCloud(view_cloud);
+    radius_outlier_filter.setRadiusSearch(0.1);
+    radius_outlier_filter.setMinNeighborsInRadius(100);
+    radius_outlier_filter.setNegative(false);
+    radius_outlier_filter.setKeepOrganized(false);
+    radius_outlier_filter.filter(*view_cloud);
+
     /** check the pass through filtered point cloud size **/
-    cout << "size of cloud after a condition filter:" << view_cloud->points.size() << endl;
+    cout << "size of cloud:" << view_cloud->points.size() << endl;
 
     pcl::io::savePCDFileBinary(pcd_path, *view_cloud);
-    cout << "Create Dense Point Cloud File Successfully!" << endl;
+    cout << "view cloud generated." << endl;
 }
 
 void LidarProcess::ViewRegistration() {
@@ -681,7 +690,7 @@ void LidarProcess::ViewRegistration() {
     Mat4F align_trans_mat = init_trans_mat;
 
     /** ICP **/
-    align_trans_mat = Align(view_cloud_tgt, view_cloud_src, init_trans_mat, 1, false);
+    align_trans_mat = Align(view_cloud_tgt, view_cloud_src, init_trans_mat, 0, false);
     CloudI::Ptr view_cloud_icp_trans(new CloudI);
     pcl::transformPointCloud(*view_cloud_src, *view_cloud_icp_trans, align_trans_mat);
 
@@ -754,19 +763,6 @@ void LidarProcess::FullViewMapping() {
     /** check the original point cloud size **/
     int fullview_cloud_size = spot_cloud->points.size();
     cout << "size of original cloud:" << fullview_cloud_size << endl;
-
-    /** radius outlier filter **/
-    pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
-    radius_outlier_filter.setInputCloud(spot_cloud);
-    radius_outlier_filter.setRadiusSearch(0.1);
-    radius_outlier_filter.setMinNeighborsInRadius(100);
-    radius_outlier_filter.setNegative(false);
-    radius_outlier_filter.setKeepOrganized(false);
-    radius_outlier_filter.filter(*spot_cloud);
-
-    /** radius outlier filter cloud size check **/
-    int radius_outlier_cloud_size = spot_cloud->points.size();
-    cout << "radius outlier filtered cloud size:" << spot_cloud->points.size() << endl;
 
     pcl::io::savePCDFileBinary(spot_cloud_path, *spot_cloud);
     cout << "Spot cloud generated." << endl;

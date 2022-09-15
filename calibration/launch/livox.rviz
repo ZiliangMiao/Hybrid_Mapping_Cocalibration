@@ -54,7 +54,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: false
-    - Alpha: 0.014999999664723873
+    - Alpha: 0.04500000178813934
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
         Max Value: 7.475579738616943
@@ -64,7 +64,7 @@ Visualization Manager:
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color Transformer: RGB8
       Decay Time: 10000
       Enabled: true
       Invert Rainbow: false
@@ -119,7 +119,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 16.80499839782715
+      Distance: 23.609811782836914
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -134,10 +134,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.009796621277928352
+      Pitch: 0.1647965908050537
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 1.0549978017807007
+      Yaw: 1.2899975776672363
     Saved:
       - Class: rviz/Orbit
         Distance: 28.431976318359375
