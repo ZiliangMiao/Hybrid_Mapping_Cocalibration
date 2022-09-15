@@ -699,56 +699,77 @@ void LidarProcess::ViewRegistration() {
 
 void LidarProcess::FullViewMapping() {
     cout << "----- LiDAR: CreateFullviewPcd -----" << " Spot Index: " << spot_idx << endl;
-    /** target and fullview cloud path **/
-    string tgt_view_cloud_path = poses_files_path_vec[spot_idx][fullview_idx].view_cloud_path;
-    string fullview_cloud_path = poses_files_path_vec[spot_idx][fullview_idx].spot_cloud_path;
+    /** spot cloud **/
+    CloudI::Ptr spot_cloud(new CloudI);
+    string spot_cloud_path = poses_files_path_vec[spot_idx][fullview_idx].spot_cloud_path;
 
-    /** load full view point cloud **/
-    CloudI::Ptr fullview_cloud(new CloudI);
-    LoadPcd(tgt_view_cloud_path, *fullview_cloud, "view");
-    cout << "Degree 0 Full View Dense Pcd Loaded!" << endl;
+    vector<Mat4F> pose_trans_vec (5, Mat4F::Identity());
+    vector<float> eval_radius (5, 0);
+    float eval_sum = 0;
+    for (int i = 0; i < num_views; i++) {
+        if (i != fullview_idx) {
+            /** load icp pose transform matrix **/
+            string pose_trans_mat_path = poses_files_path_vec[spot_idx][i].pose_trans_mat_path;
+            Mat4F pose_trans_mat = LoadTransMat(pose_trans_mat_path);
+            cout << "Degree " << degree_map[i] << " ICP Mat: " << "\n" << pose_trans_mat << endl;
+            pose_trans_vec[i] = pose_trans_mat;
 
-    for(int i = 0; i < num_views; i++) {
-        if (i == fullview_idx) {
-            continue;
+            Mat3F rot_matrix = pose_trans_mat.topLeftCorner(3, 3);
+            float radius = (Vec4F(0, 0, 0.15, -1) + pose_trans_mat.col(3)).norm();
+            eval_radius[i] = radius;
+            eval_sum += radius;
         }
-        /** load icp pose transform matrix **/
-        string pose_trans_mat_path = poses_files_path_vec[spot_idx][i].pose_trans_mat_path;
-        Mat4F pose_trans_mat = LoadTransMat(pose_trans_mat_path);
-        cout << "Degree " << degree_map[i] << " ICP Mat: " << "\n" << pose_trans_mat << endl;
+    }
+
+    for (int i = 0; i < num_views; i++) {
+        /** matrix check **/
+        if (i == 0 || i == num_views - 1) {
+            if (abs((eval_radius[i] - 0.15f) > 0.03)) {
+                PCL_INFO("radius check failed for degree %i.\n", degree_map[i]);
+                Mat4F remap_mat = (i == 0) ? pose_trans_vec[num_views - 1].inverse() : pose_trans_vec[0].inverse();
+                for (int j = 1; j < fullview_idx; j++) {
+                    if (i == 0) {
+                        remap_mat = remap_mat * pose_trans_vec[fullview_idx + j] * pose_trans_vec[fullview_idx - j];
+                    }
+                    else {
+                        remap_mat = remap_mat * pose_trans_vec[fullview_idx - j] * pose_trans_vec[fullview_idx + j];
+                    }
+                }
+                    
+                cout << "Re-calculated matrix: \n" << remap_mat << endl;
+                pose_trans_vec[i] = remap_mat;
+            }
+        }
 
         /** transform point cloud **/
         CloudI::Ptr view_cloud(new CloudI);
         string view_cloud_path = poses_files_path_vec[spot_idx][i].view_cloud_path;
         LoadPcd(view_cloud_path, *view_cloud, "view");
-
-        Mat3F rot_matrix = pose_trans_mat.topLeftCorner(3, 3);
-        cout << "radius: " << (Vec4F(0, 0, 0.15, -1) + pose_trans_mat.col(3)).norm() << endl;
-        cout << "angle: " << rot_matrix.eulerAngles(2,1,0).transpose() << endl;
-
-        pcl::transformPointCloud(*view_cloud, *view_cloud, pose_trans_mat);
-        *fullview_cloud = *fullview_cloud + *view_cloud;
+        if (i != fullview_idx) {
+            pcl::transformPointCloud(*view_cloud, *view_cloud, pose_trans_vec[i]);
+        }
+        *spot_cloud = *spot_cloud + *view_cloud;
     }
 
     /** check the original point cloud size **/
-    int fullview_cloud_size = fullview_cloud->points.size();
+    int fullview_cloud_size = spot_cloud->points.size();
     cout << "size of original cloud:" << fullview_cloud_size << endl;
 
     /** radius outlier filter **/
     pcl::RadiusOutlierRemoval<PointI> radius_outlier_filter;
-    radius_outlier_filter.setInputCloud(fullview_cloud);
+    radius_outlier_filter.setInputCloud(spot_cloud);
     radius_outlier_filter.setRadiusSearch(0.1);
     radius_outlier_filter.setMinNeighborsInRadius(100);
     radius_outlier_filter.setNegative(false);
     radius_outlier_filter.setKeepOrganized(false);
-    radius_outlier_filter.filter(*fullview_cloud);
+    radius_outlier_filter.filter(*spot_cloud);
 
     /** radius outlier filter cloud size check **/
-    int radius_outlier_cloud_size = fullview_cloud->points.size();
-    cout << "radius outlier filtered cloud size:" << fullview_cloud->points.size() << endl;
+    int radius_outlier_cloud_size = spot_cloud->points.size();
+    cout << "radius outlier filtered cloud size:" << spot_cloud->points.size() << endl;
 
-    pcl::io::savePCDFileBinary(fullview_cloud_path, *fullview_cloud);
-    cout << "Create Full View Point Cloud File Successfully!" << endl;
+    pcl::io::savePCDFileBinary(spot_cloud_path, *spot_cloud);
+    cout << "Spot cloud generated." << endl;
 }
 
 void LidarProcess::SpotRegistration() {
