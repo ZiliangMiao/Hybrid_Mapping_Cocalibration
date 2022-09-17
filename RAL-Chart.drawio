@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-09-17T16:41:32.298Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36" etag="lRgoqToXdaaqQy0UIF7q" version="20.3.1" type="github">
+<mxfile host="app.diagrams.net" modified="2022-09-17T16:43:22.371Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36" etag="b5cu3RbT12Yj-1h2yAVX" version="20.3.1" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="236" dy="573" grid="1" gridSize="5" guides="1" tooltips="1" connect="1" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="713" dy="830" grid="1" gridSize="5" guides="1" tooltips="1" connect="1" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -1270,7 +1270,7 @@
           <mxGeometry x="10" y="48.39628607311039" width="125" height="35" as="geometry" />
         </mxCell>
         <mxCell id="MvPKE6Y9ST5NAioB9Xak-21" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Sync&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=default;fontSize=10;rotation=0;gradientColor=none;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
-          <mxGeometry x="52.5" y="21.372628593999085" width="40" height="20" as="geometry" />
+          <mxGeometry x="52.5" y="24.572628593999085" width="40" height="20" as="geometry" />
         </mxCell>
         <mxCell id="MvPKE6Y9ST5NAioB9Xak-22" value="2-aixs Gimbal Mount" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#BAC8D3;strokeColor=default;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
           <mxGeometry x="10" y="189.5685240591041" width="125" height="35" as="geometry" />
