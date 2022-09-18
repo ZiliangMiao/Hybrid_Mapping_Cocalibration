@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-09-18T08:21:22.466Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36" etag="RNiw7vKBAccpQpbB1U0f" version="20.3.2" type="github">
+<mxfile host="app.diagrams.net" modified="2022-09-18T09:52:09.784Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36" etag="oqYsXuPKj9026tB1RP9y" version="20.3.2" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="-206" dy="322" grid="1" gridSize="5" guides="1" tooltips="1" connect="1" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="-620" dy="96" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -1252,12 +1252,12 @@
           <mxGeometry x="10" y="234.57" width="125" height="35" as="geometry" />
         </mxCell>
         <mxCell id="MvPKE6Y9ST5NAioB9Xak-18" value="Livox Mid-360 LiDAR" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#BAC8D3;strokeColor=#36393d;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
-          <mxGeometry x="10" y="83.3939574689085" width="125" height="35" as="geometry" />
+          <mxGeometry x="10" y="89.5739574689085" width="125" height="35" as="geometry" />
         </mxCell>
         <mxCell id="MvPKE6Y9ST5NAioB9Xak-19" value="Fisheye Camera" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#BAC8D3;strokeColor=#23445d;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
           <mxGeometry x="10" y="130.67010850223377" width="125" height="35" as="geometry" />
         </mxCell>
-        <mxCell id="MvPKE6Y9ST5NAioB9Xak-20" value="Integrated IMU" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#BAC8D3;strokeColor=#36393d;dashed=1;dashPattern=1 1;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
+        <mxCell id="MvPKE6Y9ST5NAioB9Xak-20" value="Integrated IMU" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#BAC8D3;strokeColor=#36393d;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
           <mxGeometry x="10" y="48.39628607311039" width="125" height="35" as="geometry" />
         </mxCell>
         <mxCell id="MvPKE6Y9ST5NAioB9Xak-21" value="&lt;font style=&quot;font-size: 10px;&quot;&gt;Sync&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=default;fontSize=10;rotation=0;gradientColor=none;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
@@ -1281,7 +1281,7 @@
         <mxCell id="ihG7ee388sOC7R-7oaYt-10" value="&lt;font style=&quot;font-size: 16px&quot;&gt;Co-calibration&lt;/font&gt;" style="text;strokeColor=none;fillColor=default;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;" parent="ihG7ee388sOC7R-7oaYt-1" vertex="1">
           <mxGeometry x="15" width="100" height="26.990553306342775" as="geometry" />
         </mxCell>
-        <mxCell id="ihG7ee388sOC7R-7oaYt-8" value="Rounds Optimization" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;strokeColor=#23445d;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
+        <mxCell id="ihG7ee388sOC7R-7oaYt-8" value="Iterative Optimization" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;strokeColor=#23445d;" parent="MvPKE6Y9ST5NAioB9Xak-14" vertex="1">
           <mxGeometry x="159.3699999999999" y="224.5728744939271" width="130" height="45" as="geometry" />
         </mxCell>
         <mxCell id="ihG7ee388sOC7R-7oaYt-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;" parent="MvPKE6Y9ST5NAioB9Xak-14" source="ihG7ee388sOC7R-7oaYt-6" target="ihG7ee388sOC7R-7oaYt-8" edge="1">
