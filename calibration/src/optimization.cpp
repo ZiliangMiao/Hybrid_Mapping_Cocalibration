@@ -87,8 +87,8 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         if (sqrt(pow(u-intrinsic(0),2)+pow(v-intrinsic(1),2)) > 325 &&
             sqrt(pow(u-intrinsic(0),2)+pow(v-intrinsic(1),2)) < 1125) {
             raw_image.at<cv::Vec3b>(u, v)[0] = 0;    // b
-            raw_image.at<cv::Vec3b>(u, v)[1] = 0;    // g
-            raw_image.at<cv::Vec3b>(u, v)[2] = 255;  // r
+            raw_image.at<cv::Vec3b>(u, v)[1] = 255;    // g
+            raw_image.at<cv::Vec3b>(u, v)[2] = 0;  // r
             outfile << u << "," << v << endl;
         }
     }
@@ -102,7 +102,8 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     /** generate fusion image **/
     CloudRGB::Ptr fisheye_pixel_cloud(new CloudRGB);
     CloudRGB::Ptr fisheye_polar_cloud(new CloudRGB);
-    fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud, raw_image, intrinsic);
+    // fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud, raw_image, intrinsic);
+    fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud, raw_image, fisheye.int_);
     fisheye.SphereToPlane(fisheye_polar_cloud, bandwidth);
 }
 
@@ -321,7 +322,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
     options.minimizer_progress_to_stdout = true;
     options.num_threads = std::thread::hardware_concurrency();
-    options.max_num_iterations = 200;
+    options.max_num_iterations = 100;
     options.gradient_tolerance = 1e-6;
     options.function_tolerance = 1e-12;
     options.use_nonmonotonic_steps = true;

@@ -43,6 +43,7 @@ int main(int argc, char** argv) {
     bool kCeresOptimization = false;
     bool kMultiSpotsOptimization = false;
     bool kParamsAnalysis = false;
+    bool kGlobalUniformSampling = false;
     int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
     nh.param<bool>("switch/kLidarFlatProcess", kLidarFlatProcess, false);
@@ -57,13 +58,14 @@ int main(int argc, char** argv) {
     nh.param<bool>("switch/kCeresOptimization", kCeresOptimization, false);
     nh.param<bool>("switch/kMultiSpotsOptimization", kMultiSpotsOptimization, false);
     nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);
+    nh.param<bool>("switch/kGlobalUniformSampling", kGlobalUniformSampling, false);
     nh.param<int>("spot/kOneSpot", kOneSpot, -1);
 
     google::InitGoogleLogging(argv[0]);
 
     /***** Initial Parameters *****/
     std::vector<double> params_init = {
-        M_PI, 0.00, -M_PI/2, /** Rx Ry Rz **/
+        M_PI + 0.02, 0.02, -M_PI/2, /** Rx Ry Rz **/
         0.27, 0.00, 0.03, /** tx ty tz **/
         1023.0, 1201.0, /** u0 v0 **/
         616.7214056132 * M_PI, -616.7214056132, 0.0, 0.0, 0.0,
@@ -165,7 +167,7 @@ int main(int argc, char** argv) {
     if (kCeresOptimization) {
         cout << "----------------- Ceres Optimization ---------------------" << endl;
         std::vector<double> lb(dev.size()), ub(dev.size());
-        std::vector<double> bw = {16, 4, 1};
+        std::vector<double> bw = {32, 16, 4, 1};
         for (int i = 0; i < dev.size(); ++i) {
             ub[i] = params_init[i] + dev[i];
             lb[i] = params_init[i] - dev[i];
@@ -195,7 +197,7 @@ int main(int argc, char** argv) {
         }
 
         bool kParamsAnalysis = false;
-        ros::param::get("switch/kParamsAnalysis", kParamsAnalysis);
+        ros::param::get("switch/kAnalysis", kParamsAnalysis);
 
         for (int spot = 0; spot < lidar.num_spots; ++spot) {
             if (kOneSpot == -1 || kOneSpot == spot) {
@@ -236,7 +238,7 @@ int main(int argc, char** argv) {
         //         1022.412883, 1199.429484,       /** u0, v0 **/
         //         1995.940476, -696.447201, 27.426648, 2.044011, -1.568044, 
         //         0.999972, -0.008120, 0.007628
-        // };
+        // }
         // parking:
         // params_calib = {
         //         0.001335, -3.139391, 1.559892,
@@ -267,30 +269,33 @@ int main(int argc, char** argv) {
 
     if (kSpotRegistration) {
         cout << "----------------- Spot Registration ---------------------" << endl;
-        for (int i = lidar.num_spots - 1; i > 0; --i) {
-            if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
-            }
-        }
-        
         // for (int i = lidar.num_spots - 1; i > 0; --i) {
         //     if (kOneSpot == -1 || kOneSpot == i) {
         //         lidar.SetSpotIdx(i);
-        //         lidar.SpotRegAnalysis(0, lidar.spot_idx);
+        //         lidar.SpotRegistration();
         //     }
         // }
+        
+        bool kSpotAnalysis = false;
+        ros::param::get("switch/kAnalysis", kSpotAnalysis);
+
+        for (int i = lidar.num_spots - 1; i > 0; --i) {
+            if (kOneSpot == -1 || kOneSpot == i) {
+                lidar.SetSpotIdx(i);
+                lidar.SpotRegAnalysis(0, lidar.spot_idx, kSpotAnalysis);
+            }
+        }
     }
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
         // lidar.MappingEval();
-        lidar.GlobalMapping();
+        lidar.GlobalMapping(kGlobalUniformSampling);
     }
 
     if (kGlobalColoredMapping) {
         cout << "----------------- Global Colored Mapping ---------------------" << endl;
-        lidar.GlobalColoredMapping();
+        lidar.GlobalColoredMapping(kGlobalUniformSampling);
     }
 
     return 0;

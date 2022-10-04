@@ -9,10 +9,10 @@ import subprocess
 import numpy as np
 from threading import Timer
 
-dataset_name = "bs_hall"
+dataset_name = "room"
 num_gimbal_step = 25
 num_views = 5
-num_spots = 5
+num_spots = 1
 
 gimbal_delay = 10
 view_delay = 30
@@ -36,8 +36,7 @@ def _checkFolder(dir):
         os.mkdir(dir)
 
 def CheckFolders():
-    view_folders = ["bags", "all_pcds", "view_clouds", "icp_pcds",
-                    "images", "edges", "outputs", "results"]
+    view_folders = ["bags", "images", "edges", "outputs", "results"]
     _checkFolder(data_path)
     _checkFolder(root_path)
     for spot_idx in range(num_spots):

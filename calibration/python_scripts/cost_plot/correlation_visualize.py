@@ -5,9 +5,9 @@ from scipy.interpolate import interpolate
 import os, sys
 
 # dataset = "lh3_global"
-dataset = "bs_hall"
+# dataset = "bs_hall"
 # dataset = "crf"
-# dataset = "rb1"
+dataset = "rb1"
 # dataset = "parking"
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
 data_path = root_path + "/data/" + dataset + "/log"

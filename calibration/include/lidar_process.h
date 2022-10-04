@@ -191,15 +191,15 @@ public:
     /***** Registration and Mapping *****/
     Mat4F Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz);
     void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float uniform_radius, float max_range);
-    void SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx);
+    void SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAnalysis);
 
     void CreateDensePcd();
     void ViewRegistration();
     void FullViewMapping();
     void SpotRegistration();
     void FineToCoarseReg();
-    void GlobalColoredMapping();
-    void GlobalMapping();
+    void GlobalColoredMapping(bool kGlobalUniformSampling);
+    void GlobalMapping(bool kGlobalUniformSampling);
     void MappingEval();
 
     double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
