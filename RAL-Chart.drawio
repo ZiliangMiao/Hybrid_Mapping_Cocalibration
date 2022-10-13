@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-10-13T06:16:33.880Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36" etag="UMC5Sii294VT3FNU310P" version="20.4.0" type="github">
+<mxfile host="app.diagrams.net" modified="2022-10-13T06:23:10.501Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36" etag="UJ-GQGWjuOS-Kkc6J9AV" version="20.4.0" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="2627" dy="1415" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="1063" dy="573" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -1582,22 +1582,22 @@
           <mxGeometry x="506.13" y="2118.2799999999997" width="125" height="33.44" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-67" value="" style="rounded=1;whiteSpace=wrap;html=1;gradientColor=none;fillColor=none;dashed=1;glass=0;shadow=0;sketch=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="186" y="1564.91" width="455" height="75.84" as="geometry" />
+          <mxGeometry x="180" y="1560" width="460" height="85" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-68" value="Stationary scanning" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="341.0006451612903" y="1570.75" width="60" height="65" as="geometry" />
+          <mxGeometry x="336.8" y="1570.75" width="60" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-69" value="&amp;nbsp;Planning for viewpoints in ROI" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="266.0000000000001" y="1570.75" width="60" height="65" as="geometry" />
+          <mxGeometry x="263.4" y="1570.75" width="60" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-70" value="Fine mapping in ROI" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="416" y="1570.75" width="55" height="65" as="geometry" />
+          <mxGeometry x="410.2" y="1570.75" width="55" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-71" value="Map registration &amp;amp; colorizaton" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="482.8800000000001" y="1570.75" width="77.5" height="65" as="geometry" />
+          <mxGeometry x="478.6" y="1570.75" width="78" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-72" value="Mapping Quality Inspection" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="575.9996774193548" y="1570.75" width="60" height="65" as="geometry" />
+          <mxGeometry x="570" y="1570.75" width="60" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-73" value="" style="endArrow=classic;html=1;rounded=0;exitX=1.003;exitY=0.496;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.001;entryY=0.495;entryDx=0;entryDy=0;entryPerimeter=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" source="GsMirqj3LKlR-epmJSQw-74" target="GsMirqj3LKlR-epmJSQw-69" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -1606,7 +1606,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-74" value="Global coarse mapping (SLAM)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="193.5" y="1570.75" width="60" height="65" as="geometry" />
+          <mxGeometry x="190" y="1570" width="60" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-75" value="" style="endArrow=classic;html=1;rounded=0;exitX=1.003;exitY=0.496;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.004;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" target="GsMirqj3LKlR-epmJSQw-70" edge="1">
           <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -1633,7 +1633,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-79" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Scanning &amp;amp; Mapping&lt;/span&gt;" style="text;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;fillColor=#FFFFFF;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="476" y="1545" width="165" height="22" as="geometry" />
+          <mxGeometry x="465" y="1548.44" width="165" height="15" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-90" value="&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="500" y="1670" width="130" height="110" as="geometry" />
