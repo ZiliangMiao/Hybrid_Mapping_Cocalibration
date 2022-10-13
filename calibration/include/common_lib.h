@@ -148,7 +148,6 @@ void SaveResults(std::string &record_path, std::vector<double> params, double ba
                 "Final cost: " + to_string(final_cost) + "\n";
     }
     
-    
     write.open(record_path, mode);
     write << output << endl;
     write.close();

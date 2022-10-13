@@ -22,10 +22,10 @@ def visualization(data, type):
     
 
 if __name__=="__main__":
-    # names = ["rx", "ry", "rz",
-    #         "tx", "ty", "tz"]
-    names = ["rx", "rz",
-            "tx", "tz"]
+    names = ["rx", "ry", "rz",
+            "tx", "ty", "tz"]
+    # names = ["rx", "rz",
+    #         "tx", "tz"]
     # plt.style.use("seaborn-dark-palette")
     for idx in range(len(names)):
         plt.figure(figsize=(4.80, 3.20))

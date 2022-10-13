@@ -289,60 +289,53 @@ void FisheyeProcess::SphereToPlane(CloudRGB::Ptr &polar_cloud, double bandwidth)
 
 void FisheyeProcess::EdgeToPixel() {
     cout << "----- Fisheye: EdgeToPixel -----" << " Spot Index: " << this->spot_idx << endl;
+}
+
+void FisheyeProcess::PixLookUp(CloudRGB::Ptr &fisheye_pixel_cloud) {
+    cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
+    
     string edge_img_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
 
     ROS_ASSERT_MSG((edge_img.rows != 0 && edge_img.cols != 0),
                    "size of original fisheye image is 0, check the path and filename! View Index: %d", this->view_idx);
-    ROS_ASSERT_MSG((edge_img.rows == this->kFlatRows || edge_img.cols == this->kFlatCols),
-                   "size of original fisheye image is incorrect! View Index: %d", this->view_idx);
-    EdgePixels edge_pixels;
+    
+    int invalid_edge_pix = 0;
+    EdgeCloud::Ptr edge_fisheye_pixels(new EdgeCloud);
+    TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
 
     for (int u = 0; u < edge_img.rows; ++u) {
         for (int v = 0; v < edge_img.cols; ++v) {
             if (edge_img.at<uchar>(u, v) > 127) {
-                edge_pixels.push_back(vector<int>{u, v});
+                int num_pts = tags_map[u][v].pts_indices.size();
+                if (num_pts > 0) {
+                    // mean value -> edge point
+                    float x = 0, y = 0;
+                    for (auto &idx : tags_map[u][v].pts_indices) {
+                        PointRGB &pt = fisheye_pixel_cloud->points[idx];
+                        x += pt.x;
+                        y += pt.y;
+                    }
+                    pcl::PointXYZ edge_pt;
+                    edge_pt.x = x / num_pts;
+                    edge_pt.y = y / num_pts;
+                    edge_fisheye_pixels->points.push_back(edge_pt);
+                    
+                    // // all -> edge point
+                    // for (auto &idx : tags_map[u][v].pts_indices) {
+                    //     edge_fisheye_pixels->points.push_back(fisheye_pixel_cloud->points[idx]);
+                    // }
+                }
+                else {invalid_edge_pix++; }
             }
-        }
-    }
-    this -> edge_pixels_vec[this->spot_idx][this->view_idx] = edge_pixels;
-}
-
-void FisheyeProcess::PixLookUp(CloudRGB::Ptr &fisheye_pixel_cloud) {
-    cout << "----- Fisheye: PixLookUp -----" << " Spot Index: " << this->spot_idx << endl;
-    int invalid_edge_pix = 0;
-    EdgeCloud::Ptr edge_fisheye_pixels(new EdgeCloud);
-    EdgePixels edge_pixels = this->edge_pixels_vec[this->spot_idx][this->view_idx];
-    TagsMap tags_map = this->tags_map_vec[this->spot_idx][this->view_idx];
-    for (auto &edge_pixel : edge_pixels) {
-        int u = round(edge_pixel[0]);
-        int v = round(edge_pixel[1]);
-        float x = 0;
-        float y = 0;
-
-        int num_pts = tags_map[u][v].pts_indices.size();
-        if (num_pts == 0) {
-            invalid_edge_pix++;
-        }
-        else {
-            for (auto &idx : tags_map[u][v].pts_indices) {
-                PointRGB &pt = fisheye_pixel_cloud->points[idx];
-                x += pt.x;
-                y += pt.y;
-            }
-            pcl::PointXYZ edge_pt;
-            edge_pt.x = x / num_pts;
-            edge_pt.y = y / num_pts;
-            edge_fisheye_pixels->points.push_back(edge_pt);
         }
     }
     this->edge_fisheye_pixels_vec[this->spot_idx][this->view_idx] = edge_fisheye_pixels;
     cout << "number of invalid lookups(image): " << invalid_edge_pix << endl;
-
-    string edge_org_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
     
     /********* write the coordinates into txt file *********/
     ofstream outfile;
+    string edge_org_txt_path = this->poses_files_path_vec[this->spot_idx][this->view_idx].edge_fisheye_pixels_path;
     outfile.open(edge_org_txt_path, ios::out);
     if (!outfile.is_open()) {
         cout << "Open file failure" << endl;

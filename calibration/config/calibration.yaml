@@ -36,7 +36,7 @@ essential:
     # kDatasetName: "rb1"
     # kNumSpots: 1
     kDatasetName: "bs_hall"
-    kNumSpots: 5
+    kNumSpots: 4
     # kDatasetName: "room"
     # kNumSpots: 1
     # kDatasetName: "parking"
