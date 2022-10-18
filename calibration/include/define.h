@@ -8,6 +8,7 @@
 #define K_INT           (10)
 #define KDE_SCALE       (1)
 #define SAMPLING_RADIUS (0.01)
+#define FULL_OUTPUT     (0)
 
 #define MatD(a,b)       Eigen::Matrix<double, (a), (b)>
 #define MatF(a,b)       Eigen::Matrix<float, (a), (b)>
@@ -31,8 +32,9 @@ typedef MatF(K_EXT,1)       Ext_F;
 typedef MatD(K_EXT+K_INT,1)    Param_D;
 typedef MatF(K_EXT+K_INT,1)    Param_F;
 
-/** typedef **/
 typedef pcl::PointXYZI PointI;
 typedef pcl::PointXYZRGB PointRGB;
 typedef pcl::PointCloud<PointI> CloudI;
 typedef pcl::PointCloud<PointRGB> CloudRGB;
+
+typedef std::pair<int, int> Pair;

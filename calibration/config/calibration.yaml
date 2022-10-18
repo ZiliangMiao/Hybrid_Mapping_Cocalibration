@@ -1,26 +1,26 @@
 switch:
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: true
-    kViewRegistration: true
-    kFullViewMapping: true
+    kCreateDensePcd: false
+    kViewRegistration: false
+    kFullViewMapping: false
 
     ## Data Process
     kLidarFlatProcess: false
     kFisheyeFlatProcess: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kMultiSpotsOptimization: false
+    kCeresOptimization: true
+    kMultiSpotsOptimization: true
     kParamsAnalysis: false
     
     # spot
-    kSpotRegistration: true
-    kGlobalMapping: true
+    kSpotRegistration: false
+    kGlobalMapping: false
 
     # colorization
     kSpotColorization: false
-    kGlobalColoredMapping: true
+    kGlobalColoredMapping: false
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 

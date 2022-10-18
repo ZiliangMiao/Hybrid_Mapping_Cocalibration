@@ -53,8 +53,9 @@ int main (int argc, char **argv) {
     ros::init (argc, argv, "rviz_pub");
     ros::NodeHandle nh;
     double rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0; 
-    bool mono_color, enable_rgb;
-    int msg_size;
+    bool mono_color;
+    string cloud_type;
+    int msg_size, point_lim;
 
     std::string currPkgDir = ros::package::getPath("calibration");
     std::string data_path;
@@ -67,7 +68,8 @@ int main (int argc, char **argv) {
     nh.getParam("ty", ty);
     nh.getParam("tz", tz);
     nh.getParam("msg_size", msg_size);
-    nh.getParam("rgb", enable_rgb);
+    nh.getParam("point_limit", point_lim);
+    nh.getParam("type", cloud_type);
     data_path = currPkgDir + data_path;
 
     ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 1e5);
@@ -82,14 +84,15 @@ int main (int argc, char **argv) {
     ros::Rate loop_rate(50);
     int cnt = 0;
 
-    if (!enable_rgb) {
-        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+    if (cloud_type == "xyzrgb") {
+        cout << "type: " << cloud_type << endl;
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
         pcl::io::loadPCDFile(data_path, *cloud);
         pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
-        int limit = int(cloud->points.size() / msg_size) + 1;
-        
+        int size_limit = int(cloud->points.size() / msg_size) + 1;
+        int point_limit = int(point_lim / msg_size) + 1;
         while (ros::ok()) {
-            if (cnt < limit) {
+            if (cnt < size_limit && cnt < point_limit) {
                 getMessage(msg, *cloud, msg_size, cnt);
                 orgPub.publish(msg);
                 cnt++;
@@ -98,11 +101,11 @@ int main (int argc, char **argv) {
             loop_rate.sleep();
         }
     }
-    else {
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    else if (cloud_type == "xyzi") {
+        cout << "type: " << cloud_type << endl;
+        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
         pcl::io::loadPCDFile(data_path, *cloud);
         pcl::transformPointCloud(*cloud, *cloud, tf_mat); 
-
         int limit = int(cloud->points.size() / msg_size) + 1;
         
         while (ros::ok()) {

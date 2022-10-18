@@ -9,12 +9,13 @@
 #include <Eigen/Core>
 
 // pcl
+#include <pcl/io/pcd_io.h>
 #include <pcl/common/common.h>
+#include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 
 // headings
 #include "define.h"
-#include "spline.h"
 
 using namespace std;
 
@@ -45,6 +46,16 @@ int CheckFolder(std::string spot_path) {
 //     cout << "read file list success" << endl;
 //     return num;
 // }
+
+template <typename PointType>
+void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
+    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
+        PCL_ERROR("Failed to load %s cloud.\n Filepath: %s", name, filepath.c_str());
+    }
+    else {
+        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
+    }
+}
 
 Eigen::Matrix4f LoadTransMat(std::string trans_path){
     std::ifstream load_stream;
@@ -147,7 +158,6 @@ void SaveResults(std::string &record_path, std::vector<double> params, double ba
         output += "Initial cost: " + to_string(initial_cost) + "\n" +
                 "Final cost: " + to_string(final_cost) + "\n";
     }
-    
     
     write.open(record_path, mode);
     write << output << endl;

@@ -49,8 +49,6 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
 void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
 
-bool CheckCorrespondance(FisheyeProcess &fisheye, LidarProcess &lidar, Vec3D &lidar_point);
-
 std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     LidarProcess &lidar,
                                     double bandwidth,
