@@ -110,6 +110,15 @@ public:
             this->output_folder_path = pose_path + "/outputs/lidar_outputs";
             this->bag_folder_path = pose_path + "/bags";
             this->result_folder_path = pose_path + "/results";
+
+            this->edge_img_path = pose_path + "/edges/lidar_edge.png";
+            this->view_cloud_path = this->output_folder_path + "/view_cloud.pcd";
+            this->pose_trans_mat_path = this->output_folder_path + "/pose_trans_mat.txt";
+            this->flat_img_path = this->output_folder_path + "/flat_lidar_image.bmp";
+            this->tags_map_path = this->output_folder_path + "/tags_map.txt";
+            this->edge_cloud_path = this->output_folder_path + "/edge_lidar.pcd";
+            this->edge_fisheye_projection_path = this->output_folder_path + "/lidTrans.txt";
+            this->params_record_path = this->output_folder_path + "/params_record.txt";
             
             this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";
             this->icp_spot_trans_mat_path = this->fullview_recon_folder_path + "/icp_spot_trans_mat.txt";
@@ -178,7 +187,6 @@ public:
     void FineToCoarseReg();
     void GlobalColoredMapping(bool kGlobalUniformSampling);
     void GlobalMapping(bool kGlobalUniformSampling);
-    void MappingEval();
 
     double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     void RemoveInvalidPoints(CloudI::Ptr cloud);
