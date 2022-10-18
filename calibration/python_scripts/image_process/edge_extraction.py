@@ -76,7 +76,7 @@ if __name__ == "__main__":
         edge_cam_raw = cv2.cvtColor(edge_cam_raw, cv2.COLOR_BGR2GRAY)
 
         edge_cam = cv2.GaussianBlur(edge_cam_raw, sigmaX=1, sigmaY=1, ksize=(5, 5))
-        edge_cam = blur(edge_cam_raw, h_u=10, h_l=5)
+        # edge_cam = blur(edge_cam_raw, h_u=10, h_l=5)
         cv2.imwrite(dir_cam_filtered, edge_cam)
 
         # remove the black region
@@ -113,13 +113,6 @@ if __name__ == "__main__":
         cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
         edge_lid = np.zeros(edge_lid.shape, np.uint8)
         cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
-
-        # edge_lid = patch_image(edge_lid)
-
-        # cnt_lid, hierarchy_lid = cv2.findContours(edge_lid, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        # cnt_lid = contour_filter(contour=cnt_lid, len_threshold=150)
-        # edge_lid = np.zeros(edge_lid.shape, np.uint8)
-        # cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
 
         cv2.imwrite(dir_lid_output, edge_lid)
         print("done.")

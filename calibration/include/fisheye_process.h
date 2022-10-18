@@ -50,10 +50,13 @@ public:
     int view_angle_step;
     int fullview_idx;
     
-    /** Omnidirectional image settings **/
-    Pair kImageSize = {2048, 2448};
-    Pair kEffectiveRadius = {325, 1125};
-    int kExcludeRadius = 175;
+
+    /** original data - images **/
+    int kFisheyeRows = 2048;
+    int kFisheyeCols = 2448;
+    const int kFlatRows = int((double)110 / 90 * 1000) + 1;
+    const int kFlatCols = 4000;
+    const float kRadPerPix = (M_PI * 2) / 4000;
 
     /** coordinates of edge pixels in fisheye images **/
     vector<vector<EdgeCloud::Ptr>> edge_cloud_vec;
@@ -68,10 +71,10 @@ public:
             this->output_folder_path = pose_folder_path + "/outputs/fisheye_outputs";
             this->fusion_folder_path = pose_folder_path + "/results";
             this->hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
-            this->edge_img_path = pose_folder_path + "/edges/cam_edge.png";
-            this->flat_img_path = output_folder_path + "/flat_image.bmp";
+            this->edge_img_path = pose_folder_path + "/edges/camEdge.png";
+            this->flat_img_path = output_folder_path + "/flatImage.bmp";
             this->edge_cloud_path = output_folder_path + "/edge_image.pcd";
-            this->kde_samples_path = output_folder_path + "/kde_image.txt";
+            this->kde_samples_path = output_folder_path + "/camKDE.txt";
             this->fusion_img_path = fusion_folder_path + "/fusion.bmp";
         }
         string output_folder_path;
@@ -92,6 +95,12 @@ public:
 
 public:
     FisheyeProcess();
+    /** Fisheye Pre-Processing **/
+    cv::Mat LoadImage();
+    // void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud);
+    // void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud, cv::Mat &image, Int_D intrinsic);
+    // void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud);
+    // void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud, double bandwidth);
 
     cv::Mat LoadImage();
     void ReadEdge();
