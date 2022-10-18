@@ -46,8 +46,7 @@ struct QuaternionFunctor {
 };
 
 void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
-    string fisheye_hdr_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fisheye.view_idx].fisheye_hdr_img_path;
-    cv::Mat raw_image = fisheye.ReadFisheyeImage(fisheye_hdr_img_path);
+    cv::Mat raw_image = fisheye.LoadImage();
 
     /** write the edge points projected on fisheye to .txt file **/
     ofstream outfile;
@@ -62,16 +61,15 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     Mat4D T_mat = TransformMat(extrinsic);
     pcl::copyPointCloud(*lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *lidar_edge_cloud);
     pcl::transformPointCloud(*lidar_edge_cloud, *lidar_edge_cloud, T_mat);
-
-    EdgeCloud::Ptr fisheye_edge_pixel = fisheye.edge_fisheye_pixels_vec[lidar.spot_idx][lidar.view_idx];
+    pcl::copyPointCloud(*fisheye.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *fisheye_edge_cloud);
     
-    for (int i = 0; i < fisheye_edge_pixel->points.size(); ++i) {
-        PointI pt;
-        pt.x = fisheye_edge_pixel->points[i].x;
-        pt.y = fisheye_edge_pixel->points[i].y;
-        pt.z = 0;
-        fisheye_edge_cloud->points.push_back(pt);
-    }
+    // for (int i = 0; i < fisheye_edge_pixel->points.size(); ++i) {
+    //     PointI pt;
+    //     pt.x = fisheye_edge_pixel->points[i].x;
+    //     pt.y = fisheye_edge_pixel->points[i].y;
+    //     pt.z = 0;
+    //     fisheye_edge_cloud->points.push_back(pt);
+    // }
 
     Vec3D lidar_point;
     Vec2D projection;
@@ -100,11 +98,9 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     }
 
     /** generate fusion image **/
-    CloudRGB::Ptr fisheye_pixel_cloud(new CloudRGB);
-    CloudRGB::Ptr fisheye_polar_cloud(new CloudRGB);
-    // fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud, raw_image, intrinsic);
-    fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud, raw_image, fisheye.int_);
-    fisheye.SphereToPlane(fisheye_polar_cloud, bandwidth);
+    string fusion_img_path = fisheye.file_path_vec[fisheye.spot_idx][fisheye.view_idx].fusion_folder_path 
+                            + "/spot_" + to_string(fisheye.spot_idx) + "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
+    cv::imwrite(fusion_img_path, raw_image); /** fusion image generation **/
 }
 
 void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
@@ -153,8 +149,8 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
         pose_mat_inv = pose_mat.inverse();
 
         /** Loading transform matrix between different views **/
-        fisheye_img_path = fisheye.poses_files_path_vec[fisheye.spot_idx][fullview_idx].fisheye_hdr_img_path;
-        target_view_img = fisheye.ReadFisheyeImage(fisheye_img_path);
+        fisheye.SetSpotIdx(fullview_idx);
+        target_view_img = fisheye.LoadImage();
 
         /** PointCloud Coloring **/
         pcl::transformPointCloud(*input_cloud, *input_cloud, (T_mat * pose_mat_inv * T_mat_inv)); 
@@ -208,7 +204,7 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
 bool CheckCorrespondance(FisheyeProcess &fisheye, LidarProcess &lidar, Vec3D &lid_point) {
     const float max_dist_tol = 50;
-    EdgeCloud::Ptr &fisheye_edge_cloud = fisheye.edge_fisheye_pixels_vec[fisheye.spot_idx][fisheye.view_idx];
+    EdgeCloud::Ptr &fisheye_edge_cloud = fisheye.edge_cloud_vec[fisheye.spot_idx][fisheye.view_idx];
     Vec4D lid_point_4;
     Vec3D lid_point_;
     lid_point_4 << lid_point, 1;

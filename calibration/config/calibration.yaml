@@ -6,8 +6,8 @@ switch:
     kFullViewMapping: false
 
     ## Data Process
-    kLidarFlatProcess: false
-    kFisheyeFlatProcess: false
+    kLidarFlatProcess: true
+    kFisheyeFlatProcess: true
 
     ## Calibration and Optimization cost analysis
     kCeresOptimization: true
@@ -36,7 +36,7 @@ essential:
     # kDatasetName: "rb1"
     # kNumSpots: 1
     kDatasetName: "bs_hall"
-    kNumSpots: 4
+    kNumSpots: 5
     # kDatasetName: "room"
     # kNumSpots: 1
     # kDatasetName: "parking"

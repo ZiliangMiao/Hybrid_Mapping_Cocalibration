@@ -149,15 +149,13 @@ int main(int argc, char** argv) {
                 lidar.PixLookUp(lidar_cart_cloud);
             }
             if (kFisheyeFlatProcess) {
-                CloudRGB::Ptr fisheye_pixel_cloud(new CloudRGB);
-                CloudRGB::Ptr fisheye_polar_cloud(new CloudRGB);
-                fisheye.SetSpotIdx(i); /** spot idx **/
+                fisheye.SetSpotIdx(i);
                 fisheye.SetViewIdx(fisheye.fullview_idx);
-                fisheye.FisheyeImageToSphere(fisheye_pixel_cloud, fisheye_polar_cloud);
-                fisheye.SphereToPlane(fisheye_polar_cloud);
+
+                fisheye.LoadImage();
                 fisheye.EdgeExtraction();
-                fisheye.EdgeToPixel();
-                fisheye.PixLookUp(fisheye_pixel_cloud);
+                fisheye.EdgeToPixel(); 
+
             }
         }
     }

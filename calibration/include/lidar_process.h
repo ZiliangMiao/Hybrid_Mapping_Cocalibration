@@ -13,31 +13,36 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/PointCloud2.h>
+
 /** pcl **/
-#include <pcl_conversions/pcl_conversions.h>
-// #include <pcl/filters/voxel_grid.h>
-#include <pcl/filters/uniform_sampling.h>
 #include <pcl/common/common.h>
-#include <pcl/io/pcd_io.h>
+#include <pcl/common/time.h>
+#include <pcl_conversions/pcl_conversions.h>
+
 #include <pcl/point_types.h>
-#include <pcl/filters/radius_outlier_removal.h>
-// #include <pcl/filters/passthrough.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/common/transforms.h>
-#include <Eigen/Core>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/gicp.h>
-#include <pcl/registration/ndt.h>
-#include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/filters/filter.h>
 #include <pcl/filters/conditional_removal.h>
-#include <pcl/common/time.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/uniform_sampling.h>
 #include <pcl/filters/extract_indices.h>
-/** opencv **/
-#include <opencv2/opencv.hpp>
+
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/common/transforms.h>
+
 
 #include <pcl/features/normal_3d.h>
 #include <pcl/features/normal_3d_omp.h>
+// #include <pcl/registration/icp.h>
+#include <pcl/registration/gicp.h>
+// #include <pcl/registration/ndt.h>
+#include <pcl/visualization/pcl_visualizer.h>
+
+
+#include <Eigen/Core>
+
+/** opencv **/
+#include <opencv2/opencv.hpp>
+
 
 /** headings **/
 #include <define.h>
@@ -203,7 +208,5 @@ public:
     void MappingEval();
 
     double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
-    template <typename PointType>
-    void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name = "");
     void RemoveInvalidPoints(CloudI::Ptr cloud);
 };

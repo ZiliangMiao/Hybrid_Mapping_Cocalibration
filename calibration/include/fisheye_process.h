@@ -13,11 +13,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 /** pcl **/
-#include <pcl/common/io.h>
 #include <pcl/common/common.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/visualization/cloud_viewer.h>
-#include <pcl/features/principal_curvatures.h>
 #include <Eigen/Core>
 /** ros **/
 #include <ros/ros.h>
@@ -55,7 +51,7 @@ public:
     int view_angle_init;
     int view_angle_step;
     int fullview_idx;
-    vector<vector<string>> poses_folder_path_vec;
+    
 
     /** original data - images **/
     int kFisheyeRows = 2048;
@@ -64,20 +60,8 @@ public:
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / 4000;
 
-    /** coordinates of edge pixels in flat images **/
-    typedef vector<vector<int>> EdgePixels;
-    vector<vector<EdgePixels>> edge_pixels_vec;
-
     /** coordinates of edge pixels in fisheye images **/
-    // typedef vector<vector<double>> EdgeFisheyePixels;
-    vector<vector<EdgeCloud::Ptr>> edge_fisheye_pixels_vec;
-
-    /** tagsmap container **/
-    typedef struct Tags {
-        vector<int> pts_indices = {};
-    }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
-    typedef vector<vector<Tags>> TagsMap;
-    vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
+    vector<vector<EdgeCloud::Ptr>> edge_cloud_vec;
 
     /***** Intrinsic Parameters *****/
     Int_D int_;
@@ -87,24 +71,26 @@ public:
         PoseFilePath () = default;
         PoseFilePath (const string &pose_folder_path) {
             this->output_folder_path = pose_folder_path + "/outputs/fisheye_outputs";
-            this->fusion_result_folder_path = pose_folder_path + "/results";
-            this->fisheye_hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
+            this->fusion_folder_path = pose_folder_path + "/results";
+            this->hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
             this->edge_img_path = pose_folder_path + "/edges/camEdge.png";
-            this->flat_img_path = this -> output_folder_path + "/flatImage.bmp";
-            this->edge_fisheye_pixels_path = this -> output_folder_path + "/camPixOut.txt";
-            this->kde_samples_path = this -> output_folder_path + "/camKDE.txt";
-            this->fusion_img_path = this -> fusion_result_folder_path + "/fusion.bmp";
+            this->flat_img_path = output_folder_path + "/flatImage.bmp";
+            this->edge_cloud_path = output_folder_path + "/edge_image.pcd";
+            this->kde_samples_path = output_folder_path + "/camKDE.txt";
+            this->fusion_img_path = fusion_folder_path + "/fusion.bmp";
         }
         string output_folder_path;
-        string fusion_result_folder_path;
+        string fusion_folder_path;
         string fusion_img_path;
-        string fisheye_hdr_img_path;
+        string hdr_img_path;
         string edge_img_path;
         string flat_img_path;
-        string edge_fisheye_pixels_path;
+        string edge_cloud_path;
         string kde_samples_path;
     };
-    vector<vector<struct PoseFilePath>> poses_files_path_vec;
+
+    vector<vector<string>> folder_path_vec;
+    vector<vector<struct PoseFilePath>> file_path_vec;
 
     /** Degree Map **/
     std::map<int, int> degree_map;
@@ -112,11 +98,11 @@ public:
 public:
     FisheyeProcess();
     /** Fisheye Pre-Processing **/
-    cv::Mat ReadFisheyeImage(string fisheye_hdr_img_path);
-    void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud);
-    void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud, cv::Mat &image, Int_D intrinsic);
-    void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud);
-    void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud, double bandwidth);
+    cv::Mat LoadImage();
+    // void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud);
+    // void FisheyeImageToSphere(CloudRGB::Ptr &pixel_cloud, CloudRGB::Ptr &polar_cloud, cv::Mat &image, Int_D intrinsic);
+    // void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud);
+    // void SphereToPlane(CloudRGB::Ptr &fisheye_polar_cloud, double bandwidth);
 
     /** Edge Related **/
     void ReadEdge();

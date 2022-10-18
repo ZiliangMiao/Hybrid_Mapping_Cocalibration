@@ -92,7 +92,7 @@ void LidarProcess::BagToPcd(string filepath, CloudI &cloud) {
         ROS_ASSERT_MSG((cnt_pcds > 3.6e4), "More than 36000 pcds in a bag, aborted.");
     }
 
-    uint32_t num_pcds = (float)cnt_pcds * ((float)5 / 6);
+    uint32_t num_pcds = (float)cnt_pcds * ((float)95 / 100);
     uint32_t idx_start = (cnt_pcds - num_pcds) / 2;
     uint32_t idx_end = idx_start + num_pcds;
     iterator = view.begin();
@@ -282,107 +282,116 @@ void LidarProcess::PixLookUp(CloudI::Ptr& cart_cloud) {
         int u = edge_pixel.x;
         int v = edge_pixel.y;
         int num_pts = tags_map[u][v].num_pts;
-        if (num_pts == 0) { /** invalid pixels **/
-            num_invalid_pixels ++;
-        }
-        else { /** normal pixels **/
-            float x_avg = 0, y_avg = 0, z_avg = 0, intensity_avg = 0;
-            for (int i = 0; i < num_pts; ++i) {
-                if (tags_map[u][v].pts_indices[i] < cart_cloud->size()) {
-                    PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
-                    x_avg += pixel_pt.x;
-                    y_avg += pixel_pt.y;
-                    z_avg += pixel_pt.z;
-                    intensity_avg += pixel_pt.intensity;
-                }
-            }
+        if (num_pts > 0) {  /** normal pixels **/
+            // float x_avg = 0, y_avg = 0, z_avg = 0, intensity_avg = 0;
+            // for (int i = 0; i < num_pts; ++i) {
+            //     if (tags_map[u][v].pts_indices[i] < cart_cloud->size()) {
+            //         PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
+            //         x_avg += pixel_pt.x;
+            //         y_avg += pixel_pt.y;
+            //         z_avg += pixel_pt.z;
+            //         intensity_avg += pixel_pt.intensity;
+            //     }
+            // }
 
-            /** average coordinates->unbiased estimation of center position **/
-            x_avg = x_avg / num_pts;
-            y_avg = y_avg / num_pts;
-            z_avg = z_avg / num_pts;
-            intensity_avg = intensity_avg / num_pts;
+            // /** average coordinates->unbiased estimation of center position **/
+            // x_avg = x_avg / num_pts;
+            // y_avg = y_avg / num_pts;
+            // z_avg = z_avg / num_pts;
+            // intensity_avg = intensity_avg / num_pts;
             
-            /** store the spatial coordinates into vector **/
-            pcl::PointXYZ pt;
-            pt.x = x_avg;
-            pt.y = y_avg;
-            pt.z = z_avg;
-            // pt.intensity = 1; /** note: I is used to store the point weight **/
-            edge_cloud->points.push_back(pt);
+            // /** store the spatial coordinates into vector **/
+            // pcl::PointXYZ pt;
+            // pt.x = x_avg;
+            // pt.y = y_avg;
+            // pt.z = z_avg;
+            // edge_cloud->points.push_back(pt);
 
-            PointI pt_i;
-            pt_i.x = x_avg;
-            pt_i.y = y_avg;
-            pt_i.z = z_avg;
-            pt_i.intensity = intensity_avg;
-            edge_xyzi->points.push_back(pt_i);
+            // PointI pt_i;
+            // pt_i.x = x_avg;
+            // pt_i.y = y_avg;
+            // pt_i.z = z_avg;
+            // pt_i.intensity = intensity_avg;
+            // edge_xyzi->points.push_back(pt_i);
+
+            // Use all the points.
+            for (int i = 0; i < num_pts; ++i) { 
+                PointI &pixel_pt = cart_cloud->points[tags_map[u][v].pts_indices[i]];
+                edge_xyzi->points.push_back(pixel_pt);
+            }
         }
     }
-    cout << "number of invalid lookups(lidar): " << num_invalid_pixels << endl;
-    edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
 
-    /** save edge coordinates into .txt file **/
-    string edge_pts_coordinates_path = poses_files_path_vec[spot_idx][view_idx].edge_pts_coordinates_path;
-    ofstream outfile;
-    outfile.open(edge_pts_coordinates_path, ios::out);
-    if (!outfile.is_open()) {
-        cout << "Open file failure" << endl;
+    Eigen::Map<Eigen::Matrix<float,-1,-1>, 16, Eigen::OuterStride<>> mat = edge_xyzi->getMatrixXfMap(4,4,0);
+    std::vector<std::vector<double>> edge_vec(mat.cols());
+    auto ptr = mat.data();
+    for (auto& vec : edge_vec){
+        vec = std::vector<double>(ptr, ptr + mat.rows());
+        ptr += mat.rows();
     }
-    for (auto &point : edge_cloud->points) {
-        outfile << point.x << "\t"
-                << point.y << "\t"
-                << point.z << endl;
+    std::sort(edge_vec.begin(), edge_vec.end());
+    edge_vec.erase(unique(edge_vec.begin(), edge_vec.end()), edge_vec.end());
+    edge_xyzi->erase();
+    for (auto &edge_pt : edge_vec) {
+        pt.x = edge_pt[0];
+        pt.y = edge_pt[1];
+        pt.z = edge_pt[2];
+        edge_xyzi->points.push_back(pt);
     }
-    outfile.close();
 
+    pcl::copyPointCloud(*edge_xyzi, *edge_cloud);
+    this->edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
+
+    string edge_cloud_path = poses_files_path_vec[spot_idx][view_idx].edge_pts_coordinates_path;
     if (kEdgeAnalysis) {
-        /** visualization for weight check**/
-        string edge_cart_pcd_path = this -> poses_files_path_vec[spot_idx][view_idx].edge_cart_pcd_path;
-        
-        cout << edge_cart_pcd_path << endl;
-        pcl::io::savePCDFileBinary(edge_cart_pcd_path, *edge_xyzi);
+        pcl::io::savePCDFileBinary(edge_cloud_path, *edge_xyzi);
+    }
+    else {
+        pcl::io::savePCDFileBinary(edge_cloud_path, *edge_cloud);
     }
 
 }
 
 void LidarProcess::ReadEdge() {
-    cout << "----- LiDAR: ReadEdge -----" << " Spot Index: " << spot_idx << " View Index: " << view_idx << endl;
-    string edge_cloud_txt_path = poses_files_path_vec[spot_idx][view_idx].edge_pts_coordinates_path;
-    vector<vector<double>> edge_pts;
-    ifstream infile(edge_cloud_txt_path);
-    string line;
-    while (getline(infile, line)) {
-        stringstream ss(line);
-        string tmp;
-        vector<double> v;
-        while (getline(ss, tmp, '\t')) {
-            /** split string with "\t" **/
-            v.push_back(stod(tmp)); /** string->double **/
-        }
-        if (v.size() == 3) {
-            edge_pts.push_back(v);
-        }
-    }
-
-    ROS_ASSERT_MSG(!edge_pts.empty(), "LiDAR Read Edge Incorrect! View Index: %d", view_idx);
-    cout << "Imported LiDAR points: " << edge_pts.size() << endl;
-
-    /** remove duplicated points **/
-    std::sort(edge_pts.begin(), edge_pts.end());
-    edge_pts.erase(unique(edge_pts.begin(), edge_pts.end()), edge_pts.end());
-    cout << "LiDAR Edge Points after Duplicated Removed: " << edge_pts.size() << endl;
-
-    /** construct pcl point cloud **/
-    pcl::PointXYZ pt;
+    // cout << "----- LiDAR: ReadEdge -----" << " Spot Index: " << spot_idx << " View Index: " << view_idx << endl;
+    string edge_cloud_path = poses_files_path_vec[spot_idx][view_idx].edge_pts_coordinates_path;
     EdgeCloud::Ptr edge_cloud(new EdgeCloud);
-    for (auto &edge_pt : edge_pts) {
-        pt.x = edge_pt[0];
-        pt.y = edge_pt[1];
-        pt.z = edge_pt[2];
-        edge_cloud->points.push_back(pt);
-    }
-    cout << "Filtered LiDAR points: " << edge_cloud->points.size() << endl;
+    LoadPcd(edge_cloud_path, edge_cloud, "edge");
+
+    // vector<vector<double>> edge_pts;
+    // ifstream infile(edge_cloud_txt_path);
+    // string line;
+    // while (getline(infile, line)) {
+    //     stringstream ss(line);
+    //     string tmp;
+    //     vector<double> v;
+    //     while (getline(ss, tmp, '\t')) {
+    //         /** split string with "\t" **/
+    //         v.push_back(stod(tmp)); /** string->double **/
+    //     }
+    //     if (v.size() == 3) {
+    //         edge_pts.push_back(v);
+    //     }
+    // }
+
+    // ROS_ASSERT_MSG(!edge_pts.empty(), "LiDAR Read Edge Incorrect! View Index: %d", view_idx);
+    // cout << "Imported LiDAR points: " << edge_pts.size() << endl;
+
+    // /** remove duplicated points **/
+    // std::sort(edge_pts.begin(), edge_pts.end());
+    // edge_pts.erase(unique(edge_pts.begin(), edge_pts.end()), edge_pts.end());
+    // cout << "LiDAR Edge Points after Duplicated Removed: " << edge_pts.size() << endl;
+
+    // /** construct pcl point cloud **/
+    // pcl::PointXYZ pt;
+    // EdgeCloud::Ptr edge_cloud(new EdgeCloud);
+    // for (auto &edge_pt : edge_pts) {
+    //     pt.x = edge_pt[0];
+    //     pt.y = edge_pt[1];
+    //     pt.z = edge_pt[2];
+    //     edge_cloud->points.push_back(pt);
+    // }
+    // cout << "Filtered LiDAR points: " << edge_cloud->points.size() << endl;
     edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
 }
 
@@ -394,7 +403,6 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
 
     int max_iters = 100;
     float max_corr_dis = 0.5;
-    // float trans_epsilon = 1e-12;
     float eucidean_epsilon = 1e-6;
     float max_fitness_range = 2.0;
 
@@ -1116,16 +1124,6 @@ void LidarProcess::MappingEval(){
 
     while (!viewer.wasStopped()) {
         viewer.spinOnce();
-    }
-}
-
-template <typename PointType>
-void LidarProcess::LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name) {
-    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
-        PCL_ERROR("Failed to load %s cloud.\n Filepath: %s", name, filepath.c_str());
-    }
-    else {
-        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
     }
 }
 
