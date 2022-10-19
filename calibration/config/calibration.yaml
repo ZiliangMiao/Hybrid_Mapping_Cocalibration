@@ -6,23 +6,23 @@ switch:
     kFullViewMapping: false
 
     ## Data Process
-    kLidarFlatProcess: true
-    kFisheyeFlatProcess: true
+    kLidarFlatProcess: false
+    kFisheyeFlatProcess: false
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: true
-    kMultiSpotsOptimization: true
+    kCeresOptimization: false
+    kMultiSpotsOptimization: false
     kAnalysis: false
     
     # spot
     kSpotRegistration: false
-    kGlobalMapping: false
+    kGlobalMapping: true
 
     # colorization
-    kSpotColorization: true
+    kSpotColorization: false
     kGlobalColoredMapping: true
 
-    kGlobalUniformSampling: false
+    kGlobalUniformSampling: true
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 

@@ -177,8 +177,7 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
             if (search_num == 0) {
                 flat_img.at<float>(u, v) = 0; /** intensity **/
                 invalid_search_num ++;
-                tags_map[u][v].num_pts = 0;
-                tags_map[u][v].pts_indices = {};
+                tags_map[u][v] = {};
             }
             else { /** corresponding points are found in the radius neighborhood **/
                 int hidden_pt_num = 0;
@@ -205,11 +204,10 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
 
                 /** add tags **/
                 local_vec.erase(std::remove(local_vec.begin(), local_vec.end(), 0), local_vec.end());
-                tags_map[u][v].num_pts = local_vec.size();
-                tags_map[u][v].pts_indices.insert(tags_map[u][v].pts_indices.begin(), local_vec.data(), local_vec.data()+local_vec.size());
+                tags_map[u][v].insert(tags_map[u][v].begin(), local_vec.data(), local_vec.data()+local_vec.size());
 
-                if (tags_map[u][v].num_pts > 0) {
-                    flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].num_pts;
+                if (tags_map[u][v].size() > 0) {
+                    flat_img.at<float>(u, v) = intensity_mean / tags_map[u][v].size();
                 }
                 else {
                     flat_img.at<float>(u, v) = 0;
@@ -249,8 +247,8 @@ void LidarProcess::EdgeToPixel(CloudI::Ptr& cart_cloud) {
         for (int v = 0; v < edge_img.cols; ++v) {
             if (edge_img.at<uchar>(u, v) > 127) {
                 Tags &tag = tags_map[u][v];
-                for (int i = 0; i < tag.num_pts; ++i) { 
-                    PointI &pixel_pt = cart_cloud->points[tag.pts_indices[i]];
+                for (int i = 0; i < tag.size(); ++i) { 
+                    PointI &pixel_pt = cart_cloud->points[tag[i]];
                     edge_xyzi->points.push_back(pixel_pt);
                 }
             }
@@ -279,7 +277,7 @@ void LidarProcess::EdgeToPixel(CloudI::Ptr& cart_cloud) {
     this->edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
 
     string edge_cloud_path = file_path_vec[spot_idx][view_idx].edge_cloud_path;
-    if (kEdgeAnalysis) {
+    if (kColorMap) {
         pcl::io::savePCDFileBinary(edge_cloud_path, *edge_xyzi);
     }
     else {
@@ -647,11 +645,13 @@ void LidarProcess::SpotRegistration() {
     mat_out << align_spot_trans_mat << endl;
     mat_out.close();
 
-    // /** save the pair registered point cloud **/
-    // string pair_registered_cloud_path = file_path_vec[tgt_idx][0].fullview_recon_folder_path +
-    //                                     "/icp_registered_spot_tgt_" + to_string(tgt_idx) + ".pcd";
-    // cout << pair_registered_cloud_path << endl;
-    // pcl::io::savePCDFileBinary(pair_registered_cloud_path, *spot_cloud_icp_trans + *spot_cloud_tgt);
+    if (FULL_OUTPUT) {
+        /** save the pair registered point cloud **/
+        string pair_registered_cloud_path = file_path_vec[tgt_idx][0].fullview_recon_folder_path +
+                                            "/icp_registered_spot_tgt_" + to_string(tgt_idx) + ".pcd";
+        cout << pair_registered_cloud_path << endl;
+        pcl::io::savePCDFileBinary(pair_registered_cloud_path, *spot_cloud_icp_trans + *spot_cloud_tgt);
+    }
 }
 
 void LidarProcess::SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAnalysis) {
@@ -867,8 +867,10 @@ void LidarProcess::GlobalMapping(bool kGlobalUniformSampling) {
     cout << init_dense_cloud_path << endl;
     LoadPcd(init_dense_cloud_path, *global_registered_cloud, "fullview dense");
 
-    for (auto & pt : global_registered_cloud->points) {
-        pt.intensity = 40;
+    if (kColorMap) {
+        for (auto & pt : global_registered_cloud->points) {
+            pt.intensity = 40;
+        }
     }
 
     /** source index and target index (align to spot 0) **/
@@ -895,9 +897,12 @@ void LidarProcess::GlobalMapping(bool kGlobalUniformSampling) {
         pcl::transformPointCloud(*spot_cloud_src, *spot_cloud_src, icp_spot_trans_mat);
 
         /** for view coloring & viz only **/
-        for (auto & pt : spot_cloud_src->points) {
-            pt.intensity = (src_idx + 1) * 40;
+        if (kColorMap) {
+            for (auto & pt : spot_cloud_src->points) {
+                pt.intensity = (src_idx + 1) * 40;
+            }
         }
+        
         *global_registered_cloud += *spot_cloud_src;
     }
 
@@ -911,10 +916,8 @@ void LidarProcess::GlobalMapping(bool kGlobalUniformSampling) {
 
     string global_registered_cloud_path = file_path_vec[0][0].fullview_recon_folder_path +
                                           "/global_registered_cloud.pcd";
-                                        //   "/global_lio_registered_cloud.pcd";
     pcl::io::savePCDFileBinary(global_registered_cloud_path, *global_registered_cloud);
 }
-
 
 double LidarProcess::GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range) {
     double fitness_score = 0.0;
@@ -947,3 +950,93 @@ void LidarProcess::RemoveInvalidPoints(CloudI::Ptr cloud){
     (*cloud).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud, *cloud, null_indices);
 }
+
+void LidarProcess::Test(){
+    MatricesVectorPtr target_covariances_ (new MatricesVector);
+    CloudI::ConstPtr target_ (new CloudI);
+    const pcl::search::KdTree<PointI>::Ptr tree_ (new pcl::search::KdTree<PointI>);
+    (*tree_).setInputCloud(target_);
+    computeCovariances(target_, tree_, *target_covariances_);
+}
+
+void LidarProcess::computeCovariances(pcl::PointCloud<PointI>::ConstPtr cloud,
+                                const pcl::search::KdTree<PointI>::Ptr kdtree,
+                                MatricesVector& cloud_covariances) { // vector<Mat3d>
+    int k_correspondences_ = 20;
+    float epsilon_ = 1e-6;
+    Eigen::Vector3d mean;
+    std::vector<int> nn_indecies; nn_indecies.reserve (k_correspondences_);
+    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_correspondences_);
+
+    // We should never get there but who knows
+    if(cloud_covariances.size () < cloud->size ())
+        cloud_covariances.resize (cloud->size ());
+
+    typename pcl::PointCloud<PointI>::const_iterator points_iterator = cloud->begin ();
+    MatricesVector::iterator matrices_iterator = cloud_covariances.begin ();
+    for(;
+        points_iterator != cloud->end ();
+        ++points_iterator, ++matrices_iterator)
+    {
+        const PointI &query_point = *points_iterator;
+        Eigen::Matrix3d &cov = *matrices_iterator;
+        // Zero out the cov and mean
+        cov.setZero ();
+        mean.setZero ();
+
+        // Search for the K nearest neighbours
+        kdtree->nearestKSearch(query_point, k_correspondences_, nn_indecies, nn_dist_sq);
+
+        // Find the covariance matrix
+        for(int j = 0; j < k_correspondences_; j++) {
+        const PointI &pt = (*cloud)[nn_indecies[j]];
+
+        mean[0] += pt.x;
+        mean[1] += pt.y;
+        mean[2] += pt.z;
+
+        cov(0,0) += pt.x*pt.x;
+
+        cov(1,0) += pt.y*pt.x;
+        cov(1,1) += pt.y*pt.y;
+
+        cov(2,0) += pt.z*pt.x;
+        cov(2,1) += pt.z*pt.y;
+        cov(2,2) += pt.z*pt.z;
+        }
+
+        mean /= static_cast<double> (k_correspondences_);
+        // Get the actual covariance
+        for (int k = 0; k < 3; k++)
+        for (int l = 0; l <= k; l++)
+        {
+            cov(k,l) /= static_cast<double> (k_correspondences_);
+            cov(k,l) -= mean[k]*mean[l];
+            cov(l,k) = cov(k,l);
+        }
+
+        // Compute the SVD (covariance matrix is symmetric so U = V')
+        Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
+        cov.setZero ();
+        Eigen::Matrix3d U = svd.matrixU ();
+        // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
+        for(int k = 0; k < 3; k++) {
+        Eigen::Vector3d col = U.col(k);
+        double v = 1.; // biggest 2 singular values replaced by 1
+        if(k == 2)   // smallest singular value replaced by gicp_epsilon
+            v = epsilon_;
+        cov+= v * col * col.transpose();
+        }
+    }
+}
+
+// if ((!target_covariances_) || (target_covariances_->empty ()))
+//   {
+
+//   }
+//   // Compute input cloud covariance matrices
+//   if ((!input_covariances_) || (input_covariances_->empty ()))
+//   {
+//     covariances_.reset (new MatricesVector);
+//     computeCovariances<PointSource> (input_, tree_reciprocal_, *input_covariances_);
+//   }

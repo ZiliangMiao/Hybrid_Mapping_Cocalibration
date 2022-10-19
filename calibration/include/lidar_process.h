@@ -62,6 +62,9 @@ typedef pcl::PointCloud<pcl::Normal> CloudN;
 typedef pcl::PointCloud<pcl::PointXYZ> EdgeCloud;
 typedef pcl::PointCloud<pcl::PointXYZ> EdgePixels;
 
+typedef std::vector< Eigen::Matrix3d, Eigen::aligned_allocator<Eigen::Matrix3d> > MatricesVector;
+typedef boost::shared_ptr< MatricesVector > MatricesVectorPtr;
+
 class LidarProcess{
 public:
     /** essential params **/
@@ -78,17 +81,13 @@ public:
     int fullview_idx = 0;
 
     /** const parameters - original data - images and point clouds **/
-    const int kNumRecPcds = 250; /** dense point cloud used for reconstruction **/
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / kFlatCols;
-    const bool kEdgeAnalysis = true; /** enable edge cloud output in polar/3D space for visualization **/
+    const bool kColorMap = true; /** enable edge cloud output in polar/3D space for visualization **/
 
     /** tags and maps **/
-    typedef struct Tags {
-        int num_pts = 0; /** number of points **/
-        vector<int> pts_indices = {};
-    }Tags; /** "Tags" here is a struct type, equals to "struct Tags", LidarProcess::Tags **/
+    typedef vector<int> Tags;
     typedef vector<vector<Tags>> TagsMap;
     vector<vector<TagsMap>> tags_map_vec; /** container of tagsMaps of each pose **/
 
@@ -190,4 +189,10 @@ public:
 
     double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, double max_range);
     void RemoveInvalidPoints(CloudI::Ptr cloud);
+
+    void computeCovariances(pcl::PointCloud<PointI>::ConstPtr cloud,
+                            const pcl::search::KdTree<PointI>::Ptr kdtree,
+                            MatricesVector& cloud_covariances);
+    void Test();
+
 };
