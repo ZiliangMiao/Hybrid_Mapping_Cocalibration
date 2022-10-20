@@ -1,11 +1,10 @@
 <launch>
-  <param name="rx" type="double" value="-0.0228948" />
-  <param name="ry" type="double" value="0.027074" />
-  <param name="rz" type="double" value="0.776748" />
-  <param name="tx" type="double" value="-4.83285" />
-  <param name="ty" type="double" value="-2.08588" />
-  <param name="tz" type="double" value="-0.110397" />
   <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" />
+  <param name="save_path" type="string" value="/data/bs_hall/spot0/fullview_recon/segment.pcd" />
+  <!-- mode = 0: delete points inside the polygon -->
+  <!-- mode = 1: save points inside the polygon -->
+  <param name="clip_mode" type="bool" value="0" />
+  <param name="k_nearest" type="int" value="10" />
   <node name="segment" pkg="calibration" type="segment" output="screen">
   </node>
 </launch>

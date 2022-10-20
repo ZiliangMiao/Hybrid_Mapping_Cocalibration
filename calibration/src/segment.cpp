@@ -9,6 +9,7 @@
 #include <pcl/visualization/mouse_event.h> //鼠标事件
 #include <pcl/visualization/keyboard_event.h>//键盘事件
 
+#include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/ModelCoefficients.h>
 
@@ -17,19 +18,28 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <ros/package.h>
 
+#include <Eigen/Core>
+
 #include "vtkCamera.h"
 #include <vtkRenderWindow.h>
 
 using namespace std;
+
+typedef pcl::PointXYZ Point;
+typedef pcl::PointCloud<Point> Cloud;
+typedef std::vector< Eigen::Matrix3d, Eigen::aligned_allocator<Eigen::Matrix3d> > MatricesVector;
+typedef boost::shared_ptr< MatricesVector > MatricesVectorPtr;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_in (new pcl::PointCloud<pcl::PointXYZ>);
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_polygon (new pcl::PointCloud<pcl::PointXYZ>);
 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cliped (new pcl::PointCloud<pcl::PointXYZ>);
 
 pcl::PointXYZ curP,lastP;
-bool flag=false;//判断是不是第一次点击
+bool flag = false; //判断是不是第一次点击
 bool isPickingMode = false;
 unsigned int line_id = 0;
+int k_correspondences_ = 10;
+bool clip_mode = 1;
 
 boost::shared_ptr<pcl::visualization::PCLVisualizer> interactionCustomizationVis();
 void getScreentPos(double* displayPos, double* world,void* viewer_void);
@@ -37,16 +47,23 @@ void keyboardEventOccurred(const pcl::visualization::KeyboardEvent& event,void* 
 void mouseEventOccurred(const pcl::visualization::MouseEvent& event,void* viewer_void);
 int inOrNot1(int poly_sides, double *poly_X, double *poly_Y, double x, double y);
 void projectInliers(void*);
-
+void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
+                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
+                        MatricesVector& cloud_covariances);
+void test(Cloud::ConstPtr target_);
 
 int main(int argc, char** argv)
 {
     ros::init (argc, argv, "segment");
     ros::NodeHandle nh;
-    std::string currPkgDir = ros::package::getPath("calibration");
-    string data_path;
+    std::string package_dir = ros::package::getPath("calibration");
+    string data_path, save_path;
     nh.getParam("data_path", data_path);
-    data_path = currPkgDir + data_path;
+    nh.getParam("save_path", save_path);
+    nh.getParam("clip_mode", clip_mode);
+    nh.getParam("k_nearests", k_correspondences_);
+    data_path = package_dir + data_path;
+    save_path = package_dir + save_path;
 
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
     viewer = interactionCustomizationVis();
@@ -63,6 +80,14 @@ int main(int argc, char** argv)
         viewer->spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::microseconds(100000));
     }
+
+    cout << cloud_cliped->points.size() << endl;
+    cloud_cliped->height = 1;
+    cloud_cliped->width = cloud_cliped->points.size();
+    pcl::io::savePCDFileBinary(save_path, *cloud_cliped);
+
+    Cloud::ConstPtr target_ (cloud_cliped);
+    test(target_);
 
     return 0;
 }
@@ -213,9 +238,8 @@ void projectInliers(void* viewer_void)
     //获取焦点单位向量
     pcl::PointXYZ eyeLine1 = pcl::PointXYZ(focal[0] - pos[0], focal[1] - pos[1], focal[2] - pos[2]);
 
-    //    pcl::PointXYZ eyeLine1 = pcl::PointXYZ(camera1.focal[0] - camera1.pos[0], camera1.focal[1] - camera1.pos[1], camera1.focal[2] - camera1.pos[2]);
-    float mochang = sqrt(pow(eyeLine1.x, 2) + pow(eyeLine1.y, 2) + pow(eyeLine1.z, 2));//模长
-    pcl::PointXYZ eyeLine = pcl::PointXYZ(eyeLine1.x / mochang, eyeLine1.y / mochang, eyeLine1.z / mochang);//单位向量 法向量
+    float norm = sqrt(pow(eyeLine1.x, 2) + pow(eyeLine1.y, 2) + pow(eyeLine1.z, 2));//模长
+    pcl::PointXYZ eyeLine = pcl::PointXYZ(eyeLine1.x / norm, eyeLine1.y / norm, eyeLine1.z / norm);//单位向量 法向量
 
     //创建一个平面
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());//ax+by+cz+d=0
@@ -255,7 +279,7 @@ void projectInliers(void* viewer_void)
     for (int i = 0; i < cloudIn_Prj->points.size(); i++)
     {
         ret = inOrNot1(cloud_polygon->points.size(), PloyXarr, PloyYarr, cloudIn_Prj->points[i].x, cloudIn_Prj->points[i].y);
-        if (1 == ret)//表示在里面
+        if (clip_mode == ret) // 1 - 表示在里面
         {
             cloud_cliped->points.push_back(cloud_in->points[i]);
         }//表示在外面
@@ -270,3 +294,81 @@ void projectInliers(void* viewer_void)
     viewer->getRenderWindow()->Render();
 }
 
+void test(Cloud::ConstPtr target_){
+    MatricesVectorPtr target_covariances_ (new MatricesVector);
+    const pcl::KdTreeFLANN<Point>::Ptr tree_ (new pcl::KdTreeFLANN<Point>);
+    (*tree_).setInputCloud(target_);
+    computeCovariances(target_, tree_, *target_covariances_);
+}
+
+void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
+                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
+                        MatricesVector& cloud_covariances) { // vector<Mat3d>
+    int k_correspondences_ = 100;
+    float epsilon_ = 1e-6;
+    Eigen::Vector3d mean;
+    std::vector<int> nn_indecies; nn_indecies.reserve (k_correspondences_);
+    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_correspondences_);
+
+    // We should never get there but who knows
+    if(cloud_covariances.size () < cloud->size ())
+        cloud_covariances.resize (cloud->size ());
+
+    typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
+    MatricesVector::iterator matrices_iterator = cloud_covariances.begin ();
+    for(;
+        points_iterator <= cloud->end ();
+        points_iterator+=k_correspondences_, ++matrices_iterator)
+    {
+        const Point &query_point = *points_iterator;
+        Eigen::Matrix3d &cov = *matrices_iterator;
+        // Zero out the cov and mean
+        cov.setZero ();
+        mean.setZero ();
+
+        // Search for the K nearest neighbours
+        kdtree->nearestKSearch(query_point, k_correspondences_, nn_indecies, nn_dist_sq);
+
+        // Find the covariance matrix
+        for(int j = 0; j < k_correspondences_; j++) {
+        const Point &pt = (*cloud)[nn_indecies[j]];
+
+        mean[0] += pt.x;
+        mean[1] += pt.y;
+        mean[2] += pt.z;
+
+        cov(0,0) += pt.x*pt.x;
+
+        cov(1,0) += pt.y*pt.x;
+        cov(1,1) += pt.y*pt.y;
+
+        cov(2,0) += pt.z*pt.x;
+        cov(2,1) += pt.z*pt.y;
+        cov(2,2) += pt.z*pt.z;
+        }
+
+        mean /= static_cast<double> (k_correspondences_);
+        // Get the actual covariance
+        for (int k = 0; k < 3; k++)
+        for (int l = 0; l <= k; l++)
+        {
+            cov(k,l) /= static_cast<double> (k_correspondences_);
+            cov(k,l) -= mean[k]*mean[l];
+            cov(l,k) = cov(k,l);
+        }
+
+        // Compute the SVD (covariance matrix is symmetric so U = V')
+        Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
+        cov.setZero ();
+        Eigen::Matrix3d U = svd.matrixU ();
+        // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
+        for(int k = 0; k < 3; k++) {
+        Eigen::Vector3d col = U.col(k);
+        double v = 1.; // biggest 2 singular values replaced by 1
+        if(k == 2)   // smallest singular value replaced by gicp_epsilon
+            v = epsilon_;
+        cov+= v * col * col.transpose();
+        }
+        cout << cov(0,0) << ", " << cov(1,1) << ", " << cov(2,2) << ", " << endl;
+    }
+}
