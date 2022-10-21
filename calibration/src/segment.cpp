@@ -38,8 +38,11 @@ pcl::PointXYZ curP,lastP;
 bool flag = false; //判断是不是第一次点击
 bool isPickingMode = false;
 unsigned int line_id = 0;
-int k_correspondences_ = 10;
+int k_samples_ = 10;
 bool clip_mode = 1;
+bool fix_radius = 0;
+double search_radius = 0;
+boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 
 boost::shared_ptr<pcl::visualization::PCLVisualizer> interactionCustomizationVis();
 void getScreentPos(double* displayPos, double* world,void* viewer_void);
@@ -48,9 +51,11 @@ void mouseEventOccurred(const pcl::visualization::MouseEvent& event,void* viewer
 int inOrNot1(int poly_sides, double *poly_X, double *poly_Y, double x, double y);
 void projectInliers(void*);
 void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
-                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
-                        MatricesVector& cloud_covariances);
-void test(Cloud::ConstPtr target_);
+                        const pcl::KdTreeFLANN<Point>::Ptr kdtree);
+void displayRegion(pcl::PointCloud<Point>::ConstPtr cloud,
+                    const pcl::KdTreeFLANN<Point>::Ptr kdtree);
+void testCovariances(Cloud::ConstPtr target_);
+void testRegion(Cloud::ConstPtr target_);
 
 int main(int argc, char** argv)
 {
@@ -61,11 +66,12 @@ int main(int argc, char** argv)
     nh.getParam("data_path", data_path);
     nh.getParam("save_path", save_path);
     nh.getParam("clip_mode", clip_mode);
-    nh.getParam("k_nearests", k_correspondences_);
+    nh.getParam("fix_radius", fix_radius);
+    nh.getParam("k_samples", k_samples_);
+    nh.getParam("search_radius", search_radius);
     data_path = package_dir + data_path;
     save_path = package_dir + save_path;
 
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
     viewer = interactionCustomizationVis();
     std::cout<<"read cloud_in"<<endl;
     {
@@ -75,19 +81,23 @@ int main(int argc, char** argv)
     }
     std::cout<<"cloud_in size:"<<cloud_in->size()<<endl;
 
+    Cloud::ConstPtr source_ (cloud_in);
+    testRegion(source_);
+
     while (!viewer->wasStopped())
     {
         viewer->spinOnce(100);
         boost::this_thread::sleep(boost::posix_time::microseconds(100000));
     }
 
+    if (cloud_cliped->points.size() == 0) {pcl::copyPointCloud(*cloud_in, *cloud_cliped); }
     cout << cloud_cliped->points.size() << endl;
     cloud_cliped->height = 1;
     cloud_cliped->width = cloud_cliped->points.size();
     pcl::io::savePCDFileBinary(save_path, *cloud_cliped);
 
     Cloud::ConstPtr target_ (cloud_cliped);
-    test(target_);
+    testCovariances(target_);
 
     return 0;
 }
@@ -286,7 +296,7 @@ void projectInliers(void* viewer_void)
     }
 
     viewer->removeAllPointClouds();
-    viewer->addPointCloud(cloud_cliped,"aftercut");
+    viewer->addPointCloud(cloud_cliped, "aftercut");
 
     cloud_in->clear();
     pcl::copyPointCloud(*cloud_cliped,*cloud_in);
@@ -294,43 +304,90 @@ void projectInliers(void* viewer_void)
     viewer->getRenderWindow()->Render();
 }
 
-void test(Cloud::ConstPtr target_){
-    MatricesVectorPtr target_covariances_ (new MatricesVector);
+void testCovariances(Cloud::ConstPtr target_){
     const pcl::KdTreeFLANN<Point>::Ptr tree_ (new pcl::KdTreeFLANN<Point>);
     (*tree_).setInputCloud(target_);
-    computeCovariances(target_, tree_, *target_covariances_);
+    computeCovariances(target_, tree_);
 }
 
-void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
-                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
-                        MatricesVector& cloud_covariances) { // vector<Mat3d>
-    int k_correspondences_ = 100;
-    float epsilon_ = 1e-6;
-    Eigen::Vector3d mean;
-    std::vector<int> nn_indecies; nn_indecies.reserve (k_correspondences_);
-    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_correspondences_);
+void testRegion(Cloud::ConstPtr target_){
+    const pcl::KdTreeFLANN<Point>::Ptr tree_ (new pcl::KdTreeFLANN<Point>);
+    (*tree_).setInputCloud(target_);
+    displayRegion(target_, tree_);
+}
 
-    // We should never get there but who knows
-    if(cloud_covariances.size () < cloud->size ())
-        cloud_covariances.resize (cloud->size ());
+void displayRegion(pcl::PointCloud<Point>::ConstPtr cloud,
+                    const pcl::KdTreeFLANN<Point>::Ptr kdtree) { // vector<Mat3d>
+    int k_interval_ = int(cloud->size() / k_samples_) + 1;
+    float epsilon_ = 1e-6;
+    Eigen::Matrix3d cov;
+    Eigen::Vector3d mean;
+    Eigen::Vector3d eigen_mean;
+    std::vector<int> nn_indecies; nn_indecies.reserve (k_interval_);
+    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_interval_);
+    int trigger_ = 0;
 
     typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
-    MatricesVector::iterator matrices_iterator = cloud_covariances.begin ();
     for(;
-        points_iterator <= cloud->end ();
-        points_iterator+=k_correspondences_, ++matrices_iterator)
+        points_iterator < cloud->end ();
+        points_iterator+=k_interval_)
     {
         const Point &query_point = *points_iterator;
-        Eigen::Matrix3d &cov = *matrices_iterator;
         // Zero out the cov and mean
         cov.setZero ();
         mean.setZero ();
 
         // Search for the K nearest neighbours
-        kdtree->nearestKSearch(query_point, k_correspondences_, nn_indecies, nn_dist_sq);
+        if (!fix_radius) {
+        kdtree->nearestKSearch(query_point, k_interval_, nn_indecies, nn_dist_sq);
+        }
+        else {
+        kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
+        }
+
+        if (trigger_ < 100) {
+        Cloud::Ptr cloud_n (new Cloud);
+        pcl::copyPointCloud(*cloud, nn_indecies, *cloud_n);
+        int r = 0;
+        int g = 255;
+        int b = 0;
+        pcl::visualization::PointCloudColorHandlerCustom<Point> cloud_color_h(cloud_n, r, g, b);
+        viewer->addPointCloud(cloud_n, cloud_color_h, "cloud" + to_string(trigger_));
+        trigger_++;
+        }
+    }
+}
+
+void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
+                        const pcl::KdTreeFLANN<Point>::Ptr kdtree) { // vector<Mat3d>
+    int k_interval_ = int(cloud->size() / k_samples_) + 1;
+    float epsilon_ = 1e-6;
+    Eigen::Matrix3d cov;
+    Eigen::Vector3d mean;
+    Eigen::Vector3d eigen_mean;
+    std::vector<int> nn_indecies; nn_indecies.reserve (k_interval_);
+    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_interval_);
+
+    typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
+    for(;
+        points_iterator < cloud->end ();
+        points_iterator+=k_interval_)
+    {
+        const Point &query_point = *points_iterator;
+        // Zero out the cov and mean
+        cov.setZero ();
+        mean.setZero ();
+
+        // Search for the K nearest neighbours
+        if (!fix_radius) {
+        kdtree->nearestKSearch(query_point, k_interval_, nn_indecies, nn_dist_sq);
+        }
+        else {
+        kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
+        }
 
         // Find the covariance matrix
-        for(int j = 0; j < k_correspondences_; j++) {
+        for(int j = 0; j < k_interval_; j++) {
         const Point &pt = (*cloud)[nn_indecies[j]];
 
         mean[0] += pt.x;
@@ -347,28 +404,41 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
         cov(2,2) += pt.z*pt.z;
         }
 
-        mean /= static_cast<double> (k_correspondences_);
+        mean /= static_cast<double> (k_interval_);
         // Get the actual covariance
         for (int k = 0; k < 3; k++)
         for (int l = 0; l <= k; l++)
         {
-            cov(k,l) /= static_cast<double> (k_correspondences_);
+            cov(k,l) /= static_cast<double> (k_interval_);
             cov(k,l) -= mean[k]*mean[l];
             cov(l,k) = cov(k,l);
         }
 
         // Compute the SVD (covariance matrix is symmetric so U = V')
         Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
-        cov.setZero ();
-        Eigen::Matrix3d U = svd.matrixU ();
-        // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
-        for(int k = 0; k < 3; k++) {
-        Eigen::Vector3d col = U.col(k);
-        double v = 1.; // biggest 2 singular values replaced by 1
-        if(k == 2)   // smallest singular value replaced by gicp_epsilon
-            v = epsilon_;
-        cov+= v * col * col.transpose();
-        }
-        cout << cov(0,0) << ", " << cov(1,1) << ", " << cov(2,2) << ", " << endl;
+        // cout << "Cov: " << cov << endl;
+        Eigen::Vector3d eigen_vec = svd.singularValues();
+        eigen_mean += eigen_vec;
+        // cout << eigen_mean.transpose() << endl;
+        // cov.setZero ();
+        // Eigen::Matrix3d U = svd.matrixU ();
+        // // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
+        // for(int k = 0; k < 3; k++) {
+        // Eigen::Vector3d col = U.col(k);
+        // double v = 1.; // biggest 2 singular values replaced by 1
+        // if(k == 2)   // smallest singular value replaced by gicp_epsilon
+        //     v = epsilon_;
+        // cov+= v * col * col.transpose();
+        // }
+        
     }
+    cout << "Sum: \n" << eigen_mean.transpose() << endl;
+    eigen_mean /= k_samples_;
+    cout << "Mean: \n" << eigen_mean.transpose() << endl;
+    float precision;
+    if (eigen_mean(0) < eigen_mean(1) * 5) {
+        precision = sqrt(eigen_mean(1) + eigen_mean(2)) * 3;
+    }
+    else {precision = sqrt(eigen_mean(2)) * 3; }
+    cout << "Precision: \n" << precision << endl;
 }

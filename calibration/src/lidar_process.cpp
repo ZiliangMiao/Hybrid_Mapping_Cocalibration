@@ -19,36 +19,6 @@ LidarProcess::LidarProcess() {
     fullview_idx = (num_views - 1) / 2;
 
     cout << "----- LiDAR: LidarProcess -----" << endl;
-    /** create objects, initialization **/
-    // string pose_folder_path_temp;
-    // PoseFilePath pose_files_path_temp;
-    // EdgePixels edge_pixels_temp;
-    // EdgeCloud::Ptr edge_cloud_temp;
-    // TagsMap tags_map_temp;
-    // Mat4F pose_trans_mat_temp;
-    // for (int i = 0; i < num_spots; ++i) {
-    //     vector<string> folder_path_vec_temp;
-    //     vector<PoseFilePath> poses_file_path_vec_temp;
-    //     vector<EdgePixels> edge_pixels_vec_temp;
-    //     vector<EdgeCloud::Ptr> edge_cloud_vec_temp;
-    //     vector<TagsMap> tags_map_vec_temp;
-    //     vector<Mat4F> poses_trans_mat_vec_temp;
-    //     for (int j = 0; j < num_views; ++j) {
-    //         folder_path_vec_temp.push_back(pose_folder_path_temp);
-    //         poses_file_path_vec_temp.push_back(pose_files_path_temp);
-    //         edge_pixels_vec_temp.push_back(edge_pixels_temp);
-    //         edge_cloud_vec_temp.push_back(edge_cloud_temp);
-    //         tags_map_vec_temp.push_back(tags_map_temp);
-    //         poses_trans_mat_vec_temp.push_back(pose_trans_mat_temp);
-    //     }
-    //     folder_path_vec.push_back(folder_path_vec_temp);
-    //     file_path_vec.push_back(poses_file_path_vec_temp);
-    //     edge_pixels_vec.push_back(edge_pixels_vec_temp);
-    //     edge_cloud_vec.push_back(edge_cloud_vec_temp);
-    //     tags_map_vec.push_back(tags_map_vec_temp);
-    //     pose_trans_mat_vec.push_back(poses_trans_mat_vec_temp);
-    // }
-
     vector<vector<string>> folder_path_vec_tmp(num_spots, vector<string>(num_views));
     vector<vector<PoseFilePath>> file_path_vec_tmp(num_spots, vector<PoseFilePath>(num_views));
     vector<vector<EdgeCloud::Ptr>> edge_cloud_vec_tmp(num_spots, vector<EdgeCloud::Ptr>(num_views));

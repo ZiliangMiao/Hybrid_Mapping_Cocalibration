@@ -7,7 +7,7 @@
 #define K_EXT           (6)
 #define K_INT           (10)
 #define KDE_SCALE       (1)
-#define SAMPLING_RADIUS (0.01)
+#define SAMPLING_RADIUS (0.015)
 #define FULL_OUTPUT     (0)
 
 #define MatD(a,b)       Eigen::Matrix<double, (a), (b)>
