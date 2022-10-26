@@ -152,5 +152,5 @@ void FisheyeProcess::EdgeExtraction() {
     std::string kSpots = to_string(this->spot_idx);
     std::string cmd_str = "python3 " 
         + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
-    system(cmd_str.c_str());
+    int status = system(cmd_str.c_str());
 }

@@ -20,35 +20,41 @@
   <param name="tz" type="double" value="-0.110397" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_rgb_1.pcd" /> -->
 
-  <param name="rx" type="double" value="-0.0228948" />
+  <!-- <param name="rx" type="double" value="-0.0228948" />
   <param name="ry" type="double" value="0.027074" />
   <param name="rz" type="double" value="0.776748" />
   <param name="tx" type="double" value="-4.83285" />
   <param name="ty" type="double" value="-2.08588" />
-  <param name="tz" type="double" value="-0.110397" />
+  <param name="tz" type="double" value="-0.110397" /> -->
   <!-- <param name="data_path" type="string" value="/data/room/spot0/0/outputs/lidar_outputs/view_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/crf/spot0/fullview_recon/spot_rgb_cloud.pcd" /> -->
-  <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_rgb_1.pcd" />
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/parking/spot0/fullview_recon/global_registered_rgb_cloud.pcd" /> -->
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_rgb_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot3/fullview_recon/spot_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot3/fullview_recon/edge_cart.pcd" /> -->
-
-  <!-- <param name="rx" type="double" value="0.012864" />
-  <param name="ry" type="double" value="0.001143" />
-  <param name="rz" type="double" value="0.160874" />
-  <param name="tx" type="double" value="0.299831" />
-  <param name="ty" type="double" value="0.230617" />
-  <param name="tz" type="double" value="-0.029438" /> -->
+  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  
+  <param name="rx" type="double" value="0.015" />
+  <param name="ry" type="double" value="0" />
+  <param name="rz" type="double" value="0" />
+  <param name="tx" type="double" value="0" />
+  <param name="ty" type="double" value="0" />
+  <param name="tz" type="double" value="-1.25" />
+  <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
   
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_lio_registered_cloud.pcd" /> -->
   
-  <param name="type" type="string" value="xyzrgb" />
+  <!-- <param name="type" type="string" value="xyzrgb" /> -->
   <!-- <param name="type" type="string" value="xyzi" /> -->
-  <param name="msg_size" type="int" value="50000" />
+  <param name="type" type="string" value="xyz" />
+  <param name="msg_size" type="int" value="1000" />
   <param name="point_limit" type="int" value="88000000" />
+  <param name="save_pcd_en" type="bool" value="1" />
+  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
+  </node>
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">
   </node>
 </launch>

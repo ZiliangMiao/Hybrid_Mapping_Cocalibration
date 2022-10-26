@@ -1,7 +1,7 @@
 switch:
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: false
+    kCreateDensePcd: true
     kViewRegistration: false
     kFullViewMapping: false
 
@@ -20,7 +20,7 @@ switch:
 
     # colorization
     kSpotColorization: false
-    kGlobalColoredMapping: true
+    kGlobalColoredMapping: false
 
     kGlobalUniformSampling: true
 
@@ -35,12 +35,12 @@ essential:
     # kNumSpots: 1
     # kDatasetName: "rb1"
     # kNumSpots: 1
-    kDatasetName: "bs_hall"
-    kNumSpots: 5
-    # kDatasetName: "room"
-    # kNumSpots: 1
-    # kDatasetName: "parking"
-    # kNumSpots: 6
+    # kDatasetName: "bs_hall"
+    # kNumSpots: 5
+    # kDatasetName: "sustech_crf"
+    # kNumSpots: 3
+    kDatasetName: "sustech_rb2"
+    kNumSpots: 3
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448

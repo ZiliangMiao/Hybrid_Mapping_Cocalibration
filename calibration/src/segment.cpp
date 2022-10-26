@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 #include <boost/thread/thread.hpp>
 
 #include <pcl/io/pcd_io.h>
@@ -361,7 +362,7 @@ void displayRegion(pcl::PointCloud<Point>::ConstPtr cloud,
 void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
                         const pcl::KdTreeFLANN<Point>::Ptr kdtree) { // vector<Mat3d>
     int k_interval_ = int(cloud->size() / k_samples_) + 1;
-    float epsilon_ = 1e-6;
+    int cnt = 1;
     Eigen::Matrix3d cov;
     Eigen::Vector3d mean;
     Eigen::Vector3d eigen_mean;
@@ -371,7 +372,7 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
     typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
     for(;
         points_iterator < cloud->end ();
-        points_iterator+=k_interval_)
+        points_iterator += (k_interval_/2+1), cnt++)
     {
         const Point &query_point = *points_iterator;
         // Zero out the cov and mean
@@ -384,6 +385,7 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
         }
         else {
         kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
+        k_interval_ = nn_indecies.size();
         }
 
         // Find the covariance matrix
@@ -416,29 +418,22 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
 
         // Compute the SVD (covariance matrix is symmetric so U = V')
         Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
-        // cout << "Cov: " << cov << endl;
         Eigen::Vector3d eigen_vec = svd.singularValues();
+        eigen_vec(0) = sqrt(eigen_vec(0));
+        eigen_vec(1) = sqrt(eigen_vec(1));
+        eigen_vec(2) = sqrt(eigen_vec(2));
         eigen_mean += eigen_vec;
-        // cout << eigen_mean.transpose() << endl;
-        // cov.setZero ();
-        // Eigen::Matrix3d U = svd.matrixU ();
-        // // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
-        // for(int k = 0; k < 3; k++) {
-        // Eigen::Vector3d col = U.col(k);
-        // double v = 1.; // biggest 2 singular values replaced by 1
-        // if(k == 2)   // smallest singular value replaced by gicp_epsilon
-        //     v = epsilon_;
-        // cov+= v * col * col.transpose();
-        // }
         
     }
     cout << "Sum: \n" << eigen_mean.transpose() << endl;
-    eigen_mean /= k_samples_;
+    eigen_mean /= cnt;
     cout << "Mean: \n" << eigen_mean.transpose() << endl;
     float precision;
-    if (eigen_mean(0) < eigen_mean(1) * 5) {
-        precision = sqrt(eigen_mean(1) + eigen_mean(2)) * 3;
+
+    if (eigen_mean(1) < eigen_mean(2) * 2) {
+        precision = sqrt((eigen_mean(1) * eigen_mean(1) + eigen_mean(2) * eigen_mean(2))) * 3 ;
     }
-    else {precision = sqrt(eigen_mean(2)) * 3; }
+    else {precision = eigen_mean(2) * 3; }
+
     cout << "Precision: \n" << precision << endl;
 }

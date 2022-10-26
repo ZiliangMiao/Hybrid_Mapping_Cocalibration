@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
     /***** Class Object Initialization *****/
     FisheyeProcess fisheye;
     LidarProcess lidar;
-    lidar.ext_ = Eigen::Map<Param_D>(params_init.data()).head(K_EXT);
+    lidar.ext_ = Eigen::Map<Param_D>(params_init.data()).head(6);
     fisheye.int_ = Eigen::Map<Param_D>(params_init.data()).tail(K_INT);
 
     /***** Data Folder Check **/
@@ -266,27 +266,26 @@ int main(int argc, char** argv) {
 
     if (kSpotRegistration) {
         cout << "----------------- Spot Registration ---------------------" << endl;
-        // for (int i = lidar.num_spots - 1; i > 0; --i) {
-        //     if (kOneSpot == -1 || kOneSpot == i) {
-        //         lidar.SetSpotIdx(i);
-        //         lidar.SpotRegistration();
-        //     }
-        // }
-        
-        bool kSpotAnalysis = false;
-        ros::param::get("switch/kAnalysis", kSpotAnalysis);
-
         for (int i = lidar.num_spots - 1; i > 0; --i) {
             if (kOneSpot == -1 || kOneSpot == i) {
                 lidar.SetSpotIdx(i);
-                lidar.SpotRegAnalysis(0, lidar.spot_idx, kSpotAnalysis);
+                lidar.SpotRegistration();
             }
         }
+        
+        // bool kSpotAnalysis = false;
+        // ros::param::get("switch/kAnalysis", kSpotAnalysis);
+
+        // for (int i = lidar.num_spots - 1; i > 0; --i) {
+        //     if (kOneSpot == -1 || kOneSpot == i) {
+        //         lidar.SetSpotIdx(i);
+        //         lidar.SpotRegAnalysis(0, lidar.spot_idx, kSpotAnalysis);
+        //     }
+        // }
     }
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        // lidar.MappingEval();
         lidar.GlobalMapping(kGlobalUniformSampling);
     }
 

@@ -13,6 +13,8 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 
 /** pcl **/
 #include <pcl/common/common.h>
@@ -84,7 +86,7 @@ public:
     const int kFlatRows = 2000;
     const int kFlatCols = 4000;
     const float kRadPerPix = (M_PI * 2) / kFlatCols;
-    const bool kColorMap = true; /** enable edge cloud output in polar/3D space for visualization **/
+    const bool kColorMap = false; /** enable edge cloud output in polar/3D space for visualization **/
 
     /** tags and maps **/
     typedef vector<int> Tags;

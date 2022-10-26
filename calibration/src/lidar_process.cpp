@@ -69,8 +69,10 @@ void LidarProcess::BagToPcd(string filepath, CloudI &cloud) {
         if (i >= idx_start && i < idx_end) {
             auto m = *iterator;
             sensor_msgs::PointCloud2::ConstPtr input = m.instantiate<sensor_msgs::PointCloud2>();
-            pcl_conversions::toPCL(*input, pcl_pc2);
-            pcl::fromPCLPointCloud2(pcl_pc2, *bag_cloud);
+            // pcl_conversions::toPCL(*input, pcl_pc2);
+            // pcl::fromPCLPointCloud2(pcl_pc2, *bag_cloud);
+
+            convertPointCloud2ToViewCloud(*input, *bag_cloud);
             cloud += *bag_cloud;
         }
     }
@@ -125,8 +127,7 @@ void LidarProcess::SphereToPlane(CloudI::Ptr& polar_cloud) {
     const float kSearchRadius = kScale * (kRadPerPix / 2);
     const float sensitivity = 0.02f;
 
-    /** Multiprocessing test **/
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
 
     for (int u = 0; u < kFlatRows; ++u) {
         float theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
@@ -198,7 +199,7 @@ void LidarProcess::EdgeExtraction() {
     std::string script_path = kPkgPath + "/python_scripts/image_process/edge_extraction.py";
     std::string kSpots = to_string(spot_idx);
     std::string cmd_str = "python3 " + script_path + " " + kDatasetPath + " " + "lidar" + " " + kSpots;
-    system(cmd_str.c_str());
+    int status = system(cmd_str.c_str());
 }
 
 void LidarProcess::EdgeToPixel(CloudI::Ptr& cart_cloud) {
@@ -334,7 +335,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
         pcl::KdTreeFLANN<PointI> kdtree_src;
         kdtree_tgt.setInputCloud (cloud_us_tgt);
         kdtree_src.setInputCloud (cloud_us_src);
-        #pragma omp parallel for num_threads(16)
+        #pragma omp parallel for num_threads(THREADS)
         for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
             kdtree_tgt.nearestKSearch (cloud_us_src->points[idx], 1, nn_indices, nn_dists);
             if (nn_dists[0] <= max_fitness_range) {
@@ -342,7 +343,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
                 tgt_indices[nn_indices[0]] = nn_indices[0];
             }
         }
-        #pragma omp parallel for num_threads(16)
+        #pragma omp parallel for num_threads(THREADS)
         for (int idx = 0; idx < cloud_us_tgt->size(); ++idx) {
             if (tgt_indices[idx] == 0) {
                 kdtree_src.nearestKSearch (cloud_us_tgt->points[idx], 1, nn_indices, nn_dists);
@@ -456,7 +457,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
 
     pcl::KdTreeFLANN<PointI> kdtree_tgt;
     kdtree_tgt.setInputCloud (cloud_us_tgt);
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
     for (int i = 0; i < cloud_us_src->size(); ++i) {
         kdtree_tgt.nearestKSearch (cloud_us_src->points[i], 1, nn_indices, nn_dists);
         src_effe_indices[i] = (nn_dists[0] <= max_range) ? i : 0;
@@ -466,7 +467,7 @@ void LidarProcess::DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src
 
     pcl::KdTreeFLANN<PointI> kdtree_src;
     kdtree_src.setInputCloud (cloud_us_src);
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
     for (int i = 0; i < cloud_us_tgt->size(); ++i) {
         kdtree_src.nearestKSearch (cloud_us_tgt->points[i], 1, nn_indices, nn_dists);
         tgt_effe_indices[i] = (nn_dists[0] <= max_range) ? i : 0;
@@ -712,7 +713,7 @@ void LidarProcess::SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAna
     pcl::KdTreeFLANN<PointI> kdtree_src;
     kdtree_tgt.setInputCloud (cloud_us_tgt);
     kdtree_src.setInputCloud (cloud_us_src);
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
     for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
         kdtree_tgt.nearestKSearch (cloud_us_src->points[idx], 1, nn_indices, nn_dists);
         if (nn_dists[0] <= max_fitness_range) {
@@ -720,7 +721,7 @@ void LidarProcess::SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAna
             tgt_indices[nn_indices[0]] = nn_indices[0];
         }
     }
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
     for (int idx = 0; idx < cloud_us_tgt->size(); ++idx) {
         if (tgt_indices[idx] == 0) {
             kdtree_src.nearestKSearch (cloud_us_tgt->points[idx], 1, nn_indices, nn_dists);
@@ -898,7 +899,7 @@ double LidarProcess::GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_sr
     pcl::KdTreeFLANN<PointI> kdtree;
     kdtree.setInputCloud(cloud_tgt);
 
-    #pragma omp parallel for num_threads(16)
+    #pragma omp parallel for num_threads(THREADS)
     for (auto &pt : cloud_src->points) {
         // Find its nearest neighbor in the target
         kdtree.nearestKSearch(pt, 1, nn_indices, nn_dists);
@@ -920,93 +921,3 @@ void LidarProcess::RemoveInvalidPoints(CloudI::Ptr cloud){
     (*cloud).is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud, *cloud, null_indices);
 }
-
-void LidarProcess::Test(){
-    MatricesVectorPtr target_covariances_ (new MatricesVector);
-    CloudI::ConstPtr target_ (new CloudI);
-    const pcl::search::KdTree<PointI>::Ptr tree_ (new pcl::search::KdTree<PointI>);
-    (*tree_).setInputCloud(target_);
-    computeCovariances(target_, tree_, *target_covariances_);
-}
-
-void LidarProcess::computeCovariances(pcl::PointCloud<PointI>::ConstPtr cloud,
-                                const pcl::search::KdTree<PointI>::Ptr kdtree,
-                                MatricesVector& cloud_covariances) { // vector<Mat3d>
-    int k_correspondences_ = 20;
-    float epsilon_ = 1e-6;
-    Eigen::Vector3d mean;
-    std::vector<int> nn_indecies; nn_indecies.reserve (k_correspondences_);
-    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_correspondences_);
-
-    // We should never get there but who knows
-    if(cloud_covariances.size () < cloud->size ())
-        cloud_covariances.resize (cloud->size ());
-
-    typename pcl::PointCloud<PointI>::const_iterator points_iterator = cloud->begin ();
-    MatricesVector::iterator matrices_iterator = cloud_covariances.begin ();
-    for(;
-        points_iterator != cloud->end ();
-        ++points_iterator, ++matrices_iterator)
-    {
-        const PointI &query_point = *points_iterator;
-        Eigen::Matrix3d &cov = *matrices_iterator;
-        // Zero out the cov and mean
-        cov.setZero ();
-        mean.setZero ();
-
-        // Search for the K nearest neighbours
-        kdtree->nearestKSearch(query_point, k_correspondences_, nn_indecies, nn_dist_sq);
-
-        // Find the covariance matrix
-        for(int j = 0; j < k_correspondences_; j++) {
-        const PointI &pt = (*cloud)[nn_indecies[j]];
-
-        mean[0] += pt.x;
-        mean[1] += pt.y;
-        mean[2] += pt.z;
-
-        cov(0,0) += pt.x*pt.x;
-
-        cov(1,0) += pt.y*pt.x;
-        cov(1,1) += pt.y*pt.y;
-
-        cov(2,0) += pt.z*pt.x;
-        cov(2,1) += pt.z*pt.y;
-        cov(2,2) += pt.z*pt.z;
-        }
-
-        mean /= static_cast<double> (k_correspondences_);
-        // Get the actual covariance
-        for (int k = 0; k < 3; k++)
-        for (int l = 0; l <= k; l++)
-        {
-            cov(k,l) /= static_cast<double> (k_correspondences_);
-            cov(k,l) -= mean[k]*mean[l];
-            cov(l,k) = cov(k,l);
-        }
-
-        // Compute the SVD (covariance matrix is symmetric so U = V')
-        Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
-        cov.setZero ();
-        Eigen::Matrix3d U = svd.matrixU ();
-        // Reconstitute the covariance matrix with modified singular values using the column     // vectors in V.
-        for(int k = 0; k < 3; k++) {
-        Eigen::Vector3d col = U.col(k);
-        double v = 1.; // biggest 2 singular values replaced by 1
-        if(k == 2)   // smallest singular value replaced by gicp_epsilon
-            v = epsilon_;
-        cov+= v * col * col.transpose();
-        }
-    }
-}
-
-// if ((!target_covariances_) || (target_covariances_->empty ()))
-//   {
-
-//   }
-//   // Compute input cloud covariance matrices
-//   if ((!input_covariances_) || (input_covariances_->empty ()))
-//   {
-//     covariances_.reset (new MatricesVector);
-//     computeCovariances<PointSource> (input_, tree_reciprocal_, *input_covariances_);
-//   }
