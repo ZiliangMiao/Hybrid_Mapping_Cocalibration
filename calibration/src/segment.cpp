@@ -11,6 +11,7 @@
 #include <pcl/visualization/keyboard_event.h>//键盘事件
 
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/ModelCoefficients.h>
 
@@ -43,6 +44,8 @@ int k_samples_ = 10;
 bool clip_mode = 1;
 bool fix_radius = 0;
 double search_radius = 0;
+float z_lb = -10;
+float z_ub = 10;
 boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 
 boost::shared_ptr<pcl::visualization::PCLVisualizer> interactionCustomizationVis();
@@ -73,6 +76,8 @@ int main(int argc, char** argv)
     nh.getParam("fix_radius", fix_radius);
     nh.getParam("k_samples", k_samples_);
     nh.getParam("search_radius", search_radius);
+    nh.getParam("z_lb", z_lb);
+    nh.getParam("z_ub", z_ub);
     data_path = package_dir + data_path;
     save_path = package_dir + save_path;
     save_vec_path = package_dir + save_vec_path;
@@ -82,7 +87,16 @@ int main(int argc, char** argv)
     {
         pcl::PCDReader reader;
         reader.read(data_path, *cloud_in);
+        
+        pcl::PassThrough<pcl::PointXYZ> pt;	// 创建滤波器对象
+        pt.setInputCloud(cloud_in);			//设置输入点云
+        pt.setFilterFieldName("z");			//设置滤波所需字段x
+        pt.setFilterLimits(z_lb, z_ub);		//设置x字段过滤范围
+        pt.setFilterLimitsNegative(false);	//默认false，保留范围内的点云；true，保存范围外的点云
+        pt.filter(*cloud_in);
+
         viewer->addPointCloud(cloud_in,"cloud_in");
+
     }
     std::cout<<"cloud_in size:"<<cloud_in->size()<<endl;
 
@@ -329,6 +343,7 @@ void displayRegion(pcl::PointCloud<Point>::ConstPtr cloud,
     Eigen::Vector3d mean;
     std::vector<int> nn_indecies; nn_indecies.reserve (k_interval_);
     std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_interval_);
+    Cloud::Ptr cloud_n (new Cloud);
     int trigger_ = 0;
 
     typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
@@ -349,53 +364,8 @@ void displayRegion(pcl::PointCloud<Point>::ConstPtr cloud,
         kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
         }
 
-        if (trigger_ < 100) {
-        Cloud::Ptr cloud_n (new Cloud);
-        pcl::copyPointCloud(*cloud, nn_indecies, *cloud_n);
-        int r = 0;
-        int g = 255;
-        int b = 0;
-        pcl::visualization::PointCloudColorHandlerCustom<Point> cloud_color_h(cloud_n, r, g, b);
-        viewer->addPointCloud(cloud_n, cloud_color_h, "cloud" + to_string(trigger_));
-        trigger_++;
-        }
-    }
-}
-
-void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
-                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
-                        string save_vec_path ) { // vector<Mat3d>
-    int k_interval_ = int(cloud->size() / k_samples_) + 1;
-    int cnt = 1;
-    Eigen::Matrix3d cov;
-    Eigen::Vector3d mean;
-    // Eigen::Vector3d eigen_mean;
-    vector<float> precision_rec;
-    float avg_precision;
-    std::vector<int> nn_indecies; nn_indecies.reserve (k_interval_);
-    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_interval_);
-
-    typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
-    for(;
-        points_iterator < cloud->end ();
-        points_iterator += (k_interval_/2+1), cnt++)
-    {
-        const Point &query_point = *points_iterator;
-        // Zero out the cov and mean
-        cov.setZero ();
-        mean.setZero ();
-
-        // Search for the K nearest neighbours
-        if (!fix_radius) {
-            kdtree->nearestKSearch(query_point, k_interval_, nn_indecies, nn_dist_sq);
-        }
-        else {
-            kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
-            k_interval_ = nn_indecies.size();
-        }
-
         // Find the covariance matrix
-        for(int j = 0; j < k_interval_; j++) {
+        for(int j = 0; j < nn_indecies.size(); j++) {
             const Point &pt = (*cloud)[nn_indecies[j]];
 
             mean[0] += pt.x;
@@ -412,12 +382,12 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
             cov(2,2) += pt.z*pt.z;
         }
 
-        mean /= static_cast<double> (k_interval_);
+        mean /= static_cast<double> (nn_indecies.size());
         // Get the actual covariance
         for (int k = 0; k < 3; k++)
         for (int l = 0; l <= k; l++)
         {
-            cov(k,l) /= static_cast<double> (k_interval_);
+            cov(k,l) /= static_cast<double> (nn_indecies.size());
             cov(k,l) -= mean[k]*mean[l];
             cov(l,k) = cov(k,l);
         }
@@ -426,11 +396,88 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
         Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
         Eigen::Vector3d eigen_vec = svd.singularValues();
         float precision = 0.0f;
-        if (sqrt(eigen_vec(1)) < sqrt(eigen_vec(2)) * 2) {
-            precision = sqrt((eigen_vec(1) + eigen_vec(2)) / 2) * 3 ;
+        cout << sqrt(eigen_vec(0)) << ", " << sqrt(eigen_vec(1)) << ", " << sqrt(eigen_vec(2)) << ", " << endl;
+        if (eigen_vec(1) > eigen_vec(2) * 5 && eigen_vec(0) * 0.8 < eigen_vec(1)){
+            precision = sqrt(eigen_vec(2)) * 3;     
+            Cloud::Ptr cloud_tmp (new Cloud);
+            pcl::copyPointCloud(*cloud, nn_indecies, *cloud_tmp);
+            *cloud_n += *cloud_tmp;
         }
-        else {precision = sqrt(eigen_vec(2)) * 3; }
-        precision_rec.push_back(precision);
+    }
+    int r = 0;
+    int g = 255;
+    int b = 0;
+    pcl::visualization::PointCloudColorHandlerCustom<Point> cloud_color_h(cloud_n, r, g, b);
+    viewer->addPointCloud(cloud_n, cloud_color_h, "cloud_n");
+}
+
+void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
+                        const pcl::KdTreeFLANN<Point>::Ptr kdtree,
+                        string save_vec_path ) { // vector<Mat3d>
+    int k_interval_ = int(cloud->size() / k_samples_ / 2) + 1;
+    Eigen::Matrix3d cov;
+    Eigen::Vector3d mean;
+    vector<float> precision_rec;
+    float avg_precision = 0;
+    std::vector<int> nn_indecies; nn_indecies.reserve (k_interval_);
+    std::vector<float> nn_dist_sq; nn_dist_sq.reserve (k_interval_);
+
+    typename pcl::PointCloud<Point>::const_iterator points_iterator = cloud->begin ();
+    for(;
+        points_iterator < cloud->end ();
+        points_iterator += k_interval_)
+    {
+        const Point &query_point = *points_iterator;
+        // Zero out the cov and mean
+        cov.setZero ();
+        mean.setZero ();
+
+        // Search for the K nearest neighbours
+        if (!fix_radius) {
+            kdtree->nearestKSearch(query_point, k_interval_, nn_indecies, nn_dist_sq);
+        }
+        else {
+            kdtree->radiusSearch(query_point, search_radius, nn_indecies, nn_dist_sq);
+            // k_interval_ = nn_indecies.size();
+        }
+
+        // Find the covariance matrix
+        for(int j = 0; j < nn_indecies.size(); j++) {
+            const Point &pt = (*cloud)[nn_indecies[j]];
+
+            mean[0] += pt.x;
+            mean[1] += pt.y;
+            mean[2] += pt.z;
+
+            cov(0,0) += pt.x*pt.x;
+
+            cov(1,0) += pt.y*pt.x;
+            cov(1,1) += pt.y*pt.y;
+
+            cov(2,0) += pt.z*pt.x;
+            cov(2,1) += pt.z*pt.y;
+            cov(2,2) += pt.z*pt.z;
+        }
+
+        mean /= static_cast<double> (nn_indecies.size());
+        // Get the actual covariance
+        for (int k = 0; k < 3; k++)
+        for (int l = 0; l <= k; l++)
+        {
+            cov(k,l) /= static_cast<double> (nn_indecies.size());
+            cov(k,l) -= mean[k]*mean[l];
+            cov(l,k) = cov(k,l);
+        }
+
+        // Compute the SVD (covariance matrix is symmetric so U = V')
+        Eigen::JacobiSVD<Eigen::Matrix3d> svd(cov, Eigen::ComputeFullU);
+        Eigen::Vector3d eigen_vec = svd.singularValues();
+        float precision = 0.0f;
+        cout << sqrt(eigen_vec(0)) << ", " << sqrt(eigen_vec(1)) << ", " << sqrt(eigen_vec(2)) << ", " << endl;
+        if (eigen_vec(1) > eigen_vec(2) * 2 && eigen_vec(0) * 0.5 < eigen_vec(1)){
+            precision = sqrt(eigen_vec(2)) * 6; 
+            precision_rec.push_back(precision);
+        }
     }
 
     ofstream outfile;
@@ -443,11 +490,11 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
         outfile << p << endl;
     }
     
-    avg_precision /= cnt;
+    avg_precision /= precision_rec.size();
 
     outfile.close();
 
-    cout << "Count: \n" << cnt << endl;
+    cout << "Count: \n" << precision_rec.size() << endl;
     cout << "Precision: \n" << avg_precision << endl;
 }
 

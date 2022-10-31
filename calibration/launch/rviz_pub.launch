@@ -1,10 +1,10 @@
 <launch>
-  <!-- <param name="rx" type="double" value="0" />
+  <param name="rx" type="double" value="0" />
   <param name="ry" type="double" value="-0" />
   <param name="rz" type="double" value="0" />
   <param name="tx" type="double" value="0" />
   <param name="ty" type="double" value="0" />
-  <param name="tz" type="double" value="-0" /> -->
+  <param name="tz" type="double" value="-0" />
   <!-- <param name="data_path" type="string" value="/data/bs_hall/global_scans.pcd" /> -->
   
   <!-- <param name="data_path" type="string" value="/data/bs_hall/roi_scans_xyzi.pcd" /> -->
@@ -34,25 +34,15 @@
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot3/fullview_recon/edge_cart.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   
-  <param name="rx" type="double" value="0.015" />
-  <param name="ry" type="double" value="0" />
-  <param name="rz" type="double" value="0" />
-  <param name="tx" type="double" value="0" />
-  <param name="ty" type="double" value="0" />
-  <param name="tz" type="double" value="-1.25" />
-  <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio.pcd" />
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
-  
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
-  <!-- <param name="data_path" type="string" value="/data/liyuan/spot0/fullview_recon/global_lio_registered_cloud.pcd" /> -->
-  
+  <param name="data_path" type="string" value="/data/compare/segment_hall_lio.pcd" />
+
   <!-- <param name="type" type="string" value="xyzrgb" /> -->
   <!-- <param name="type" type="string" value="xyzi" /> -->
   <param name="type" type="string" value="xyz" />
   <param name="msg_size" type="int" value="1000" />
   <param name="point_limit" type="int" value="88000000" />
-  <param name="save_pcd_en" type="bool" value="0" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
+  <!-- <param name="save_pcd_en" type="bool" value="0" /> -->
+  <!-- <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" /> -->
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
   </node>
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">

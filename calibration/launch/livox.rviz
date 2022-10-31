@@ -21,14 +21,13 @@ Panels:
   - Class: rviz/Views
     Expanded:
       - /Current View1
-      - /Hall Camera1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz/Time
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: PointCloud2
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -54,17 +53,17 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: false
-    - Alpha: 0.5
+    - Alpha: 0.4000000059604645
       Autocompute Intensity Bounds: false
       Autocompute Value Bounds:
-        Max Value: 7.350255489349365
-        Min Value: -1.077447772026062
+        Max Value: 8.5
+        Min Value: 2.700000047683716
         Value: false
       Axis: Z
       Channel Name: intensity
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: ""
+      Color Transformer: AxisColor
       Decay Time: 10000
       Enabled: true
       Invert Rainbow: false
@@ -73,10 +72,10 @@ Visualization Manager:
       Min Color: 0; 0; 0
       Min Intensity: 40
       Name: PointCloud2
-      Position Transformer: ""
+      Position Transformer: XYZ
       Queue Size: 10000
       Selectable: true
-      Size (Pixels): 2
+      Size (Pixels): 1
       Size (m): 0.009999999776482582
       Style: Points
       Topic: /livox/lidar
@@ -118,42 +117,27 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
-      Class: rviz/TopDownOrtho
+      Class: rviz/Orbit
+      Distance: 3.6533288955688477
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 82.3356704711914
+        Y: 5.393509864807129
+        Z: 3.8754632472991943
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 10
+      Pitch: 0.18039821088314056
       Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz)
-      X: 1436.34912109375
-      Y: 1426.5501708984375
+      Value: Orbit (rviz)
+      Yaw: 3.3285818099975586
     Saved:
-      - Class: rviz/Orbit
-        Distance: 28.431976318359375
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Focal Point:
-          X: -9.683528900146484
-          Y: -11.201053619384766
-          Z: 1.037928581237793
-        Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
-        Invert Z Axis: false
-        Name: Hall Camera
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 0.2697964906692505
-        Target Frame: <Fixed Frame>
-        Value: Orbit (rviz)
-        Yaw: 0.40999794006347656
       - Angle: 0
         Class: rviz/TopDownOrtho
         Enable Stereo Rendering:
@@ -169,86 +153,6 @@ Visualization Manager:
         Value: TopDownOrtho (rviz)
         X: -25.561248779296875
         Y: -6.632148265838623
-      - Class: rviz/Orbit
-        Distance: 17.050525665283203
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Focal Point:
-          X: -9.725927352905273
-          Y: -10.344874382019043
-          Z: -0.15837553143501282
-        Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
-        Invert Z Axis: false
-        Name: HallInside
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 0.43979647755622864
-        Target Frame: <Fixed Frame>
-        Value: Orbit (rviz)
-        Yaw: 1.0299978256225586
-      - Class: rviz/Orbit
-        Distance: 17.050525665283203
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Focal Point:
-          X: -9.725927352905273
-          Y: -10.344874382019043
-          Z: -0.15837553143501282
-        Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
-        Invert Z Axis: false
-        Name: HallInsideCam
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 0.43979647755622864
-        Target Frame: <Fixed Frame>
-        Value: Orbit (rviz)
-        Yaw: 1.0299978256225586
-      - Class: rviz/Orbit
-        Distance: 17.050525665283203
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Focal Point:
-          X: -9.725927352905273
-          Y: -10.344874382019043
-          Z: -0.15837553143501282
-        Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
-        Invert Z Axis: false
-        Name: Orbit
-        Near Clip Distance: 0.009999999776482582
-        Pitch: 0.43979647755622864
-        Target Frame: <Fixed Frame>
-        Value: Orbit (rviz)
-        Yaw: 1.0299978256225586
-      - Class: rviz/Orbit
-        Distance: 11.124689102172852
-        Enable Stereo Rendering:
-          Stereo Eye Separation: 0.05999999865889549
-          Stereo Focal Distance: 1
-          Swap Stereo Eyes: false
-          Value: false
-        Focal Point:
-          X: -12.704326629638672
-          Y: -12.148805618286133
-          Z: 2.6090054512023926
-        Focal Shape Fixed Size: true
-        Focal Shape Size: 0.05000000074505806
-        Invert Z Axis: false
-        Name: haall_scale
-        Near Clip Distance: 0.009999999776482582
-        Pitch: -0.035203490406274796
-        Target Frame: <Fixed Frame>
-        Value: Orbit (rviz)
-        Yaw: 0.7818125486373901
 Window Geometry:
   Displays:
     collapsed: false
