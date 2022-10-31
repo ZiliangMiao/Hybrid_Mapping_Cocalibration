@@ -396,20 +396,20 @@ void computeCovariances(pcl::PointCloud<Point>::ConstPtr cloud,
 
         // Find the covariance matrix
         for(int j = 0; j < k_interval_; j++) {
-        const Point &pt = (*cloud)[nn_indecies[j]];
+            const Point &pt = (*cloud)[nn_indecies[j]];
 
-        mean[0] += pt.x;
-        mean[1] += pt.y;
-        mean[2] += pt.z;
+            mean[0] += pt.x;
+            mean[1] += pt.y;
+            mean[2] += pt.z;
 
-        cov(0,0) += pt.x*pt.x;
+            cov(0,0) += pt.x*pt.x;
 
-        cov(1,0) += pt.y*pt.x;
-        cov(1,1) += pt.y*pt.y;
+            cov(1,0) += pt.y*pt.x;
+            cov(1,1) += pt.y*pt.y;
 
-        cov(2,0) += pt.z*pt.x;
-        cov(2,1) += pt.z*pt.y;
-        cov(2,2) += pt.z*pt.z;
+            cov(2,0) += pt.z*pt.x;
+            cov(2,1) += pt.z*pt.y;
+            cov(2,2) += pt.z*pt.z;
         }
 
         mean /= static_cast<double> (k_interval_);
