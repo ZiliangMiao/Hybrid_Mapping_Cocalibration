@@ -51,7 +51,7 @@
   <param name="type" type="string" value="xyz" />
   <param name="msg_size" type="int" value="1000" />
   <param name="point_limit" type="int" value="88000000" />
-  <param name="save_pcd_en" type="bool" value="1" />
+  <param name="save_pcd_en" type="bool" value="0" />
   <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
   </node>

@@ -17,7 +17,7 @@
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
   <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" /> -->
 
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/spot_cloud.pcd" />
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
   
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_icp.pcd" />
@@ -26,8 +26,9 @@
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_lio.pcd" />
   <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_lio.pcd" /> -->
 
-  <param name="data_path" type="string" value="/data/compare/segment_hall_icp.pcd" />
-  <param name="save_path" type="string" value="/data/compare/segment_hall_icp.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_icp_m.pcd" /> -->
+  <param name="save_path" type="string" value="/data/compare/segment_crf_icp_m.pcd" />
+  <param name="save_vec_path" type="string" value="/data/compare/crf_icp.txt" />
 
   <!-- mode = 0: delete points inside the polygon -->
   <!-- mode = 1: save points inside the polygon -->

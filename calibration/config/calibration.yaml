@@ -2,8 +2,8 @@ switch:
     ## Registration, Colorization and Mapping
     # view
     kCreateDensePcd: true
-    kViewRegistration: false
-    kFullViewMapping: false
+    kViewRegistration: true
+    kFullViewMapping: true
 
     ## Data Process
     kLidarFlatProcess: false
@@ -15,7 +15,7 @@ switch:
     kAnalysis: false
     
     # spot
-    kSpotRegistration: false
+    kSpotRegistration: true
     kGlobalMapping: true
 
     # colorization
@@ -37,10 +37,10 @@ essential:
     # kNumSpots: 1
     # kDatasetName: "bs_hall"
     # kNumSpots: 5
-    # kDatasetName: "sustech_crf"
+    kDatasetName: "sustech_crf"
+    kNumSpots: 2
+    # kDatasetName: "sustech_rb2"
     # kNumSpots: 3
-    kDatasetName: "sustech_rb2"
-    kNumSpots: 3
     kNumViews: 5
     kFisheyeRows: 2048
     kFisheyeCols: 2448
