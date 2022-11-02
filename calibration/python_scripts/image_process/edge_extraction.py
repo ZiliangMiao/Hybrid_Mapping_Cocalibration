@@ -55,17 +55,17 @@ if __name__ == "__main__":
     data_path = dataset_path + "/spot" + str(spot) + "/0"
     print("Edge extraction in: " + data_path + " ... ", end="")
 
-    dir_cam_original = data_path + "/outputs/fisheye_outputs/flatImage.bmp"
-    dir_cam_mask = root_path + "/python_scripts/image_process/flatImage_mask.png"
+    dir_cam_original = data_path + "/outputs/fisheye_outputs/flat_image.bmp"
+    dir_cam_mask = root_path + "/python_scripts/image_process/flat_image_mask.png"
     dir_cam_filtered = data_path + "/edges/canny_outputs/cam_1_filtered.png"
     dir_cam_canny = data_path + "/edges/canny_outputs/cam_2_canny.png"
-    dir_cam_output = data_path + "/edges/camEdge.png"
+    dir_cam_output = data_path + "/edges/cam_edge.png"
 
-    dir_lid_original = data_path + "/outputs/lidar_outputs/flatLidarImage.bmp"
-    dir_lid_mask = root_path + "/python_scripts/image_process/flatLidarImage_mask.png"
+    dir_lid_original = data_path + "/outputs/lidar_outputs/flat_lidar_image.bmp"
+    dir_lid_mask = root_path + "/python_scripts/image_process/flat_lidar_image_mask.png"
     dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
     dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
-    dir_lid_output = data_path + "/edges/lidEdge.png"
+    dir_lid_output = data_path + "/edges/lidar_edge.png"
 
     check_folder()
 

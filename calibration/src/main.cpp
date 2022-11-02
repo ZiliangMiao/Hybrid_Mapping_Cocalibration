@@ -150,8 +150,7 @@ int main(int argc, char** argv) {
             if (kFisheyeFlatProcess) {
                 fisheye.SetSpotIdx(i);
                 fisheye.SetViewIdx(fisheye.fullview_idx);
-
-                fisheye.LoadImage();
+                fisheye.LoadImage(true);
                 fisheye.EdgeExtraction();
                 fisheye.EdgeToPixel(); 
 
@@ -186,7 +185,7 @@ int main(int argc, char** argv) {
                 fisheye.ReadEdge();
                 lidar.ReadEdge();
                 
-                Visualization2D(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
+                Project2Image(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
                 string record_path = lidar.file_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path
                                     + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
                 SaveResults(record_path, params_init, 0, 0, 0);
@@ -227,7 +226,7 @@ int main(int argc, char** argv) {
     /***** Registration, Colorization and Mapping *****/
     /** spot **/
         if (kSpotColorization) {
-        cout << "----------------- Full View Cloud Colorization ---------------------" << endl;
+        cout << "----------------- Spot Cloud Colorization ---------------------" << endl;
         // lh3_global:
         // params_calib = {
         //         0.000472, -3.139975, 1.563091, /** Rx Ry Rz **/
@@ -245,13 +244,13 @@ int main(int argc, char** argv) {
         //         1.000177, -0.005878, 0.006144
         // };
         // bs_hall:
-        // params_calib = {
-        //         0.000990, -3.138274, 1.560729,
-        //         0.291672, -0.005141, 0.038923,
-        //         1021.553425, 1196.789762,
-        //         1995.359807, -666.475065, -13.940682, 20.000000, -4.049823,
-        //         0.998262, -0.005735, 0.005314
-        // };
+        params_calib = {
+                0.000990, -3.138274, 1.560729,
+                0.291672, -0.005141, 0.038923,
+                1021.553425, 1196.789762,
+                1995.359807, -666.475065, -13.940682, 20.000000, -4.049823,
+                0.998262, -0.005735, 0.005314
+        };
         
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
@@ -259,7 +258,7 @@ int main(int argc, char** argv) {
                 lidar.SetSpotIdx(i);
                 fisheye.SetViewIdx(lidar.fullview_idx);
                 lidar.SetViewIdx(lidar.fullview_idx);
-                Visualization3D(fisheye, lidar, params_calib);
+                SpotColorization(fisheye, lidar, params_calib);
             }
         }
     }

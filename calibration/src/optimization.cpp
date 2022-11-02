@@ -45,7 +45,7 @@ struct QuaternionFunctor {
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
 };
 
-void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
+void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
     cv::Mat raw_image = fisheye.LoadImage();
     ofstream outfile;
 
@@ -98,7 +98,7 @@ void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
     cv::imwrite(fusion_img_path, raw_image); /** fusion image generation **/
 }
 
-void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
+void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
  
     string fullview_cloud_path, pose_mat_path, fisheye_img_path;
     Ext_F extrinsic;
@@ -131,20 +131,20 @@ void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<d
 
     for (int i = 0; i < lidar.num_views; i++)
     {
-        int coloring_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
+        int color_view_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
         CloudRGB::Ptr output_cloud(new CloudRGB);
         std::vector<int> colored_point_idx(spot_cloud->points.size());
         std::vector<int> blank_point_idx(spot_cloud->points.size());
 
         /** Loading transform matrix between different views **/
-        pose_mat_path = lidar.file_path_vec[lidar.spot_idx][coloring_idx].pose_trans_mat_path;
+        pose_mat_path = lidar.file_path_vec[lidar.spot_idx][color_view_idx].pose_trans_mat_path;
         pose_mat = LoadTransMat(pose_mat_path);
-        cout << "View: " << " Spot Index: " << lidar.spot_idx << " View Index: " << coloring_idx << "\n"
+        cout << "View: " << " Spot Index: " << lidar.spot_idx << " View Index: " << color_view_idx << "\n"
             << "ICP Trans Mat:" << "\n " << pose_mat << endl;
         pose_mat_inv = pose_mat.inverse();
 
         /** Loading transform matrix between different views **/
-        fisheye.SetSpotIdx(coloring_idx);
+        fisheye.SetViewIdx(color_view_idx);
         target_view_img = fisheye.LoadImage();
 
         /** PointCloud Coloring **/
@@ -312,7 +312,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     for (int &spot_idx : spot_vec) {
         fisheye.SetSpotIdx(spot_idx);
         lidar.SetSpotIdx(spot_idx);
-        Visualization2D(fisheye, lidar, result_vec, bandwidth);
+        Project2Image(fisheye, lidar, result_vec, bandwidth);
     }
     
     return result_vec;

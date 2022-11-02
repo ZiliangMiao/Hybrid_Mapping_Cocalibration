@@ -52,8 +52,8 @@ public:
     
     /** Omnidirectional image settings **/
     Pair kImageSize = {2048, 2448};
-    Pair kEffectiveRadius = {325, 1125};
-    int kExcludeRadius = 175;
+    Pair kEffectiveRadius = {300, 1100};
+    int kExcludeRadius = 200;
 
     /** coordinates of edge pixels in fisheye images **/
     vector<vector<EdgeCloud::Ptr>> edge_cloud_vec;
@@ -92,8 +92,7 @@ public:
 
 public:
     FisheyeProcess();
-
-    cv::Mat LoadImage();
+    cv::Mat LoadImage(bool output=false);
     void ReadEdge();
     void EdgeToPixel();
     std::vector<double> Kde(double bandwidth, double scale);

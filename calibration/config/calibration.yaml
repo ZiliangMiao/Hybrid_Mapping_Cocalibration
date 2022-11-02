@@ -16,11 +16,11 @@ switch:
     
     # spot
     kSpotRegistration: false
-    kGlobalMapping: true
+    kGlobalMapping: false
 
     # colorization
-    kSpotColorization: false
-    kGlobalColoredMapping: false
+    kSpotColorization: true
+    kGlobalColoredMapping: true
 
     kGlobalUniformSampling: false
 
@@ -35,10 +35,10 @@ essential:
     # kNumSpots: 1
     # kDatasetName: "rb1"
     # kNumSpots: 1
-    # kDatasetName: "bs_hall"
-    # kNumSpots: 5
-    kDatasetName: "sustech_crf"
-    kNumSpots: 3
+    kDatasetName: "bs_hall"
+    kNumSpots: 5
+    # kDatasetName: "sustech_crf"
+    # kNumSpots: 3
     # kDatasetName: "sustech_rb2"
     # kNumSpots: 3
     kNumViews: 5

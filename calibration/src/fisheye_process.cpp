@@ -51,14 +51,17 @@ void FisheyeProcess::ReadEdge() {
     edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
 }
 
-cv::Mat FisheyeProcess::LoadImage() {
+cv::Mat FisheyeProcess::LoadImage(bool output) {
     string img_path = file_path_vec[spot_idx][view_idx].hdr_img_path;
-    string output_img_path = file_path_vec[spot_idx][view_idx].flat_img_path;
-
     cv::Mat image = cv::imread(img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
-                   "Invalid size (%d, %d) from file: %s", image.rows, image.cols, fisheye_hdr_img_path);
-    cv::imwrite(output_img_path, image);
+                   "Invalid size (%d, %d) from file: %s", image.rows, image.cols, img_path);
+    cout << "Load image from file:" << img_path << endl;
+
+    if (output) {
+        string output_img_path = file_path_vec[spot_idx][view_idx].flat_img_path;
+        cv::imwrite(output_img_path, image);
+    }
     return image;
 }
 

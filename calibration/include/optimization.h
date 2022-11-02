@@ -45,9 +45,9 @@ inline double getDouble(const ceres::Jet<SCALAR, N> &x) {
     return static_cast<double>(x.a);
 }
 
-void Visualization2D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
+void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
 
-void Visualization3D(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
+void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
 
 std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     LidarProcess &lidar,
