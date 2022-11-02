@@ -845,9 +845,9 @@ void LidarProcess::GlobalMapping(bool kGlobalUniformSampling) {
     }
 
     /** source index and target index (align to spot 0) **/
-    int tgt_idx = 0;
+    int tgt_idx = 1;
 
-    for (int src_idx = 1; src_idx < num_spots; ++src_idx) {
+    for (int src_idx = tgt_idx + 1; src_idx < num_spots; ++src_idx) {
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);
 
         /** create point cloud container  **/

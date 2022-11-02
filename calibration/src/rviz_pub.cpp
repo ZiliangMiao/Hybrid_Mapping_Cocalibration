@@ -10,6 +10,7 @@
 // pcl library
 #include <pcl/point_cloud.h>
 #include <pcl/common/transforms.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/io/pcd_io.h>
 
@@ -33,28 +34,15 @@ void getMessage(sensor_msgs::PointCloud2 &msg,
     msg.header.seq = partition;
 }
 
-double uniform_rand(double lowerBndr, double upperBndr) {
-  return lowerBndr + ((double) std::rand() / (RAND_MAX + 1.0)) * (upperBndr - lowerBndr);
-}
-
-double gauss_rand(double mean, double sigma) {
-  double x, y, r2;
-  do {
-    x = -1.0 + 2.0 * uniform_rand(0.0, 1.0);
-    y = -1.0 + 2.0 * uniform_rand(0.0, 1.0);
-    r2 = x * x + y * y;
-  } while (r2 > 1.0 || r2 == 0.0);
-  return mean + sigma * y * std::sqrt(-2.0 * log(r2) / r2);
-}
-
 template <typename PointT>
-void process(pcl::PointCloud<PointT> &cloud) {
-    float sigma = 0.01;
-    for (auto &pt : cloud) {
-        pt.x = gauss_rand(pt.x, sigma);
-        pt.y = gauss_rand(pt.y, sigma);
-        pt.z = gauss_rand(pt.z, sigma);
-    }
+void process(pcl::PointCloud<PointT> &cloud, double z_lb, double z_ub) {
+    pcl::PointCloud<PointT>::Ptr cloud_in (cloud);
+    pcl::PassThrough<pcl::PointXYZ> pt;	// 创建滤波器对象
+    pt.setInputCloud(cloud_in);			//设置输入点云
+    pt.setFilterFieldName("z");			//设置滤波所需字段x
+    pt.setFilterLimits(z_lb, z_ub);		//设置x字段过滤范围
+    pt.setFilterLimitsNegative(false);	//默认false，保留范围内的点云；true，保存范围外的点云
+    pt.filter(cloud);
 } 
 
 template <typename PointT>
@@ -62,8 +50,9 @@ void broadcast( pcl::PointCloud<PointT> &cloud,
                 ros::NodeHandle &nh) {
 
     double rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0; 
+    double z_lb, z_ub = 0;
     bool save_pcd_en;
-    int msg_size, point_lim;
+    int msg_size;
     string save_path;
 
     nh.getParam("rx", rx);
@@ -72,10 +61,14 @@ void broadcast( pcl::PointCloud<PointT> &cloud,
     nh.getParam("tx", tx);
     nh.getParam("ty", ty);
     nh.getParam("tz", tz);
+
+    nh.getParam("z_lb", z_lb);
+    nh.getParam("z_ub", z_ub);
+
     nh.getParam("save_pcd_en", save_pcd_en);
     nh.getParam("save_path", save_path);
     nh.getParam("msg_size", msg_size);
-    nh.getParam("point_limit", point_lim);
+    
 
     ros::Publisher orgPub = nh.advertise<sensor_msgs::PointCloud2> ("/livox/lidar", 1e5);
 
@@ -90,8 +83,7 @@ void broadcast( pcl::PointCloud<PointT> &cloud,
 
     pcl::PointCloud<PointT> cloud_tf;
     pcl::transformPointCloud(cloud, cloud_tf, tf_mat); 
-    process(cloud_tf);
-    cloud += cloud_tf;
+    process(cloud_tf, z_lb, z_ub);
     cout << cloud.size() << endl;
     int size_limit = int(cloud.size() / msg_size) + 1;
     int point_limit = int(point_lim / msg_size) + 1;

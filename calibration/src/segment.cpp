@@ -100,8 +100,8 @@ int main(int argc, char** argv)
     }
     std::cout<<"cloud_in size:"<<cloud_in->size()<<endl;
 
-    Cloud::ConstPtr source_ (cloud_in);
-    testRegion(source_);
+    // Cloud::ConstPtr source_ (cloud_in);
+    // testRegion(source_);
 
     while (!viewer->wasStopped())
     {

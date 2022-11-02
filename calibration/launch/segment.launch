@@ -2,37 +2,19 @@
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/roi_scans_xyzi.pcd" /> -->
   
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/segment_hall_icp.pcd" />
-  <param name="save_path" type="string" value="/data/bs_hall/spot0/fullview_recon/segment_hall_icp.pcd" /> -->
-
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/segment_hall_lio.pcd" />
-  <param name="save_path" type="string" value="/data/bs_hall/spot0/fullview_recon/segment_hall_lio.pcd" /> -->
-  
-  <!-- <param name="data_path" type="string" value="/data/sustech_rb2/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/dvata/sustech_rb2/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
   
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_icp.pcd" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_icp.pcd" /> -->
-
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" /> -->
-
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/spot_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
-  
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_icp.pcd" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_icp.pcd" /> -->
 
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_lio.pcd" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_crf_lio.pcd" /> -->
-
-  <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_icp_m.pcd" />
-  <param name="save_path" type="string" value="/data/compare/segment_crf_icp_c.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_icp2.pcd" />
+  <param name="save_path" type="string" value="/data/compare/segment_crf_icp2.pcd" />
   <param name="save_vec_path" type="string" value="/data/compare/crf_icp.txt" /> -->
 
-  <param name="data_path" type="string" value="/data/compare/segment_crf_lio.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_lio.pcd" />
   <param name="save_path" type="string" value="/data/compare/segment_crf_lio_c.pcd" />
-  <param name="save_vec_path" type="string" value="/data/compare/crf_lio.txt" />
+  <param name="save_vec_path" type="string" value="/data/compare/crf_lio.txt" /> -->
 
   <!-- <param name="data_path" type="string" value="/data/compare/segment_rb2_icp.pcd" />
   <param name="save_path" type="string" value="/data/compare/segment_crf_icp_c.pcd" />

@@ -1,9 +1,9 @@
 switch:
     ## Registration, Colorization and Mapping
     # view
-    kCreateDensePcd: true
-    kViewRegistration: true
-    kFullViewMapping: true
+    kCreateDensePcd: false
+    kViewRegistration: false
+    kFullViewMapping: false
 
     ## Data Process
     kLidarFlatProcess: false
@@ -15,14 +15,14 @@ switch:
     kAnalysis: false
     
     # spot
-    kSpotRegistration: true
+    kSpotRegistration: false
     kGlobalMapping: true
 
     # colorization
     kSpotColorization: false
     kGlobalColoredMapping: false
 
-    kGlobalUniformSampling: true
+    kGlobalUniformSampling: false
 
 spot:
     kOneSpot: -1  # -1: means run all the spots, other means run the specific spot index 
@@ -38,7 +38,7 @@ essential:
     # kDatasetName: "bs_hall"
     # kNumSpots: 5
     kDatasetName: "sustech_crf"
-    kNumSpots: 2
+    kNumSpots: 3
     # kDatasetName: "sustech_rb2"
     # kNumSpots: 3
     kNumViews: 5
