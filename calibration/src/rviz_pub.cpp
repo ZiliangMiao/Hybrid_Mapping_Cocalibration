@@ -35,18 +35,21 @@ void getMessage(sensor_msgs::PointCloud2 &msg,
 }
 
 template <typename PointT>
-void process(pcl::PointCloud<PointT> &cloud, double z_lb, double z_ub) {
-    pcl::PointCloud<PointT>::Ptr cloud_in (cloud);
-    pcl::PassThrough<pcl::PointXYZ> pt;	// 创建滤波器对象
+void process(typename boost::shared_ptr<pcl::PointCloud<PointT>> cloud_in,
+            Eigen::Matrix4f tf_mat,
+            double z_lb,
+            double z_ub) {
+    pcl::transformPointCloud(*cloud_in, *cloud_in, tf_mat); 
+    pcl::PassThrough<PointT> pt;	// 创建滤波器对象
     pt.setInputCloud(cloud_in);			//设置输入点云
     pt.setFilterFieldName("z");			//设置滤波所需字段x
     pt.setFilterLimits(z_lb, z_ub);		//设置x字段过滤范围
     pt.setFilterLimitsNegative(false);	//默认false，保留范围内的点云；true，保存范围外的点云
-    pt.filter(cloud);
+    pt.filter(*cloud_in);
 } 
 
 template <typename PointT>
-void broadcast( pcl::PointCloud<PointT> &cloud,
+void broadcast( typename boost::shared_ptr<pcl::PointCloud<PointT>> cloud,
                 ros::NodeHandle &nh) {
 
     double rx = 0, ry = 0, rz = 0, tx = 0, ty = 0, tz = 0; 
@@ -81,16 +84,13 @@ void broadcast( pcl::PointCloud<PointT> &cloud,
 
     ros::Rate loop_rate(50);
 
-    pcl::PointCloud<PointT> cloud_tf;
-    pcl::transformPointCloud(cloud, cloud_tf, tf_mat); 
-    process(cloud_tf, z_lb, z_ub);
-    cout << cloud.size() << endl;
-    int size_limit = int(cloud.size() / msg_size) + 1;
-    int point_limit = int(point_lim / msg_size) + 1;
+    process(cloud, tf_mat, z_lb, z_ub);
+    cout << "size = " << cloud->size() << endl;
+    int size_limit = int(cloud->size() / msg_size) + 1;
     int cnt = 0;
     while (ros::ok()) {
-        if (cnt < size_limit && cnt < point_limit) {
-            getMessage(msg_cloud, cloud, msg_size, cnt);
+        if (cnt < size_limit) {
+            getMessage(msg_cloud, *cloud, msg_size, cnt);
             orgPub.publish(msg_cloud);
             cnt++;
         }
@@ -103,7 +103,7 @@ void broadcast( pcl::PointCloud<PointT> &cloud,
     }
 
     if (save_pcd_en) {
-        pcl::io::savePCDFileBinary(ros::package::getPath("calibration") + save_path, cloud);
+        pcl::io::savePCDFileBinary(ros::package::getPath("calibration") + save_path, *cloud);
     }
 }
 
@@ -121,19 +121,19 @@ int main (int argc, char **argv) {
         typedef pcl::PointXYZRGB PointType;
         pcl::PointCloud<PointType>::Ptr cloud(new pcl::PointCloud<PointType>);
         pcl::io::loadPCDFile(data_path, *cloud);
-        broadcast(*cloud, nh);
+        broadcast(cloud, nh);
     }
     else if (cloud_type == "xyzi") {
         typedef pcl::PointXYZI PointType;
         pcl::PointCloud<PointType>::Ptr cloud(new pcl::PointCloud<PointType>);
         pcl::io::loadPCDFile(data_path, *cloud);
-        broadcast(*cloud, nh);
+        broadcast(cloud, nh);
     }
     else if (cloud_type == "xyz") {
         typedef pcl::PointXYZ PointType;
         pcl::PointCloud<PointType>::Ptr cloud(new pcl::PointCloud<PointType>);
         pcl::io::loadPCDFile(data_path, *cloud);
-        broadcast(*cloud, nh);
+        broadcast(cloud, nh);
     }
     return 0;
 }
