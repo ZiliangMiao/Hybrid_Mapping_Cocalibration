@@ -49,6 +49,10 @@ Clone the repository and catkin_make:
     source ~/catkin_ws/devel/setup.bash
 ```
 
+\\begin{center}
+\\includegraphics[width=8in]{readme_pics/map-result-b.pdf}
+\\end{center}
+
 ## 3. Data 
 ### 3.1 Use Livox ROS Driver to Obtain LiDAR Data
 Get into the workspace of livox driver, record data by these command. 
