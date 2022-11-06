@@ -23,37 +23,37 @@ We presents a novel omnidirectional field-of-view (FoV) 3D scanning sensor suite
 <img src="readme_pics/colorized_mapping.png" width=45% >
 
 ## 4. Prerequisites
-### 1.1 **Ubuntu** and **ROS**
+### 4.1 **Ubuntu** and **ROS**
 Version: Ubuntu 18.04.
 
 Version: ROS Melodic. 
 
 Please follow [ROS Installation](http://wiki.ros.org/ROS/Installation) to install.
-### 1.2. **ceres-solver**
+### 4.2. **ceres-solver**
 Version: ceres-solver 2.1.0
 
 Please follow [Ceres-Solver Installation](http://ceres-solver.org/installation.html) to install.
-### 1.3. **PCL**
+### 4.3. **PCL**
 Version: PCL 1.7.4
 
 Version: Eigen 3.3.4
 
 Please follow [PCL Installation](http://www.pointclouds.org/downloads/linux.html) to install.
-### 1.4. **OpenCV**
+### 4.4. **OpenCV**
 Version: OpenCV 3.2.0
 
 Please follow [OpenCV Installation](https://opencv.org/) to install.
-### 1.5. **mlpack**
+### 4.5. **mlpack**
 Version: mlpack 3.4.2
 
 Please follow [mlpack Installation](https://mlpack.org/) to install.
 
-### 1.6 Livox SDK and Livox ROS Driver (Optional)
+### 4.6 Livox SDK and Livox ROS Driver (Optional)
 The SDK and driver is used for dealing with Livox LiDAR.
 Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [Livox ROS Driver](https://github.com/Livox-SDK/livox_ros_driver).
 
-### 1.7 MindVision SDK (Optional)
+### 4.7 MindVision SDK (Optional)
 The SDK of the fisheye camera is in [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138).
 
-## n. Acknowledgements
-Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration). [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab), thanks to the help of Wenquan Zhao, Xiao Huang, Jian Bai.
+## 5. Acknowledgements
+Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration), [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab), [Fast-LIO](https://github.com/hku-mars/FAST_LIO), and thanks to the help of Wenquan Zhao, Xiao Huang, Jian Bai.
