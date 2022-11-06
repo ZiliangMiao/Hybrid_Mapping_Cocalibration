@@ -1,5 +1,5 @@
 # Coarse-to-fine Hybrid 3D Mapping System with Co-calibrated Omnidirectional Camera and Non-repetitive LiDAR
-The project is an automatic calibration method for Livox mid-360 LiDAR and Fisheye Camera. The package is developed by MIAO Ziliang, He Buwei, Xie Wenya(ISEE Lab, SDIM, SUSTech), supervised by Prof.HONG Xiaoping (ISEE Lab, SDIM, SUSTech), thanks to the help of Wenquan Zhao, Xiao Huang, Jian Bai.
+The project is an automatic calibration method for Livox mid-360 LiDAR and Fisheye Camera. The package is developed by MIAO Ziliang, He Buwei, Xie Wenya(ISEE Lab, SDIM, SUSTech), supervised by Prof.HONG Xiaoping ([ISEE-Lab](https://isee.technology/), SDIM, SUSTech).
 
 ## 1. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
@@ -135,5 +135,4 @@ rosrun data_process mainNode
 
 
 ## 7. Acknowledgements
-Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration). [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab).
-Thanks for the guidance of Prof.HONG Xiaoping and [ISEE-Lab](https://isee.technology/).
+Thanks for [CamVox](https://github.com/ISEE-Technology/CamVox), [Livox-SDK](https://github.com/Livox-SDK/livox_camera_lidar_calibration). [OCamCalib MATLAB Toolbox](https://sites.google.com/site/scarabotix/ocamcalib-omnidirectional-camera-calibration-toolbox-for-matlab), thanks to the help of Wenquan Zhao, Xiao Huang, Jian Bai.
