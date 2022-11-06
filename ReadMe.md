@@ -10,7 +10,8 @@ We presents a novel omnidirectional field-of-view (FoV) 3D scanning sensor suite
 
 <div align=center> <img src="readme_pics/robot.png" width = 30%/> </div>
 <center class="half">
-    <img src="readme_pics/sensor_suite.png" width="300"/><img src="readme_pics/nonrepetitive_scanning.png" width="300"/>
+    <img src="readme_pics/sensor_suite.png" width=200/>
+    <img src="readme_pics/nonrepetitive_scanning.png" width=200/>
 </center>
 
 ## 1. Prerequisites
