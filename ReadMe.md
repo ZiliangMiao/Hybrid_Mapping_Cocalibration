@@ -102,8 +102,8 @@ rosrun data_process mainNode
 <img src="readme_pics/lidarEdge.png" >
 
 ### 5.3 Calibration Visualization
-<img src="readme_pics/map-result-b.pdf" >
-<img src="readme_pics/ColoredScene2.png" >
+![Image Title](./readme_pics/map-result-b.pdf){width=65%}
+
 
 ## 6. Hardwares
 
