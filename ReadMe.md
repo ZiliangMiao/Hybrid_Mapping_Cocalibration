@@ -8,12 +8,10 @@ Demo Video: https://www.youtube.com/watch?v=Uh0C9VL9YEQ
 ## 0. Introduction
 We presents a novel omnidirectional field-of-view (FoV) 3D scanning sensor suite composed of a non-repetitive scanning LiDAR, a fisheye camera, and a gimbal mount. Thanks to the non-repetitive nature of the LiDAR, an automatic and targetless co-calibration method with simultaneous intrinsic calibration for the fisheye camera and extrinsic calibration for the sensor suite is proposed, which is a crucial step in combining the color images with the 3D point clouds. Analyses and comparisons are made to target-based intrinsic calibration and mutual information (MI) based extrinsic calibration, respectively. Contrary to sensors based on the conventional LiDARs, this sensor suite permits a coarse-to-fine approach in robotic 3D scanning by obtaining the coarse global map with odometry/SLAM-based methods first, generating scanning viewpoints from the global map, and obtaining finer and more precise 3D scanning of the region-of-interest (ROI) through stationary non-repetitive scanning at these respective viewpoints. The still scan results are registered together to a fine map of ROI, then stitched with the global map. More accurate and robust scanning results are obtained compared to odometry/SLAM-only methods.
 
+<img src="readme_pics/robot.png" width = 30%/>
+<img src="readme_pics/sensor_suite.png" width=200/>
+<img src="readme_pics/nonrepetitive_scanning.png" width=200/>
 
-
-<center class="half">
-    <img src="readme_pics/sensor_suite.png" width=200/>
-    <img src="readme_pics/nonrepetitive_scanning.png" width=200/>
-</center>
 
 ## 1. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
