@@ -53,6 +53,8 @@ Clone the repository and catkin_make:
 
 ![Alt](readme_pics/map-result-b.pdf){width=100% height=400}
 
+![image](https://github.com/ZiliangMiao/Hybrid_Mapping_Cocalibration/blob/main/readme_pics/map-result-b.pdf)
+
 ## 3. Data 
 ### 3.1 Use Livox ROS Driver to Obtain LiDAR Data
 Get into the workspace of livox driver, record data by these command. 
