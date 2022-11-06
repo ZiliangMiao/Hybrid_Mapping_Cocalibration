@@ -12,7 +12,17 @@ We presents a novel omnidirectional field-of-view (FoV) 3D scanning sensor suite
 <img src="readme_pics/sensor_suite.png" width=45% >
 <img src="readme_pics/nonrepetitive_scanning.png" width=45% >
 
-## 1. Prerequisites
+## 1. Workflow
+<img src="readme_pics/workflow.png" width=45% >
+
+## 2. Calibration Results
+<img src="readme_pics/cocalibration_result.png" width=45% >
+
+## 3. Mapping Results
+<img src="readme_pics/mapping_result.png" width=45% >
+<img src="readme_pics/colorized_mapping.png" width=45% >
+
+## 4. Prerequisites
 ### 1.1 **Ubuntu** and **ROS**
 Version: Ubuntu 18.04.
 
