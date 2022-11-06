@@ -49,9 +49,7 @@ Clone the repository and catkin_make:
     source ~/catkin_ws/devel/setup.bash
 ```
 
-\\begin{center}
-\\includegraphics[width=8in]{readme_pics/map-result-b.pdf}
-\\end{center}
+<img src="readme_pics/map-result-b.pdf" alt="some text" width="4200" height="4200">
 
 ## 3. Data 
 ### 3.1 Use Livox ROS Driver to Obtain LiDAR Data
