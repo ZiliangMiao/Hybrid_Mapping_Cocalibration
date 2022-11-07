@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-10-18T04:12:27.125Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36" etag="1PNpK8uxna6X-6A8E9Mw" version="20.4.0" type="github">
+<mxfile host="app.diagrams.net" modified="2022-11-07T10:05:33.807Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36" etag="ZcFTPa7Guf-HHUxDd3fb" version="20.5.3" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="1615" dy="365" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="1519" dy="327" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -1438,7 +1438,7 @@
         <mxCell id="_kkP6Ry7baPpvotNU_Fo-33" value="Fine mapping in ROI" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="1150" y="1040" width="55" height="65" as="geometry" />
         </mxCell>
-        <mxCell id="_kkP6Ry7baPpvotNU_Fo-34" value="Map registration &amp;amp; colorizaton" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+        <mxCell id="_kkP6Ry7baPpvotNU_Fo-34" value="Map registration &amp;amp; colorization" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="1216.88" y="1040" width="77.5" height="65" as="geometry" />
         </mxCell>
         <mxCell id="_kkP6Ry7baPpvotNU_Fo-35" value="Mapping Quality Inspection" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
@@ -1593,7 +1593,7 @@
         <mxCell id="GsMirqj3LKlR-epmJSQw-70" value="Fine mapping in ROI" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="410.2" y="1570.75" width="55" height="65" as="geometry" />
         </mxCell>
-        <mxCell id="GsMirqj3LKlR-epmJSQw-71" value="Map registration &amp;amp; colorizaton" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+        <mxCell id="GsMirqj3LKlR-epmJSQw-71" value="Map registration &amp;amp; colorization" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="478.6" y="1570.75" width="78" height="65" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-72" value="Mapping Quality Inspection" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
@@ -1638,7 +1638,7 @@
         <mxCell id="GsMirqj3LKlR-epmJSQw-90" value="&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="500" y="1670" width="130" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="GsMirqj3LKlR-epmJSQw-91" value="&lt;span style=&quot;&quot;&gt;Projection by azimuth &lt;br&gt;and pitch angles&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;align=center;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+        <mxCell id="GsMirqj3LKlR-epmJSQw-91" value="&lt;span style=&quot;&quot;&gt;Projection by azimuth &lt;br&gt;and elevation angles&lt;/span&gt;" style="text;whiteSpace=wrap;html=1;align=center;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="493.00461538461536" y="1741.875" width="144.23076923076925" height="48.124999999999915" as="geometry" />
         </mxCell>
         <mxCell id="NdB-BHJxIYJRGrac211a-4" value="" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
@@ -1674,10 +1674,10 @@
         <mxCell id="NdB-BHJxIYJRGrac211a-23" value="Exposure fusion" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="345.67972972972973" y="1875.28" width="129.32432432432432" height="24.72" as="geometry" />
         </mxCell>
-        <mxCell id="Wa_UzJzLD1b0vTqWjn12-0" value="LiDAR scans from different poses" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="Wa_UzJzLD1b0vTqWjn12-0" value="LiDAR scans from different poses" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-165" y="1631.64" width="300" height="24.72" as="geometry" />
         </mxCell>
-        <mxCell id="Wa_UzJzLD1b0vTqWjn12-1" value="Convert to grayscale" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="Wa_UzJzLD1b0vTqWjn12-1" value="Convert to grayscale" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-165" y="1663" width="300" height="24.72" as="geometry" />
         </mxCell>
       </root>
