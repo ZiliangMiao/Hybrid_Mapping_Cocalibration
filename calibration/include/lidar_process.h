@@ -118,7 +118,7 @@ public:
             this->flat_img_path = this->output_folder_path + "/flat_lidar_image.bmp";
             this->tags_map_path = this->output_folder_path + "/tags_map.txt";
             this->edge_cloud_path = this->output_folder_path + "/edge_lidar.pcd";
-            this->edge_fisheye_projection_path = this->output_folder_path + "/lidTrans.txt";
+            this->edge_fisheye_projection_path = this->output_folder_path + "/lid_trans.txt";
             this->params_record_path = this->output_folder_path + "/params_record.txt";
             
             this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";

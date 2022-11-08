@@ -271,8 +271,8 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     float normal_radius = 0.15;
 
     int max_iters = 100;
-    float max_corr_dis = 0.5;
-    float eucidean_epsilon = 1e-6;
+    float max_corr_dis = 0.2;
+    float eucidean_epsilon = 1e-12;
     float max_fitness_range = 2.0;
 
     bool enable_auto_radius = true;
@@ -328,28 +328,46 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     }
     else if (cloud_type == 1) { /** spot point cloud **/
         cout << "k-nearest search effective filter" << endl;
-        std::vector<int> nn_indices(1);
-        std::vector<float> nn_dists(1);
 
-        pcl::KdTreeFLANN<PointI> kdtree_tgt;
-        pcl::KdTreeFLANN<PointI> kdtree_src;
-        kdtree_tgt.setInputCloud (cloud_us_tgt);
-        kdtree_src.setInputCloud (cloud_us_src);
+        pcl::registration::CorrespondenceEstimation<PointI, PointI> core;
+        CloudI::ConstPtr cloud_src_search (cloud_us_src);
+        CloudI::ConstPtr cloud_tgt_search (cloud_us_tgt);
+        core.setInputSource(cloud_src_search);
+        core.setInputTarget(cloud_tgt_search);
+        
+        boost::shared_ptr<pcl::Correspondences> cor(new pcl::Correspondences);   //共享所有权的智能指针，以kdtree做索引
+        core.determineReciprocalCorrespondences(*cor, max_corr_dis);   //点之间的最大距离,cor对应索引
+
         #pragma omp parallel for num_threads(THREADS)
-        for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
-            kdtree_tgt.nearestKSearch (cloud_us_src->points[idx], 1, nn_indices, nn_dists);
-            if (nn_dists[0] <= max_fitness_range) {
-                src_indices[idx] = idx;
-                tgt_indices[nn_indices[0]] = nn_indices[0];
-            }
+        for (size_t i = 0; i < cor->size(); i++) {
+            int tgt_idx = cor->at(i).index_match;
+            int src_idx = cor->at(i).index_query;
+            tgt_indices[tgt_idx] = tgt_idx;
+            src_indices[src_idx] = src_idx;
         }
-        #pragma omp parallel for num_threads(THREADS)
-        for (int idx = 0; idx < cloud_us_tgt->size(); ++idx) {
-            if (tgt_indices[idx] == 0) {
-                kdtree_src.nearestKSearch (cloud_us_tgt->points[idx], 1, nn_indices, nn_dists);
-                tgt_indices[idx] = (nn_dists[0] <= max_fitness_range) ? idx : 0;
-            }
-        }
+
+        // std::vector<int> nn_indices(1);
+        // std::vector<float> nn_dists(1);
+
+        // pcl::KdTreeFLANN<PointI> kdtree_tgt;
+        // pcl::KdTreeFLANN<PointI> kdtree_src;
+        // kdtree_tgt.setInputCloud (cloud_us_tgt);
+        // kdtree_src.setInputCloud (cloud_us_src);
+        // #pragma omp parallel for num_threads(THREADS)
+        // for (int idx = 0; idx < cloud_us_src->size(); ++idx) {
+        //     kdtree_tgt.nearestKSearch (cloud_us_src->points[idx], 1, nn_indices, nn_dists);
+        //     if (nn_dists[0] <= max_fitness_range) {
+        //         src_indices[idx] = idx;
+        //         tgt_indices[nn_indices[0]] = nn_indices[0];
+        //     }
+        // }
+        // #pragma omp parallel for num_threads(THREADS)
+        // for (int idx = 0; idx < cloud_us_tgt->size(); ++idx) {
+        //     if (tgt_indices[idx] == 0) {
+        //         kdtree_src.nearestKSearch (cloud_us_tgt->points[idx], 1, nn_indices, nn_dists);
+        //         tgt_indices[idx] = (nn_dists[0] <= max_fitness_range) ? idx : 0;
+        //     }
+        // }
     }
     tgt_indices.erase(std::remove(tgt_indices.begin(), tgt_indices.end(), 0), tgt_indices.end());
     src_indices.erase(std::remove(src_indices.begin(), src_indices.end(), 0), src_indices.end());
@@ -406,6 +424,7 @@ Mat4F LidarProcess::Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F in
     align.setMaximumIterations(max_iters);
     align.setMaxCorrespondenceDistance(max_corr_dis);
     align.setEuclideanFitnessEpsilon(eucidean_epsilon);
+    align.setRotationEpsilon(eucidean_epsilon);
     align.align(*cloud_icp_trans_n, init_trans_mat);
     pcl::copyPointCloud(*cloud_icp_trans_n, *cloud_icp_trans_us);
 
@@ -845,7 +864,7 @@ void LidarProcess::GlobalMapping(bool kGlobalUniformSampling) {
     }
 
     /** source index and target index (align to spot 0) **/
-    int tgt_idx = 1;
+    int tgt_idx = 0;
 
     for (int src_idx = tgt_idx + 1; src_idx < num_spots; ++src_idx) {
         PCL_INFO("Spot %d to %d: \n", src_idx, tgt_idx);

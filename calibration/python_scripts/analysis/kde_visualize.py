@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
@@ -11,7 +12,7 @@ def load_data(sample_shape, mode):
     # input_data = np.loadtxt(data_path + "outputs/" + mode + "EdgePix.txt", delimiter="\t")
     # _i = np.loadtxt(data_path + mode + "KDE.txt", delimiter="\t")
     if mode == "kde":
-        _cam = np.loadtxt(data_path + "/fisheye_outputs/camKDE.txt", delimiter="\t")[:, 2]
+        _cam = np.loadtxt(data_path + "/fisheye_outputs/kde_image.txt", delimiter="\t")[:, 2]
         auto_scale = np.sqrt((sample_shape[0] * sample_shape[1] / np.size(_cam)))
         print("scale: " + str(1/auto_scale))
         _cam = _cam.reshape(((int)(sample_shape[0] / auto_scale), (int)(sample_shape[1] / auto_scale)))
@@ -77,6 +78,7 @@ def joint_visualization(img_rows, img_cols, lid, kde):
               )
     ax.set_xlim([0, img_cols-1])
     ax.set_ylim([0, img_rows-1])
+    print(str(np.max(kde)))
     # plt.savefig("/home/halsey/Desktop/pytest.png")
     plt.show()
 

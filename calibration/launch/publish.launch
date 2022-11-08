@@ -30,18 +30,28 @@
   <!-- <param name="data_path" type="string" value="/data/parking/spot0/fullview_recon/global_registered_rgb_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot3/fullview_recon/spot_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/spot3/fullview_recon/edge_cart.pcd" /> -->
-  <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" />
+  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
   
+  <!-- -0.75, +3.5 -->
   <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_icp2.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_crf_lio.pcd" /> -->
+
+  <!-- -0.75, 7.5 -->
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_rb2_icp.pcd" /> -->
+  <!-- -0.75, 8 -->
+  <!-- <param name="data_path" type="string" value="/data/compare/segment_rb2_lio.pcd" /> -->
+ 
+  <!-- <param name="data_path" type="string" value="/data/compare/cliped/segment_rb2_icp_tf.pcd" /> -->
+  <param name="data_path" type="string" value="/data/compare/cliped/segment_rb2_lio_tf.pcd" />
 
   <!-- <param name="type" type="string" value="xyzrgb" /> -->
   <param name="type" type="string" value="xyzi" />
   <!-- <param name="type" type="string" value="xyz" /> -->
-  <param name="msg_size" type="int" value="20000" />
-  <param name="z_lb" type="double" value="-2" />
-  <param name="z_ub" type="double" value="3" />
+  <param name="msg_size" type="int" value="2000" />
+  <param name="z_lb" type="double" value="-10" />
+  <param name="z_ub" type="double" value="10" />
   <param name="save_pcd_en" type="bool" value="0" />
-  <param name="save_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/segment_rb2_lio_m.pcd" />
+  <param name="save_path" type="string" value="/data/test.pcd" />
   <node name="rviz_pub" pkg="calibration" type="rviz_pub" output="screen">
   </node>
   <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d /home/halsey/catkin_ws/src/Livox_Fisheye_Fusion/calibration/launch/livox.rviz">

@@ -67,6 +67,7 @@ add_executable(main src/main.cpp)
 add_executable(rviz_pub src/rviz_pub.cpp)
 add_executable(lio_pose src/lio_pose.cpp)
 add_executable(segment src/segment.cpp)
+add_executable(ground src/ground.cpp)
 
 ## Add Dependencies
 add_dependencies(lidar_process ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -76,6 +77,8 @@ add_dependencies(main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARG
 add_dependencies(rviz_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(lio_pose ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(segment ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(ground ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+
 
 ## Link Libraries
 target_link_libraries(lidar_process ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
@@ -100,3 +103,4 @@ target_link_libraries(main
 target_link_libraries(rviz_pub ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(lio_pose ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(segment ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+target_link_libraries(ground ${catkin_LIBRARIES} ${PCL_LIBRARIES})

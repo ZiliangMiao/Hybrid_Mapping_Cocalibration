@@ -16,11 +16,11 @@ switch:
     
     # spot
     kSpotRegistration: false
-    kGlobalMapping: false
+    kGlobalMapping: true
 
     # colorization
-    kSpotColorization: true
-    kGlobalColoredMapping: true
+    kSpotColorization: false
+    kGlobalColoredMapping: false
 
     kGlobalUniformSampling: false
 
@@ -29,14 +29,12 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    # kDatasetName: "bs"
-    # kNumSpots/: 5
     # kDatasetName: "crf"
     # kNumSpots: 1
     # kDatasetName: "rb1"
     # kNumSpots: 1
     kDatasetName: "bs_hall"
-    kNumSpots: 5
+    kNumSpots: 4
     # kDatasetName: "sustech_crf"
     # kNumSpots: 3
     # kDatasetName: "sustech_rb2"
