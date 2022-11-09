@@ -56,7 +56,7 @@ public:
     int kExcludeRadius = 200;
 
     /** coordinates of edge pixels in fisheye images **/
-    vector<vector<EdgeCloud::Ptr>> edge_cloud_vec;
+    vector<vector<EdgeCloud>> edge_cloud_vec;
 
     /***** Intrinsic Parameters *****/
     Int_D int_;

@@ -26,7 +26,7 @@ FisheyeProcess::FisheyeProcess() {
     /** filepath and edge cloud**/
     vector<vector<string>> folder_path_tmp(num_spots, vector<string>(num_views));
     vector<vector<PoseFilePath>> file_path_tmp(num_spots, vector<PoseFilePath>(num_views));
-    vector<vector<EdgeCloud::Ptr>> edge_clouds_tmp(num_spots, vector<EdgeCloud::Ptr>(num_views));
+    vector<vector<EdgeCloud>> edge_clouds_tmp(num_spots, vector<EdgeCloud>(num_views));
     folder_path_vec = folder_path_tmp;
     file_path_vec = file_path_tmp;
     edge_cloud_vec = edge_clouds_tmp;
@@ -48,7 +48,7 @@ void FisheyeProcess::ReadEdge() {
     string edge_cloud_path = file_path_vec[spot_idx][view_idx].edge_cloud_path;
     EdgeCloud::Ptr edge_cloud(new EdgeCloud);
     LoadPcd(edge_cloud_path, *edge_cloud, "edge");
-    edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
+    edge_cloud_vec[spot_idx][view_idx] = *edge_cloud;
 }
 
 cv::Mat FisheyeProcess::LoadImage(bool output) {
@@ -85,7 +85,7 @@ void FisheyeProcess::EdgeToPixel() {
             }
         }
     }
-    this->edge_cloud_vec[spot_idx][view_idx] = edge_cloud;
+    this->edge_cloud_vec[spot_idx][view_idx] = *edge_cloud;
     string edge_cloud_path = file_path_vec[spot_idx][view_idx].edge_cloud_path;
     pcl::io::savePCDFileBinary(edge_cloud_path, *edge_cloud);
 }
@@ -98,12 +98,12 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
     const int n_cols = scale * this->kImageSize.second;
     arma::mat query;
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
-    EdgeCloud::Ptr edge_fisheye_pixels = this->edge_cloud_vec[this->spot_idx][this->view_idx];
-    const int ref_size = edge_fisheye_pixels->points.size();
+    EdgeCloud &fisheye_edge = this->edge_cloud_vec[this->spot_idx][this->view_idx];
+    const int ref_size = fisheye_edge.size();
     arma::mat reference(2, ref_size);
     for (int i = 0; i < ref_size; ++i) {
-        reference(0, i) = edge_fisheye_pixels->points[i].x;
-        reference(1, i) = edge_fisheye_pixels->points[i].y;
+        reference(0, i) = fisheye_edge.points[i].x;
+        reference(1, i) = fisheye_edge.points[i].y;
     }
 
     query = arma::mat(2, n_cols * n_rows);

@@ -4,7 +4,7 @@ import matplotlib as mpl
 import os, sys
 
 root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
-data_path = data_path = root_path + "/data/bs_hall/spot3/0/outputs"
+data_path = data_path = root_path + "/data/crf/spot0/0/outputs"
 
 ########################################################################################################################
 # load files #

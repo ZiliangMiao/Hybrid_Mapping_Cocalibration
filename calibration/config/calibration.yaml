@@ -6,12 +6,12 @@ switch:
     kFullViewMapping: false
 
     ## Data Process
-    kLidarFlatProcess: false
-    kFisheyeFlatProcess: false
+    kLidarFlatProcess: true
+    kFisheyeFlatProcess: true
 
     ## Calibration and Optimization cost analysis
-    kCeresOptimization: false
-    kMultiSpotsOptimization: false
+    kCeresOptimization: true
+    kMultiSpotsOptimization: true
     kAnalysis: false
     
     # spot
@@ -29,12 +29,12 @@ spot:
 
 essential:
     kLidarTopic: "/livox/lidar"
-    # kDatasetName: "crf"
-    # kNumSpots: 1
+    kDatasetName: "crf"
+    kNumSpots: 1
     # kDatasetName: "rb1"
     # kNumSpots: 1
-    kDatasetName: "bs_hall"
-    kNumSpots: 4
+    # kDatasetName: "bs_hall"
+    # kNumSpots: 4
     # kDatasetName: "sustech_crf"
     # kNumSpots: 3
     # kDatasetName: "sustech_rb2"

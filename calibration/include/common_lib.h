@@ -51,55 +51,6 @@ int CheckFolder(std::string spot_path) {
 //     return num;
 // }
 
-static inline bool convertPointCloud2ToViewCloud (const sensor_msgs::PointCloud2 &input, CloudI &output) {
-
-    // Get the x/y/z field offsets
-    int x_idx = getPointCloud2FieldIndex (input, "x");
-    int y_idx = getPointCloud2FieldIndex (input, "y");
-    int z_idx = getPointCloud2FieldIndex (input, "z");
-    int r_idx = getPointCloud2FieldIndex (input, "reflectivity");
-    int t_idx = getPointCloud2FieldIndex (input, "tag");
-    int l_idx = getPointCloud2FieldIndex (input, "line");
-    if (x_idx == -1 || y_idx == -1 || z_idx == -1) {
-        std::cerr << "x/y/z coordinates not found! Conversion failed." << std::endl;
-        return (false);
-        if (r_idx == -1 || t_idx == -1 || l_idx == -1) {
-            std::cerr << "reflectivity/tag/line info not found! Conversion failed." << std::endl;
-            return (false);
-        }
-    }
-
-    int x_offset = input.fields[x_idx].offset;
-    int y_offset = input.fields[y_idx].offset;
-    int z_offset = input.fields[z_idx].offset;
-    int r_offset = input.fields[r_idx].offset;
-    int t_offset = input.fields[t_idx].offset;
-    int l_offset = input.fields[l_idx].offset;
-    uint8_t x_datatype = input.fields[x_idx].datatype;
-    uint8_t y_datatype = input.fields[y_idx].datatype;
-    uint8_t z_datatype = input.fields[z_idx].datatype;
-    uint8_t r_datatype = input.fields[r_idx].datatype;
-    uint8_t t_datatype = input.fields[t_idx].datatype;
-    uint8_t l_datatype = input.fields[l_idx].datatype;
-
-    // Copy the data points
-    PointI cpt;
-    output.clear();
-    for (size_t cp = 0; cp < input.width * input.height; ++cp) {
-        uint8_t tag = sensor_msgs::readPointCloud2BufferValue<uint8_t>(&input.data[cp * input.point_step + t_offset], t_datatype);
-        if ((tag & 0x30) == 0x10 || (tag & 0x30) == 0x00) {
-            // Copy x/y/z/r/t
-            cpt.x = sensor_msgs::readPointCloud2BufferValue<float>(&input.data[cp * input.point_step + x_offset], x_datatype);
-            cpt.y = sensor_msgs::readPointCloud2BufferValue<float>(&input.data[cp * input.point_step + y_offset], y_datatype);
-            cpt.z = sensor_msgs::readPointCloud2BufferValue<float>(&input.data[cp * input.point_step + z_offset], z_datatype);
-            cpt.intensity = sensor_msgs::readPointCloud2BufferValue<uint8_t>(&input.data[cp * input.point_step + r_offset], r_datatype);
-            output.push_back(cpt);
-        }
-    }
-    return (true);
-}
-
-
 template <typename PointType>
 void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
     if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
