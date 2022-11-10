@@ -45,28 +45,27 @@ FisheyeProcess::FisheyeProcess() {
 }
 
 void FisheyeProcess::ReadEdge() {
-    string edge_cloud_path = file_path_vec[spot_idx][view_idx].edge_cloud_path;
-    EdgeCloud::Ptr edge_cloud(new EdgeCloud);
-    LoadPcd(edge_cloud_path, *edge_cloud, "edge");
-    edge_cloud_vec[spot_idx][view_idx] = *edge_cloud;
+    string edge_cloud_path = this->file_path_vec[spot_idx][view_idx].edge_cloud_path;
+    LoadPcd(edge_cloud_path, this->edge_cloud_vec[spot_idx][view_idx], "camera edge");
 }
 
 cv::Mat FisheyeProcess::LoadImage(bool output) {
-    string img_path = file_path_vec[spot_idx][view_idx].hdr_img_path;
+    PoseFilePath &path_vec = this->file_path_vec[spot_idx][view_idx];
+    string img_path = path_vec.hdr_img_path;
     cv::Mat image = cv::imread(img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
                    "Invalid size (%d, %d) from file: %s", image.rows, image.cols, img_path);
-    cout << "Load image from file:" << img_path << endl;
-
+    ROS_ASSERT_MSG((!FULL_OUTPUT),
+                    "Loaded image from file: %s", img_path)
     if (output) {
-        string output_img_path = file_path_vec[spot_idx][view_idx].flat_img_path;
+        string output_img_path = path_vec.flat_img_path;
         cv::imwrite(output_img_path, image);
     }
     return image;
 }
 
 
-void FisheyeProcess::EdgeToPixel() {
+void FisheyeProcess::GenerateEdgeCloud() {
     string edge_img_path = file_path_vec[spot_idx][view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
@@ -91,7 +90,6 @@ void FisheyeProcess::EdgeToPixel() {
 }
 
 std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
-    cout << "----- Fisheye: Kde -----"  << " Spot Index: " << this->spot_idx << endl;
     clock_t start_time = clock();
     const double default_rel_error = 0.05;
     const int n_rows = scale * this->kImageSize.first;

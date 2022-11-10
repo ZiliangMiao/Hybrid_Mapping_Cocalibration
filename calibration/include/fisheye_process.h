@@ -94,7 +94,7 @@ public:
     FisheyeProcess();
     cv::Mat LoadImage(bool output=false);
     void ReadEdge();
-    void EdgeToPixel();
+    void GenerateEdgeCloud();
     std::vector<double> Kde(double bandwidth, double scale);
     void EdgeExtraction();
 

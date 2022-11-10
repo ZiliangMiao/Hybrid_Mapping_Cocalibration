@@ -145,14 +145,14 @@ int main(int argc, char** argv) {
                 lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
                 lidar.SphereToPlane(lidar_polar_cloud);
                 lidar.EdgeExtraction();
-                lidar.EdgeToPixel(lidar_cart_cloud);
+                lidar.GenerateEdgeCloud(lidar_cart_cloud);
             }
             if (kFisheyeFlatProcess) {
                 fisheye.SetSpotIdx(i);
                 fisheye.SetViewIdx(fisheye.fullview_idx);
                 fisheye.LoadImage(true);
                 fisheye.EdgeExtraction();
-                fisheye.EdgeToPixel(); 
+                fisheye.GenerateEdgeCloud(); 
 
             }
         }

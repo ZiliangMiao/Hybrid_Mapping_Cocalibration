@@ -34,7 +34,7 @@ namespace perls
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>); /** apply icp result to source point cloud **/
         /** file loading check **/
         if (pcl::io::loadPCDFile<pcl::PointXYZI>(cloud_path, *cloud) == -1) {
-            PCL_ERROR("Could Not Load Target File!\n");
+            ROS_ERROR("Could Not Load Target File!\n");
         }
         std::cout << "Num of original loaded points = " << cloud->points.size() << std::endl;
 

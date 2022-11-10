@@ -58,11 +58,10 @@ void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<dou
     Ext_D extrinsic = Eigen::Map<Param_D>(params.data()).head(6);
     Int_D intrinsic = Eigen::Map<Param_D>(params.data()).tail(K_INT);
     
-    CloudI::Ptr fisheye_edge_cloud (new CloudI);
-    CloudI::Ptr lidar_edge_cloud (new CloudI);
+    EdgeCloud::Ptr fisheye_edge_cloud (new EdgeCloud);
+    EdgeCloud::Ptr lidar_edge_cloud (new EdgeCloud);
     Mat4D T_mat = TransformMat(extrinsic);
-    pcl::copyPointCloud(lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *lidar_edge_cloud);
-    pcl::transformPointCloud(*lidar_edge_cloud, *lidar_edge_cloud, T_mat);
+    pcl::transformPointCloud(lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *lidar_edge_cloud, T_mat);
     pcl::copyPointCloud(fisheye.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *fisheye_edge_cloud);
 
     Vec3D lidar_point;
@@ -71,25 +70,25 @@ void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<dou
     for (auto &point : lidar_edge_cloud->points) {
         lidar_point << point.x, point.y, point.z;
         projection = IntrinsicTransform(intrinsic, lidar_point);
-        int u = projection(0);
-        int v = projection(1);
+        int u = std::clamp((int)round(projection(0)), 0, raw_image.rows - 1);
+        int v = std::clamp((int)round(projection(1)), 0, raw_image.cols - 1);
         point.x = projection(0);
         point.y = projection(1);
         point.z = 0;
 
-        // float radius = pow(u-intrinsic(0),2) + pow(v-intrinsic(1),2);
-        // Pair &bounds = fisheye.kEffectiveRadius;
-        // if (radius > bounds.first * bounds.first) {
+        float radius = pow(u-intrinsic(0),2) + pow(v-intrinsic(1),2);
+        Pair &bounds = fisheye.kEffectiveRadius;
+        if (radius > bounds.first * bounds.first && radius < bounds.second * bounds.second) {
             raw_image.at<cv::Vec3b>(u, v)[0] = 0;    // b
             raw_image.at<cv::Vec3b>(u, v)[1] = 255;    // g
             raw_image.at<cv::Vec3b>(u, v)[2] = 0;  // r
             if (FULL_OUTPUT) {outfile << u << "," << v << endl; }
-        // }
+        }
     }
     
     if (FULL_OUTPUT) {outfile.close(); }
 
-    lidar.DistanceAnalysis(fisheye_edge_cloud, lidar_edge_cloud, 30);
+    lidar.CalcEdgeDistance(fisheye_edge_cloud, lidar_edge_cloud, 30);
 
     /** generate fusion image **/
     string fusion_img_path = fisheye.file_path_vec[fisheye.spot_idx][fisheye.view_idx].fusion_folder_path 
@@ -233,7 +232,6 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     lidar.SetViewIdx(lidar.fullview_idx);
     for (int idx = 0; idx < spot_vec.size(); idx++) {
         fisheye.SetSpotIdx(spot_vec[idx]);
-        lidar.SetSpotIdx(spot_vec[idx]);
         std::vector<double> fisheye_kde = fisheye.Kde(bandwidth, scale);
         double *kde_val = new double[fisheye_kde.size()];
         memcpy(kde_val, &fisheye_kde[0], fisheye_kde.size() * sizeof(double));
@@ -244,15 +242,12 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     }
     const std::vector<ceres::Grid2D<double>> kde_grids(grids);
     for (int idx = 0; idx < spot_vec.size(); idx++) {
-        fisheye.SetSpotIdx(spot_vec[idx]);
-        lidar.SetSpotIdx(spot_vec[idx]);
         ceres::BiCubicInterpolator<ceres::Grid2D<double>> interpolator(kde_grids[idx]);
         interpolators.push_back(interpolator);
     }
     const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
 
     for (int idx = 0; idx < spot_vec.size(); idx++) {
-        fisheye.SetSpotIdx(spot_vec[idx]);
         lidar.SetSpotIdx(spot_vec[idx]);
         EdgeCloud &edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
         double weight = sqrt(50000.0f / edge_cloud.size());

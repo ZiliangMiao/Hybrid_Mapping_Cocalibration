@@ -164,13 +164,12 @@ public:
     }
 
     /***** Point Cloud Generation *****/
-    static int ReadFileList(const string &folder_path, vector<string> &file_list);
     void BagToPcd(string filepath, CloudI &cloud);
 
     /***** LiDAR Pre-Processing *****/
-    void LidarToSphere(CloudI::Ptr& cart_cloud, CloudI::Ptr& polar_cloud);
-    void SphereToPlane(CloudI::Ptr& polar_cloud);
-    void EdgeToPixel(CloudI::Ptr& cart_cloud);
+    void LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_cloud);
+    void SphereToPlane(CloudI::Ptr &polar_cloud);
+    void GenerateEdgeCloud(CloudI::Ptr &cart_cloud);
 
     /***** Edge Process *****/
     void EdgeExtraction();
@@ -178,7 +177,7 @@ public:
 
     /***** Registration and Mapping *****/
     Mat4F Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz);
-    void DistanceAnalysis(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float max_range);
+    void CalcEdgeDistance(EdgeCloud::Ptr cloud_tgt, EdgeCloud::Ptr cloud_src, float max_range);
     void SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAnalysis);
 
     void CreateDensePcd();

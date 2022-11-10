@@ -4,12 +4,12 @@ project(calibration)
 
 ## Cmake Settings
 set(MAKE_CXX_STANDARD 11)
+# set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
 ## Find Package
 set(PCL_DIR "/usr/lib/x86_64-linux-gnu/cmake/pcl")
-# set(PCL_DIR "/usr/local/share/pcl-1.12")
 find_package(mlpack REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(OpenMP REQUIRED)

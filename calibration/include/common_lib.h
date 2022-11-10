@@ -53,11 +53,10 @@ int CheckFolder(std::string spot_path) {
 
 template <typename PointType>
 void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
-    if (pcl::io::loadPCDFile<PointType>(filepath, cloud) == -1) {
-        PCL_ERROR("Failed to load %s cloud.\n Filepath: %s", name, filepath.c_str());
-    }
-    else {
-        PCL_INFO("Loaded %d points into %s cloud.\n", cloud.points.size(), name);
+    ROS_INFO("Loading %s cloud.\n Filepath: %s", name, filepath.c_str());
+    int status = pcl::io::loadPCDFile<PointType>(filepath, cloud);
+    if (FULL_OUTPUT) {
+        ROS_INFO("Loaded %ld points into %s cloud.\n", cloud.points.size(), name);
     }
 }
 
@@ -167,5 +166,5 @@ void SaveResults(std::string &record_path, std::vector<double> params, double ba
     write << output << endl;
     write.close();
     
-    cout << output << endl;
+    ROS_INFO("%s", output.c_str());
 }
