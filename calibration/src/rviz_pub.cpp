@@ -77,7 +77,7 @@ void broadcast( typename boost::shared_ptr<pcl::PointCloud<PointT>> cloud,
 
     Eigen::Matrix<float, 6, 1> transform;
     transform << (float)rx, (float)ry, (float)rz, (float)tx, (float)ty, (float)tz;
-    Eigen::Matrix4f tf_mat = TransformMat(transform);
+    Eigen::Matrix4f tf_mat = transformMat(transform);
     cout << tf_mat << endl;
 
     sensor_msgs::PointCloud2 msg_cloud;

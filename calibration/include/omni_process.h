@@ -36,7 +36,7 @@ typedef pcl::PointCloud<PointI> CloudI;
 typedef pcl::PointCloud<PointRGB> CloudRGB;
 typedef pcl::PointCloud<pcl::PointXYZ> EdgeCloud;
 
-class FisheyeProcess{
+class OmniProcess{
 public:
     /** essential params **/
     string kPkgPath = ros::package::getPath("calibration");
@@ -65,10 +65,10 @@ public:
     struct PoseFilePath {
         PoseFilePath () = default;
         PoseFilePath (const string &pose_folder_path) {
-            this->output_folder_path = pose_folder_path + "/outputs/fisheye_outputs";
+            this->output_folder_path = pose_folder_path + "/outputs/omni_outputs";
             this->fusion_folder_path = pose_folder_path + "/results";
             this->hdr_img_path = pose_folder_path + "/images/grab_0.bmp";
-            this->edge_img_path = pose_folder_path + "/edges/cam_edge.png";
+            this->edge_img_path = pose_folder_path + "/edges/omni_edge.png";
             this->flat_img_path = output_folder_path + "/flat_image.bmp";
             this->edge_cloud_path = output_folder_path + "/edge_image.pcd";
             this->kde_samples_path = output_folder_path + "/kde_image.txt";
@@ -91,18 +91,18 @@ public:
     std::map<int, int> degree_map;
 
 public:
-    FisheyeProcess();
-    cv::Mat LoadImage(bool output=false);
+    OmniProcess();
+    cv::Mat loadImage(bool output=false);
     void ReadEdge();
-    void GenerateEdgeCloud();
+    void generateEdgeCloud();
     std::vector<double> Kde(double bandwidth, double scale);
-    void EdgeExtraction();
+    void edgeExtraction();
 
-    void SetSpotIdx(int spot_idx) {
+    void setSpot(int spot_idx) {
         this->spot_idx = spot_idx;
     }
 
-    void SetViewIdx(int view_idx) {
+    void setView(int view_idx) {
         this->view_idx = view_idx;
     }
 

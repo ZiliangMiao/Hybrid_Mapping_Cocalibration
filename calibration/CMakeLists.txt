@@ -53,9 +53,9 @@ add_library(lidar_process
         include/lidar_process.h
         src/lidar_process.cpp
 )
-add_library(fisheye_process
-        include/fisheye_process.h
-        src/fisheye_process.cpp
+add_library(omni_process
+        include/omni_process.h
+        src/omni_process.cpp
 )
 add_library(optimization
         include/optimization.h
@@ -71,7 +71,7 @@ add_executable(ground src/ground.cpp)
 
 ## Add Dependencies
 add_dependencies(lidar_process ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(fisheye_process ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(omni_process ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(optimization ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(main ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(rviz_pub ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -82,9 +82,9 @@ add_dependencies(ground ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TA
 
 ## Link Libraries
 target_link_libraries(lidar_process ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES})
-target_link_libraries(fisheye_process ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
+target_link_libraries(omni_process ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${PCL_LIBRARIES} ${MLPACK_LIBRARIES})
 target_link_libraries(optimization
-  fisheye_process
+  omni_process
   lidar_process
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
@@ -92,7 +92,7 @@ target_link_libraries(optimization
   ${CERES_LIBRARIES}
 )
 target_link_libraries(main
-  fisheye_process
+  omni_process
   lidar_process
   optimization
   ${catkin_LIBRARIES}

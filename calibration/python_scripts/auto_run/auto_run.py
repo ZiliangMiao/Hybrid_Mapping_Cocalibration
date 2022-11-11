@@ -47,7 +47,7 @@ def CheckFolders():
             _checkFolder(view_path)
             for folder in view_folders:
                 _checkFolder(view_path + "/" + folder)
-        _checkFolder(spot_path + "/fullview_recon")
+        _checkFolder(spot_path + "/recon")
 
 
 def GetFolderPath(spot_idx, view_idx=None, return_angle=False):

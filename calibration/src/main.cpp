@@ -31,34 +31,34 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
 
     /***** ROS Parameters Server *****/
-    bool kFisheyeFlatProcess = false;
-    bool kLidarFlatProcess = false;
-    bool kCreateDensePcd = false;
-    bool kViewRegistration = false;
-    bool kFullViewMapping = false;
+    bool kGenerateOmniEdge = false;
+    bool kGenerateLidarEdge = false;
+    bool kGenerateViewCloud = false;
+    bool kStitchViewCloud = false;
+    bool kGenerateSpotCloud = false;
     bool kSpotColorization = false;
-    bool kSpotRegistration = false;
+    bool kStitchSpotCloud = false;
     bool kGlobalMapping = false;
     bool kGlobalColoredMapping = false;
     bool kCeresOptimization = false;
     bool kMultiSpotsOptimization = false;
     bool kParamsAnalysis = false;
-    bool kGlobalUniformSampling = false;
+    bool kUniformSampling = false;
     int kOneSpot = 0; /** -1 means run all the spots, other means run a specific spot **/
 
-    nh.param<bool>("switch/kLidarFlatProcess", kLidarFlatProcess, false);
-    nh.param<bool>("switch/kFisheyeFlatProcess", kFisheyeFlatProcess, false);
-    nh.param<bool>("switch/kCreateDensePcd", kCreateDensePcd, false);
-    nh.param<bool>("switch/kViewRegistration", kViewRegistration, false);
-    nh.param<bool>("switch/kFullViewMapping", kFullViewMapping, false);
+    nh.param<bool>("switch/kGenerateLidarEdge", kGenerateLidarEdge, false);
+    nh.param<bool>("switch/kGenerateOmniEdge", kGenerateOmniEdge, false);
+    nh.param<bool>("switch/kGenerateViewCloud", kGenerateViewCloud, false);
+    nh.param<bool>("switch/kStitchViewCloud", kStitchViewCloud, false);
+    nh.param<bool>("switch/kGenerateSpotCloud", kGenerateSpotCloud, false);
     nh.param<bool>("switch/kSpotColorization", kSpotColorization, false);
-    nh.param<bool>("switch/kSpotRegistration", kSpotRegistration, false);
+    nh.param<bool>("switch/kStitchSpotCloud", kStitchSpotCloud, false);
     nh.param<bool>("switch/kGlobalMapping", kGlobalMapping, false);
     nh.param<bool>("switch/kGlobalColoredMapping", kGlobalColoredMapping, false);
     nh.param<bool>("switch/kCeresOptimization", kCeresOptimization, false);
     nh.param<bool>("switch/kMultiSpotsOptimization", kMultiSpotsOptimization, false);
     nh.param<bool>("switch/kParamsAnalysis", kParamsAnalysis, false);
-    nh.param<bool>("switch/kGlobalUniformSampling", kGlobalUniformSampling, false);
+    nh.param<bool>("switch/kUniformSampling", kUniformSampling, false);
     nh.param<int>("spot/kOneSpot", kOneSpot, -1);
 
     google::InitGoogleLogging(argv[0]);
@@ -81,10 +81,10 @@ int main(int argc, char** argv) {
     };
 
     /***** Class Object Initialization *****/
-    FisheyeProcess fisheye;
+    OmniProcess omnicam;
     LidarProcess lidar;
     lidar.ext_ = Eigen::Map<Param_D>(params_init.data()).head(6);
-    fisheye.int_ = Eigen::Map<Param_D>(params_init.data()).tail(K_INT);
+    omnicam.int_ = Eigen::Map<Param_D>(params_init.data()).tail(K_INT);
 
     /***** Data Folder Check **/
     for (int i = 0; i < lidar.num_spots; ++i) {
@@ -95,40 +95,37 @@ int main(int argc, char** argv) {
         for (int j = 0; j < lidar.num_views; ++j) {
             int view_degree = lidar.view_angle_init + lidar.view_angle_step * j;
             string view_path = spot_path + "/" + to_string(view_degree);
-            string fullview_path = spot_path + "/fullview_recon";
+            string center_view_path = spot_path + "/recon";
             CheckFolder(view_path);
             CheckFolder(view_path + "/bags");
             CheckFolder(view_path + "/images");
             CheckFolder(view_path + "/edges");
             CheckFolder(view_path + "/outputs");
-            CheckFolder(view_path + "/outputs/fisheye_outputs");
+            CheckFolder(view_path + "/outputs/omni_outputs");
             CheckFolder(view_path + "/outputs/lidar_outputs");
             CheckFolder(view_path + "/results");
-            CheckFolder(fullview_path);
+            CheckFolder(center_view_path);
         }
     }
 
     /***** Registration, Colorization and Mapping *****/
     for (int i = 0; i < lidar.num_spots; ++i) {
         if (kOneSpot == -1 || kOneSpot == i) {
-            lidar.SetSpotIdx(i);
+            lidar.setSpot(i);
             for (int j = 0; j < lidar.num_views; ++j) {
-                lidar.SetViewIdx(j);
-                if (kCreateDensePcd) {
-                    cout << "----------------- Merge Dense Point Cloud ---------------------" << endl;
-                    lidar.CreateDensePcd();
+                lidar.setView(j);
+                if (kGenerateViewCloud) {
+                    lidar.generateViewCloud();
                 }
             }
             for (int j = 0; j < lidar.num_views; ++j) {
-                lidar.SetViewIdx(j);
-                if (kViewRegistration && j != lidar.fullview_idx) {
-                    cout << "----------------- View Registration ---------------------" << endl;
-                    lidar.ViewRegistration();
+                lidar.setView(j);
+                if (kStitchViewCloud && j != lidar.center_view_idx) {
+                    lidar.stitchViewCloud();
                 }
             }
-            if (kFullViewMapping) {
-                cout << "----------------- Full View Mapping ---------------------" << endl;
-                lidar.FullViewMapping();
+            if (kGenerateSpotCloud) {
+                lidar.generateSpotCloud();
             }
         }
     }
@@ -137,22 +134,22 @@ int main(int argc, char** argv) {
     
     for (int i = 0; i < lidar.num_spots; ++i) {
         if (kOneSpot == -1 || kOneSpot == i) {
-            if (kLidarFlatProcess) {
+            if (kGenerateLidarEdge) {
                 CloudI::Ptr lidar_cart_cloud(new CloudI);
                 CloudI::Ptr lidar_polar_cloud(new CloudI);
-                lidar.SetSpotIdx(i);
-                lidar.SetViewIdx(lidar.fullview_idx);
-                lidar.LidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
-                lidar.SphereToPlane(lidar_polar_cloud);
-                lidar.EdgeExtraction();
-                lidar.GenerateEdgeCloud(lidar_cart_cloud);
+                lidar.setSpot(i);
+                lidar.setView(lidar.center_view_idx);
+                lidar.lidarToSphere(lidar_cart_cloud, lidar_polar_cloud);
+                lidar.sphereToPlane(lidar_polar_cloud);
+                lidar.edgeExtraction();
+                lidar.generateEdgeCloud(lidar_cart_cloud);
             }
-            if (kFisheyeFlatProcess) {
-                fisheye.SetSpotIdx(i);
-                fisheye.SetViewIdx(fisheye.fullview_idx);
-                fisheye.LoadImage(true);
-                fisheye.EdgeExtraction();
-                fisheye.GenerateEdgeCloud(); 
+            if (kGenerateOmniEdge) {
+                omnicam.setSpot(i);
+                omnicam.setView(omnicam.fullview_idx);
+                omnicam.loadImage(true);
+                omnicam.edgeExtraction();
+                omnicam.generateEdgeCloud(); 
 
             }
         }
@@ -178,17 +175,17 @@ int main(int argc, char** argv) {
 
         for (int spot = 0; spot < lidar.num_spots; ++spot) {
             if (kOneSpot == -1 || kOneSpot == spot) {
-                fisheye.SetSpotIdx(spot);
-                lidar.SetSpotIdx(spot);
-                fisheye.SetViewIdx(fisheye.fullview_idx);
-                lidar.SetViewIdx(lidar.fullview_idx);
-                fisheye.ReadEdge();
+                omnicam.setSpot(spot);
+                lidar.setSpot(spot);
+                omnicam.setView(omnicam.fullview_idx);
+                lidar.setView(lidar.center_view_idx);
+                omnicam.ReadEdge();
                 lidar.ReadEdge();
                 
-                Project2Image(fisheye, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
+                project2Image(omnicam, lidar, params_init, 0); /** 0 - invalid bandwidth to initialize the visualization **/
                 string record_path = lidar.file_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path
                                     + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
-                SaveResults(record_path, params_init, 0, 0, 0);
+                saveResults(record_path, params_init, 0, 0, 0);
             }
         }
 
@@ -209,12 +206,12 @@ int main(int argc, char** argv) {
                 for (int i = 0; i < bw.size(); i++) {
                     double bandwidth = bw[i];
                     vector<double> init_params_vec(params_calib);
-                    params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, false);
+                    params_calib = QuaternionCalib(omnicam, lidar, bandwidth, spot_vec, params_calib, lb, ub, false);
                     // if (i == bw.size() - 1) {
                     //     params_calib = QuaternionCalib(fisheye, lidar, bandwidth, spot_vec, params_calib, lb, ub, true);
                     // }
                     if (kParamsAnalysis) {
-                        CorrelationAnalysis(fisheye, lidar, spot_vec, init_params_vec, params_calib, bandwidth);
+                        costAnalysis(omnicam, lidar, spot_vec, init_params_vec, params_calib, bandwidth);
                     }
                 }
 
@@ -254,43 +251,34 @@ int main(int argc, char** argv) {
         
         for (int i = 0; i < lidar.num_spots; ++i) {
             if (kOneSpot == -1 || kOneSpot == i) {
-                fisheye.SetSpotIdx(i);
-                lidar.SetSpotIdx(i);
-                fisheye.SetViewIdx(lidar.fullview_idx);
-                lidar.SetViewIdx(lidar.fullview_idx);
-                SpotColorization(fisheye, lidar, params_calib);
+                omnicam.setSpot(i);
+                lidar.setSpot(i);
+                omnicam.setView(lidar.center_view_idx);
+                lidar.setView(lidar.center_view_idx);
+                SpotColorization(omnicam, lidar, params_calib);
             }
         }
     }
 
-    if (kSpotRegistration) {
+    if (kStitchSpotCloud) {
         cout << "----------------- Spot Registration ---------------------" << endl;
         for (int i = lidar.num_spots - 1; i > 0; --i) {
             if (kOneSpot == -1 || kOneSpot == i) {
-                lidar.SetSpotIdx(i);
-                lidar.SpotRegistration();
+                lidar.setSpot(i);
+                lidar.stitchSpotCloud();
             }
         }
         
-        // bool kSpotAnalysis = false;
-        // ros::param::get("switch/kAnalysis", kSpotAnalysis);
-
-        // for (int i = lidar.num_spots - 1; i > 0; --i) {
-        //     if (kOneSpot == -1 || kOneSpot == i) {
-        //         lidar.SetSpotIdx(i);
-        //         lidar.SpotRegAnalysis(0, lidar.spot_idx, kSpotAnalysis);
-        //     }
-        // }
     }
 
     if (kGlobalMapping) {
         cout << "----------------- Global Mapping ---------------------" << endl;
-        lidar.GlobalMapping(kGlobalUniformSampling);
+        lidar.generateFineMap(kUniformSampling);
     }
 
     if (kGlobalColoredMapping) {
         cout << "----------------- Global Colored Mapping ---------------------" << endl;
-        lidar.GlobalColoredMapping(kGlobalUniformSampling);
+        lidar.generateColoredFineMap(kUniformSampling);
     }
 
     return 0;

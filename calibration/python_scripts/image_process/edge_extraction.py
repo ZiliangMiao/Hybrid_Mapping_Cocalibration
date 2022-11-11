@@ -55,11 +55,11 @@ if __name__ == "__main__":
     data_path = dataset_path + "/spot" + str(spot) + "/0"
     print("Edge extraction in: " + data_path + " ... ", end="")
 
-    dir_cam_original = data_path + "/outputs/fisheye_outputs/flat_image.bmp"
+    dir_cam_original = data_path + "/outputs/omni_outputs/flat_image.bmp"
     dir_cam_mask = root_path + "/python_scripts/image_process/flat_image_mask.png"
-    dir_cam_filtered = data_path + "/edges/canny_outputs/cam_1_filtered.png"
-    dir_cam_canny = data_path + "/edges/canny_outputs/cam_2_canny.png"
-    dir_cam_output = data_path + "/edges/cam_edge.png"
+    dir_cam_filtered = data_path + "/edges/canny_outputs/omni_1_filtered.png"
+    dir_cam_canny = data_path + "/edges/canny_outputs/omni_2_canny.png"
+    dir_cam_output = data_path + "/edges/omni_edge.png"
 
     dir_lid_original = data_path + "/outputs/lidar_outputs/flat_lidar_image.bmp"
     dir_lid_mask = root_path + "/python_scripts/image_process/flat_lidar_image_mask.png"
@@ -69,9 +69,9 @@ if __name__ == "__main__":
 
     check_folder()
 
-    # -------- fisheye camera --------
+    # -------- omnidirectional camera --------
 
-    if (mode == "fisheye"):
+    if (mode == "omni"):
         edge_cam_raw = cv2.imread(dir_cam_original)
         edge_cam_raw = cv2.cvtColor(edge_cam_raw, cv2.COLOR_BGR2GRAY)
 

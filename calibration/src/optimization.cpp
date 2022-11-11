@@ -45,11 +45,11 @@ struct QuaternionFunctor {
     const ceres::BiCubicInterpolator<ceres::Grid2D<double>> &kde_interpolator_;
 };
 
-void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
-    cv::Mat raw_image = fisheye.LoadImage();
+void project2Image(OmniProcess &omnicam, LidarProcess &lidar, std::vector<double> &params, double bandwidth) {
+    cv::Mat raw_image = omnicam.loadImage();
     ofstream outfile;
 
-    if (FULL_OUTPUT) {
+    if (MESSAGE_EN) {
         /** save the projected edge points to .txt file **/
         string edge_proj_txt_path = lidar.file_path_vec[lidar.spot_idx][lidar.view_idx].edge_fisheye_projection_path;
         outfile.open(edge_proj_txt_path, ios::out);
@@ -60,9 +60,9 @@ void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<dou
     
     EdgeCloud::Ptr fisheye_edge_cloud (new EdgeCloud);
     EdgeCloud::Ptr lidar_edge_cloud (new EdgeCloud);
-    Mat4D T_mat = TransformMat(extrinsic);
+    Mat4D T_mat = transformMat(extrinsic);
     pcl::transformPointCloud(lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *lidar_edge_cloud, T_mat);
-    pcl::copyPointCloud(fisheye.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *fisheye_edge_cloud);
+    pcl::copyPointCloud(omnicam.edge_cloud_vec[lidar.spot_idx][lidar.view_idx], *fisheye_edge_cloud);
 
     Vec3D lidar_point;
     Vec2D projection;
@@ -77,26 +77,26 @@ void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<dou
         point.z = 0;
 
         float radius = pow(u-intrinsic(0),2) + pow(v-intrinsic(1),2);
-        Pair &bounds = fisheye.kEffectiveRadius;
+        Pair &bounds = omnicam.kEffectiveRadius;
         if (radius > bounds.first * bounds.first && radius < bounds.second * bounds.second) {
             raw_image.at<cv::Vec3b>(u, v)[0] = 0;    // b
             raw_image.at<cv::Vec3b>(u, v)[1] = 255;    // g
             raw_image.at<cv::Vec3b>(u, v)[2] = 0;  // r
-            if (FULL_OUTPUT) {outfile << u << "," << v << endl; }
+            if (MESSAGE_EN) {outfile << u << "," << v << endl; }
         }
     }
     
-    if (FULL_OUTPUT) {outfile.close(); }
+    if (MESSAGE_EN) {outfile.close(); }
 
-    lidar.CalcEdgeDistance(fisheye_edge_cloud, lidar_edge_cloud, 30);
+    lidar.getEdgeDistance(fisheye_edge_cloud, lidar_edge_cloud, 30);
 
     /** generate fusion image **/
-    string fusion_img_path = fisheye.file_path_vec[fisheye.spot_idx][fisheye.view_idx].fusion_folder_path 
-                            + "/spot_" + to_string(fisheye.spot_idx) + "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
+    string fusion_img_path = omnicam.file_path_vec[omnicam.spot_idx][omnicam.view_idx].fusion_folder_path 
+                            + "/spot_" + to_string(omnicam.spot_idx) + "_fusion_bw_" + to_string(int(bandwidth)) + ".bmp";
     cv::imwrite(fusion_img_path, raw_image); /** fusion image generation **/
 }
 
-void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params) {
+void SpotColorization(OmniProcess &omnicam, LidarProcess &lidar, std::vector<double> &params) {
  
     string spot_cloud_path, pose_mat_path;
     Ext_F extrinsic;
@@ -120,7 +120,7 @@ void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<
     /** Loading optimized parameters and initial transform matrix **/
     extrinsic = Eigen::Map<Param_D>(params.data()).head(6).cast<float>();
     intrinsic = Eigen::Map<Param_D>(params.data()).tail(K_INT).cast<float>();
-    T_mat = TransformMat(extrinsic);
+    T_mat = transformMat(extrinsic);
     T_mat_inv = T_mat.inverse();
     pose_mat = Mat4F::Identity();
     pose_mat_inv = Mat4F::Identity();
@@ -129,7 +129,7 @@ void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<
 
     for (int i = 0; i < lidar.num_views; i++)
     {
-        int color_view_idx = lidar.fullview_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
+        int color_view_idx = lidar.center_view_idx - (int(0.5 * (i + 1)) * ((2 * (i % 2) - 1)));
         CloudRGB::Ptr output_cloud(new CloudRGB);
         std::vector<int> colored_point_idx(spot_cloud->points.size());
         std::vector<int> blank_point_idx(spot_cloud->points.size());
@@ -142,8 +142,8 @@ void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<
         pose_mat_inv = pose_mat.inverse();
 
         /** Loading transform matrix between different views **/
-        fisheye.SetViewIdx(color_view_idx);
-        target_view_img = fisheye.LoadImage();
+        omnicam.setView(color_view_idx);
+        target_view_img = omnicam.loadImage();
 
         /** PointCloud Coloring **/
         pcl::transformPointCloud(*input_cloud, *input_cloud, (T_mat * pose_mat_inv * T_mat_inv)); 
@@ -163,8 +163,8 @@ void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<
 
             if (0 <= u && u < target_view_img.rows && 0 <= v && v < target_view_img.cols) {
                 double radius = sqrt(pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(0), 2));
-                Pair &bounds = fisheye.kEffectiveRadius;
-                int &extra = fisheye.kExcludeRadius;
+                Pair &bounds = omnicam.kEffectiveRadius;
+                int &extra = omnicam.kExcludeRadius;
                 if (radius > (bounds.first + extra) && radius < (bounds.second - extra)) {
                     point.b = target_view_img.at<cv::Vec3b>(u, v)[0];
                     point.g = target_view_img.at<cv::Vec3b>(u, v)[1];
@@ -191,10 +191,10 @@ void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<
 
     pcl::transformPointCloud(*spot_rgb_cloud, *spot_rgb_cloud, T_mat_inv);
 
-    pcl::io::savePCDFileBinary(lidar.file_path_vec[lidar.spot_idx][lidar.fullview_idx].spot_rgb_cloud_path, *spot_rgb_cloud);
+    pcl::io::savePCDFileBinary(lidar.file_path_vec[lidar.spot_idx][lidar.center_view_idx].spot_rgb_cloud_path, *spot_rgb_cloud);
 }
 
-std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
+std::vector<double> QuaternionCalib(OmniProcess &omnicam,
                                     LidarProcess &lidar,
                                     double bandwidth,
                                     std::vector<int> spot_vec,
@@ -205,12 +205,12 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     Param_D init_params = Eigen::Map<Param_D>(init_params_vec.data());
     Ext_D extrinsic = init_params.head(6);
     MatD(K_INT+(6+1), 1) q_vector;
-    Mat3D rotation_mat = TransformMat(extrinsic).topLeftCorner(3, 3);
+    Mat3D rotation_mat = transformMat(extrinsic).topLeftCorner(3, 3);
     Eigen::Quaterniond quaternion(rotation_mat);
     ceres::EigenQuaternionManifold *q_manifold = new ceres::EigenQuaternionManifold();
     
     const int kParams = q_vector.size();
-    const int kViews = fisheye.num_views;
+    const int kViews = omnicam.num_views;
     const double scale = KDE_SCALE;
     q_vector.tail(K_INT + 3) = init_params.tail(K_INT + 3);
     q_vector.head(4) << quaternion.x(), quaternion.y(), quaternion.z(), quaternion.w();
@@ -228,14 +228,14 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     std::vector<double> ref_vals;
     std::vector<ceres::Grid2D<double>> grids;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
-    fisheye.SetViewIdx(fisheye.fullview_idx);
-    lidar.SetViewIdx(lidar.fullview_idx);
+    omnicam.setView(omnicam.fullview_idx);
+    lidar.setView(lidar.center_view_idx);
     for (int idx = 0; idx < spot_vec.size(); idx++) {
-        fisheye.SetSpotIdx(spot_vec[idx]);
-        std::vector<double> fisheye_kde = fisheye.Kde(bandwidth, scale);
+        omnicam.setSpot(spot_vec[idx]);
+        std::vector<double> fisheye_kde = omnicam.Kde(bandwidth, scale);
         double *kde_val = new double[fisheye_kde.size()];
         memcpy(kde_val, &fisheye_kde[0], fisheye_kde.size() * sizeof(double));
-        ceres::Grid2D<double> grid(kde_val, 0, fisheye.kImageSize.first * scale, 0, fisheye.kImageSize.second * scale);
+        ceres::Grid2D<double> grid(kde_val, 0, omnicam.kImageSize.first * scale, 0, omnicam.kImageSize.second * scale);
         grids.push_back(grid);
         double ref_val = *max_element(fisheye_kde.begin(), fisheye_kde.end());
         ref_vals.push_back(ref_val);
@@ -248,7 +248,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     const std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> kde_interpolators(interpolators);
 
     for (int idx = 0; idx < spot_vec.size(); idx++) {
-        lidar.SetSpotIdx(spot_vec[idx]);
+        lidar.setSpot(spot_vec[idx]);
         EdgeCloud &edge_cloud = lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx];
         double weight = sqrt(50000.0f / edge_cloud.size());
         
@@ -283,7 +283,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_SCHUR;
     options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
-    options.minimizer_progress_to_stdout = FULL_OUTPUT;
+    options.minimizer_progress_to_stdout = MESSAGE_EN;
     options.num_threads = std::thread::hardware_concurrency();
     options.max_num_iterations = 200;
     options.gradient_tolerance = 1e-6;
@@ -300,25 +300,25 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
     std::vector<double> result_vec(&result[0], result.data()+result.cols()*result.rows());
     string record_path = lidar.file_path_vec[lidar.spot_idx][lidar.view_idx].result_folder_path 
                         + "/result_spot" + to_string(lidar.spot_idx) + ".txt";
-    SaveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
+    saveResults(record_path, result_vec, bandwidth, summary.initial_cost, summary.final_cost);
 
     extrinsic = result.head(6);
     for (int &spot_idx : spot_vec) {
-        fisheye.SetSpotIdx(spot_idx);
-        lidar.SetSpotIdx(spot_idx);
-        Project2Image(fisheye, lidar, result_vec, bandwidth);
+        omnicam.setSpot(spot_idx);
+        lidar.setSpot(spot_idx);
+        project2Image(omnicam, lidar, result_vec, bandwidth);
     }
     
     return result_vec;
 }
 
-void CorrelationAnalysis(FisheyeProcess &fisheye,
-                         LidarProcess &lidar,
-                         std::vector<int> spot_vec,
-                         std::vector<double> init_params_vec,
-                         std::vector<double> result_vec,
-                         double bandwidth) {
-    const int kViews = fisheye.num_views;
+void costAnalysis(OmniProcess &omnicam,
+                  LidarProcess &lidar,
+                   std::vector<int> spot_vec,
+                  std::vector<double> init_params_vec,
+                  std::vector<double> result_vec,
+                  double bandwidth) {
+    const int kViews = omnicam.num_views;
     const double scale = KDE_SCALE;
 
     /********* Fisheye KDE *********/
@@ -326,20 +326,20 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
     std::vector<ceres::Grid2D<double>> grids;
     std::vector<ceres::BiCubicInterpolator<ceres::Grid2D<double>>> interpolators;
     for (int i = 0; i < spot_vec.size(); i++) {
-        fisheye.SetSpotIdx(spot_vec[i]);
-        lidar.SetSpotIdx(spot_vec[i]);
-        std::vector<double> fisheye_kde = fisheye.Kde(bandwidth, scale);
+        omnicam.setSpot(spot_vec[i]);
+        lidar.setSpot(spot_vec[i]);
+        std::vector<double> fisheye_kde = omnicam.Kde(bandwidth, scale);
         double *kde_val = new double[fisheye_kde.size()];
         memcpy(kde_val, &fisheye_kde[0], fisheye_kde.size() * sizeof(double));
-        ceres::Grid2D<double> grid(kde_val, 0, fisheye.kImageSize.first * scale, 0, fisheye.kImageSize.second * scale);
+        ceres::Grid2D<double> grid(kde_val, 0, omnicam.kImageSize.first * scale, 0, omnicam.kImageSize.second * scale);
         grids.push_back(grid);
         double ref_val = *max_element(fisheye_kde.begin(), fisheye_kde.end());
         ref_vals.push_back(ref_val);
     }
     const std::vector<ceres::Grid2D<double>> kde_grids(grids);
     for (int i = 0; i < spot_vec.size(); i++) {
-        fisheye.SetSpotIdx(spot_vec[i]);
-        lidar.SetSpotIdx(spot_vec[i]);
+        omnicam.setSpot(spot_vec[i]);
+        lidar.setSpot(spot_vec[i]);
         ceres::BiCubicInterpolator<ceres::Grid2D<double>> interpolator(kde_grids[i]);
         interpolators.push_back(interpolator);
     }
@@ -394,7 +394,7 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
         }
 
         for (int k = 0; k < spot_vec.size(); k++) {
-            lidar.SetSpotIdx(spot_vec[k]);
+            lidar.setSpot(spot_vec[k]);
             double normalize_weight = sqrt(1.0f / lidar.edge_cloud_vec[lidar.spot_idx][lidar.view_idx].size());
 
             /** Save & terminal output **/
@@ -439,11 +439,11 @@ void CorrelationAnalysis(FisheyeProcess &fisheye,
                             double val;
                             double weight = normalize_weight;
                             Eigen::Vector4d lidar_point4 = {point.x, point.y, point.z, 1.0};
-                            Mat4D T_mat = TransformMat(extrinsic);
+                            Mat4D T_mat = transformMat(extrinsic);
                             Vec3D lidar_point = (T_mat * lidar_point4).head(3);
                             Vec2D projection = IntrinsicTransform(intrinsic, lidar_point);
                             kde_interpolators[k].Evaluate(projection(0) * scale, projection(1) * scale, &val);
-                            Pair &bounds = fisheye.kEffectiveRadius;
+                            Pair &bounds = omnicam.kEffectiveRadius;
                             if ((pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(1), 2)) > pow(bounds.first, 2)
                              && (pow(projection(0) - intrinsic(0), 2) + pow(projection(1) - intrinsic(1), 2)) < pow(bounds.second, 2)) {
                                 step_res += pow(weight * val, 2);

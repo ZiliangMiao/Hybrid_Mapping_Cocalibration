@@ -52,10 +52,10 @@ int CheckFolder(std::string spot_path) {
 // }
 
 template <typename PointType>
-void LoadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
+void loadPcd(string filepath, pcl::PointCloud<PointType> &cloud, const char* name="") {
     ROS_INFO("Loading %s cloud.\n Filepath: %s", name, filepath.c_str());
     int status = pcl::io::loadPCDFile<PointType>(filepath, cloud);
-    if (FULL_OUTPUT) {
+    if (MESSAGE_EN) {
         ROS_INFO("Loaded %ld points into %s cloud.\n", cloud.points.size(), name);
     }
 }
@@ -74,7 +74,7 @@ Eigen::Matrix4f LoadTransMat(std::string trans_path){
 }
 
 template <typename T>
-Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, 7, 1> &extrinsic){
+Eigen::Matrix<T, 4, 4> transformMat(Eigen::Matrix<T, 7, 1> &extrinsic){
     Eigen::Matrix<T, 3, 3> R = Eigen::Quaternion<T>(extrinsic[3], extrinsic[0], extrinsic[1], extrinsic[2]).toRotationMatrix();
     Eigen::Matrix<T, 4, 4> T_mat;
     T_mat << R(0,0), R(0,1), R(0,2), extrinsic(4),
@@ -85,7 +85,7 @@ Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, 7, 1> &extrinsic){
 }
 
 template <typename T>
-Eigen::Matrix<T, 4, 4> TransformMat(Eigen::Matrix<T, 6, 1> &extrinsic){
+Eigen::Matrix<T, 4, 4> transformMat(Eigen::Matrix<T, 6, 1> &extrinsic){
     /***** R = Rx * Ry * Rz *****/
     Eigen::Matrix<T, 3, 3> R;
     R = Eigen::AngleAxis<T>(extrinsic(2), Eigen::Matrix<T, 3, 1>::UnitZ())
@@ -135,7 +135,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, K_INT, 1> &intrinsic,
     return undistorted_projection;
 }
 
-void SaveResults(std::string &record_path, std::vector<double> params, double bandwidth, double initial_cost, double final_cost) {
+void saveResults(std::string &record_path, std::vector<double> params, double bandwidth, double initial_cost, double final_cost) {
     const std::vector<const char*> name = {
             "rx", "ry", "rz",
             "tx", "ty", "tz",

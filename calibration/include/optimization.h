@@ -28,7 +28,7 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 // headings
-#include <fisheye_process.h>
+#include <omni_process.h>
 #include <lidar_process.h>
 #include <define.h>
 
@@ -45,11 +45,11 @@ inline double getDouble(const ceres::Jet<SCALAR, N> &x) {
     return static_cast<double>(x.a);
 }
 
-void Project2Image(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
+void project2Image(OmniProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
 
-void SpotColorization(FisheyeProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
+void SpotColorization(OmniProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
 
-std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
+std::vector<double> QuaternionCalib(OmniProcess &fisheye,
                                     LidarProcess &lidar,
                                     double bandwidth,
                                     std::vector<int> spot_vec,
@@ -58,7 +58,7 @@ std::vector<double> QuaternionCalib(FisheyeProcess &fisheye,
                                     std::vector<double> ub,
                                     bool lock_intrinsic);
 
-void CorrelationAnalysis(FisheyeProcess &fisheye,
+void costAnalysis(OmniProcess &fisheye,
                         LidarProcess &lidar,
                         std::vector<int> spot_vec,
                         std::vector<double> init_params_vec,

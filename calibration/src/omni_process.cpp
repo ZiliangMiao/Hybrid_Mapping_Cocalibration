@@ -1,5 +1,5 @@
 /** headings **/
-#include <fisheye_process.h>
+#include <omni_process.h>
 #include <common_lib.h>
 
 /** namespace **/
@@ -11,13 +11,13 @@ using namespace mlpack::tree;
 using namespace mlpack::kernel;
 using namespace arma;
 
-FisheyeProcess::FisheyeProcess() {
+OmniProcess::OmniProcess() {
     /** parameter server **/
     ros::param::get("essential/kDatasetName", this->dataset_name);
     ros::param::get("essential/kNumSpots", this->num_spots);
     ros::param::get("essential/kNumViews", this->num_views);
-    ros::param::get("essential/kFisheyeRows", this->kImageSize.first);
-    ros::param::get("essential/kFisheyeCols", this->kImageSize.second);
+    ros::param::get("essential/kImageRows", this->kImageSize.first);
+    ros::param::get("essential/kImageCols", this->kImageSize.second);
     ros::param::get("essential/kAngleInit", this->view_angle_init);
     ros::param::get("essential/kAngleStep", this->view_angle_step);
     this->kDatasetPath = this->kPkgPath + "/data/" + this->dataset_name;
@@ -31,7 +31,6 @@ FisheyeProcess::FisheyeProcess() {
     file_path_vec = file_path_tmp;
     edge_cloud_vec = edge_clouds_tmp;
 
-
     /** degree map **/
     for (int i = 0; i < num_spots; ++i) {
         for (int j = 0; j < num_views; ++j) {
@@ -44,18 +43,18 @@ FisheyeProcess::FisheyeProcess() {
     }
 }
 
-void FisheyeProcess::ReadEdge() {
+void OmniProcess::ReadEdge() {
     string edge_cloud_path = this->file_path_vec[spot_idx][view_idx].edge_cloud_path;
-    LoadPcd(edge_cloud_path, this->edge_cloud_vec[spot_idx][view_idx], "camera edge");
+    loadPcd(edge_cloud_path, this->edge_cloud_vec[spot_idx][view_idx], "camera edge");
 }
 
-cv::Mat FisheyeProcess::LoadImage(bool output) {
+cv::Mat OmniProcess::loadImage(bool output) {
     PoseFilePath &path_vec = this->file_path_vec[spot_idx][view_idx];
     string img_path = path_vec.hdr_img_path;
     cv::Mat image = cv::imread(img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
                    "Invalid size (%d, %d) from file: %s", image.rows, image.cols, img_path);
-    ROS_ASSERT_MSG((!FULL_OUTPUT),
+    ROS_ASSERT_MSG((!MESSAGE_EN),
                     "Loaded image from file: %s", img_path)
     if (output) {
         string output_img_path = path_vec.flat_img_path;
@@ -65,7 +64,7 @@ cv::Mat FisheyeProcess::LoadImage(bool output) {
 }
 
 
-void FisheyeProcess::GenerateEdgeCloud() {
+void OmniProcess::generateEdgeCloud() {
     string edge_img_path = file_path_vec[spot_idx][view_idx].edge_img_path;
     cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
@@ -89,7 +88,7 @@ void FisheyeProcess::GenerateEdgeCloud() {
     pcl::io::savePCDFileBinary(edge_cloud_path, *edge_cloud);
 }
 
-std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
+vector<double> OmniProcess::Kde(double bandwidth, double scale) {
     clock_t start_time = clock();
     const double default_rel_error = 0.05;
     const int n_rows = scale * this->kImageSize.first;
@@ -124,7 +123,7 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
 
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
 
-    if (FULL_OUTPUT) {
+    if (EXTRA_FILE_EN) {
         /** kde prediction output **/
         string kde_txt_path = this->file_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
         ofstream outfile;
@@ -142,16 +141,16 @@ std::vector<double> FisheyeProcess::Kde(double bandwidth, double scale) {
         }
         outfile.close();
     }
-
-    cout << "New kde image generated with size (" << n_rows << ", " << n_cols << ") in "
-         <<(double)(clock() - start_time) / CLOCKS_PER_SEC << "s, bandwidth = " << bandwidth << endl;
+    if (MESSAGE_EN) {
+        ROS_INFO("kde image generated in %f s.\n bandwidth = %f, size = (%d, %d)", ((float)(clock() - start_time) / CLOCKS_PER_SEC), bandwidth, n_rows, n_cols);
+    }
     return img;
 }
 
-void FisheyeProcess::EdgeExtraction() {
-    std::string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
-    std::string kSpots = to_string(this->spot_idx);
-    std::string cmd_str = "python3 " 
-        + script_path + " " + this->kDatasetPath + " " + "fisheye" + " " + kSpots;
+void OmniProcess::edgeExtraction() {
+    string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
+    string kSpots = to_string(this->spot_idx);
+    string cmd_str = "python3 " 
+        + script_path + " " + this->kDatasetPath + " " + "omni" + " " + kSpots;
     int status = system(cmd_str.c_str());
 }

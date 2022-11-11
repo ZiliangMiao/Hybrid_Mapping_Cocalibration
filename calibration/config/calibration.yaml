@@ -40,8 +40,8 @@ essential:
     # kDatasetName: "sustech_rb2"
     # kNumSpots: 3
     kNumViews: 5
-    kFisheyeRows: 2048
-    kFisheyeCols: 2448
+    kImageRows: 2048
+    kImageCols: 2448
     kAngleInit: -50
     kAngleStep: 25
 

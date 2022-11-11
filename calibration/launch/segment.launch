@@ -1,11 +1,11 @@
 <launch>
-  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/bs_hall/spot0/recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/bs_hall/roi_scans_xyzi.pcd" /> -->
   
-  <!-- <param name="data_path" type="string" value="/data/sustech_rb2/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/sustech_rb2/spot0/recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
   
-  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/fullview_recon/global_registered_cloud.pcd" /> -->
+  <!-- <param name="data_path" type="string" value="/data/sustech_crf/spot0/recon/global_registered_cloud.pcd" /> -->
   <!-- <param name="data_path" type="string" value="/data/sustech_crf/crf_ref.pcd" /> -->
 
   <!-- <param name="data_path" type="string" value="/data/compare/cliped/segment_crf_icp.pcd" />

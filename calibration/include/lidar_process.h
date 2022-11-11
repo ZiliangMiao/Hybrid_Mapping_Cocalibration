@@ -80,7 +80,7 @@ public:
     int num_views = 1; /** note: each spot contains several view **/
     int view_angle_init = 0;
     int view_angle_step = 1;
-    int fullview_idx = 0;
+    int center_view_idx = 0;
 
     /** const parameters - original data - images and point clouds **/
     const int kFlatRows = 2000;
@@ -107,7 +107,7 @@ public:
     struct PoseFilePath {
         PoseFilePath()= default;
         PoseFilePath(string& spot_path, string& pose_path) {
-            this->fullview_recon_folder_path = spot_path + "/fullview_recon";
+            this->recon_folder_path = spot_path + "/recon";
             this->output_folder_path = pose_path + "/outputs/lidar_outputs";
             this->bag_folder_path = pose_path + "/bags";
             this->result_folder_path = pose_path + "/results";
@@ -121,10 +121,10 @@ public:
             this->edge_fisheye_projection_path = this->output_folder_path + "/lid_trans.txt";
             this->params_record_path = this->output_folder_path + "/params_record.txt";
             
-            this->lio_spot_trans_mat_path = this->fullview_recon_folder_path + "/lio_spot_trans_mat.txt";
-            this->icp_spot_trans_mat_path = this->fullview_recon_folder_path + "/icp_spot_trans_mat.txt";
-            this->spot_cloud_path = this->fullview_recon_folder_path + "/spot_cloud.pcd";
-            this->spot_rgb_cloud_path = this->fullview_recon_folder_path + "/spot_rgb_cloud.pcd";
+            this->lio_spot_trans_mat_path = this->recon_folder_path + "/lio_spot_trans_mat.txt";
+            this->icp_spot_trans_mat_path = this->recon_folder_path + "/icp_spot_trans_mat.txt";
+            this->spot_cloud_path = this->recon_folder_path + "/spot_cloud.pcd";
+            this->spot_rgb_cloud_path = this->recon_folder_path + "/spot_rgb_cloud.pcd";
         }
         /** pose **/
         string output_folder_path;
@@ -140,7 +140,7 @@ public:
         string edge_fisheye_projection_path;
         string params_record_path;
         /** spot **/
-        string fullview_recon_folder_path;
+        string recon_folder_path;
         string spot_cloud_path;
         string fullview_sparse_cloud_path;
         string spot_rgb_cloud_path;
@@ -156,40 +156,39 @@ public:
 public:
     /***** LiDAR Class *****/
     LidarProcess();
-    void SetSpotIdx(int spot_idx) {
+    void setSpot(int spot_idx) {
         this->spot_idx = spot_idx;
     }
-    void SetViewIdx(int view_idx) {
+    void setView(int view_idx) {
         this->view_idx = view_idx;
     }
 
     /***** Point Cloud Generation *****/
-    void BagToPcd(string filepath, CloudI &cloud);
+    void bagToPcd(string filepath, CloudI &cloud);
 
     /***** LiDAR Pre-Processing *****/
-    void LidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_cloud);
-    void SphereToPlane(CloudI::Ptr &polar_cloud);
-    void GenerateEdgeCloud(CloudI::Ptr &cart_cloud);
+    void lidarToSphere(CloudI::Ptr &cart_cloud, CloudI::Ptr &polar_cloud);
+    void sphereToPlane(CloudI::Ptr &polar_cloud);
+    void generateEdgeCloud(CloudI::Ptr &cart_cloud);
 
     /***** Edge Process *****/
-    void EdgeExtraction();
+    void edgeExtraction();
     void ReadEdge();
 
     /***** Registration and Mapping *****/
-    Mat4F Align(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz);
-    void CalcEdgeDistance(EdgeCloud::Ptr cloud_tgt, EdgeCloud::Ptr cloud_src, float max_range);
-    void SpotRegAnalysis(int tgt_spot_idx, int src_spot_idx, bool kAnalysis);
+    Mat4F alignCloud(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, Mat4F init_trans_mat, int cloud_type, const bool kIcpViz);
+    void getEdgeDistance(EdgeCloud::Ptr cloud_tgt, EdgeCloud::Ptr cloud_src, float max_range);
 
-    void CreateDensePcd();
-    void ViewRegistration();
-    void FullViewMapping();
-    void SpotRegistration();
-    void FineToCoarseReg();
-    void GlobalColoredMapping(bool kGlobalUniformSampling);
-    void GlobalMapping(bool kGlobalUniformSampling);
+    void generateViewCloud();
+    void stitchViewCloud();
+    void generateSpotCloud();
+    void stitchSpotCloud();
+    void stitchFineToCoarse();
+    void generateColoredFineMap(bool kGlobalUniformSampling);
+    void generateFineMap(bool kGlobalUniformSampling);
 
-    double GetFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float max_range);
-    void RemoveInvalidPoints(CloudI::Ptr cloud);
+    double getFitnessScore(CloudI::Ptr cloud_tgt, CloudI::Ptr cloud_src, float max_range);
+    void removeInvalidPoints(CloudI::Ptr cloud);
 
     void computeCovariances(pcl::PointCloud<PointI>::ConstPtr cloud,
                             const pcl::search::KdTree<PointI>::Ptr kdtree,
