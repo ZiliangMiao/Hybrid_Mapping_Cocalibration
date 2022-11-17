@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2022-11-14T05:08:13.352Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36" etag="Zg-2d7ZGAKIvxx5Tg2vp" version="20.5.3" type="github">
+<mxfile host="app.diagrams.net" modified="2022-11-17T09:53:16.397Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36" etag="FCsv-4Nwcf4e24M6PWRk" version="20.5.3" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="1522" dy="350" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="1865" dy="547" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="0" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -1623,8 +1623,8 @@
             <mxPoint x="575.6000000000001" y="1603.3000000000002" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="GsMirqj3LKlR-epmJSQw-79" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Scanning &amp;amp; Mapping&lt;/span&gt;" style="text;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;fillColor=#FFFFFF;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
-          <mxGeometry x="465" y="1525.09" width="165" height="15" as="geometry" />
+        <mxCell id="GsMirqj3LKlR-epmJSQw-79" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Coarse-to-fine Hybrid Mapping&lt;/span&gt;" style="text;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;fillColor=#FFFFFF;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
+          <mxGeometry x="400" y="1525.09" width="230" height="15" as="geometry" />
         </mxCell>
         <mxCell id="GsMirqj3LKlR-epmJSQw-90" value="&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#F9F7ED;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="500" y="1670" width="130" height="110" as="geometry" />
@@ -1671,7 +1671,7 @@
         <mxCell id="Wa_UzJzLD1b0vTqWjn12-1" value="Convert to grayscale" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="-165" y="1663" width="300" height="24.72" as="geometry" />
         </mxCell>
-        <mxCell id="QH4flpXpadhAhcb44TqA-0" value="Intrinsic and extrinsic&lt;br&gt;co-calibration" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+        <mxCell id="QH4flpXpadhAhcb44TqA-0" value="Intrinsic and extrinsic&lt;br&gt;co-calibration" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" parent="WIyWlLk6GJQsqaUBKTNV-1" vertex="1">
           <mxGeometry x="190" y="1550" width="78" height="85.75" as="geometry" />
         </mxCell>
       </root>
