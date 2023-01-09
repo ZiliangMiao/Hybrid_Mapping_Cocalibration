@@ -440,6 +440,7 @@ void LidarProcess::generateViewCloud() {
     CloudI::Ptr view_cloud(new CloudI);
     CloudI::Ptr bag_cloud(new CloudI);
     rosbag::Bag bag;
+    bag.open(bag_path, rosbag::bagmode::Read);
     
     vector<string> topics{topic_name};
     rosbag::View view(bag, rosbag::TopicQuery(topics));
@@ -447,7 +448,6 @@ void LidarProcess::generateViewCloud() {
     pcl::PCLPointCloud2 pcl_pc2;
     uint32_t cnt_pcds = 0; 
 
-    bag.open(bag_path, rosbag::bagmode::Read);
     while (iterator != view.end()) {
         iterator++;
         cnt_pcds++;
