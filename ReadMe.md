@@ -53,6 +53,27 @@ Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [
 The SDK of the fisheye camera is in [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138).
 
 ## 4. Run Co-calibration
+File stucture:
+```bash
+├── cocalibration
+│   ├── build
+│   ├── config
+│   │   ├── calibration.yaml
+│   ├── data
+│   │   └── dataset_name
+│   │       ├── log
+│   │       └── spot0
+│   ├── launch
+│   ├── include
+│   ├── python_scripts
+│   ├── src
+│   ├── package.xml
+│   └── CMakeLists.txt
+├── ReadMe.md
+├── .git
+└── .gitignore
+```
+
 ```
     cd ~/$catkin workspace$
     catkin_make
