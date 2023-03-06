@@ -148,6 +148,7 @@ vector<double> OmniProcess::Kde(double bandwidth, double scale) {
 }
 
 void OmniProcess::edgeExtraction() {
+    ROS_INFO("Run Pythonscripts, Extract edges");
     string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
     string kSpots = to_string(this->spot_idx);
     string cmd_str = "python3 " 
