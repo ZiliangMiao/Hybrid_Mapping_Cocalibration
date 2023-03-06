@@ -1,4 +1,0 @@
-<launch>
-  <node name="sync" pkg="calibration" type="lidar_sync.py" output="screen">
-  </node>
-</launch>

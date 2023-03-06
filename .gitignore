@@ -1,9 +1,14 @@
 calibration/build/*
 calibration/data/*
-calibration/config/*
 calibration/cmake-build-debug/*
 calibration/.idea/*
 calibration/.vscode/*
+
+cocalibration/build/*
+cocalibration/data/*
+cocalibration/cmake-build-debug/*
+cocalibration/.idea/*
+cocalibration/.vscode/*
 
 gimbal/build/*
 gimbal/data/*

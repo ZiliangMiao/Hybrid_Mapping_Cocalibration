@@ -1,4 +1,0 @@
-<launch>
-  <node name="auto_run_fast_lio" pkg="calibration" type="fast_lio.py" output="screen">
-  </node>
-</launch>

@@ -1,6 +1,0 @@
-<launch>
-	<!-- <arg name="rotation_mode" default="6"/> -->
-	<!-- <node name="gimbal_control" pkg="gimbal" type="gimbal" args="$(arg rotation_mode)" output="screen">  -->
-	<node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen"> 
-	</node>
-</launch>

@@ -1,5 +1,0 @@
-plt.cm.gist_earth_r
-bw=32, max=0.00515765
-bw=16, max=0.0014483
-bw=4, max=0.000123513
-bw=1, max=9.64004e-06

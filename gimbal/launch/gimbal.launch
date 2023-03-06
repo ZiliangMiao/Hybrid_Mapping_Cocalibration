@@ -1,6 +1,0 @@
-<launch>
-  <node name="gimbal_cmd_instruction" pkg="gimbal" type="gimbal_cmd_instruction.py" output="screen">
-  </node>
-  <node name="gimbal_control" pkg="gimbal" type="gimbal" output="screen">
-  </node>
-</launch>
