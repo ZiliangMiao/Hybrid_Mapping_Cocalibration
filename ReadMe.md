@@ -49,11 +49,11 @@ Version: mlpack 3.4.2
 Please follow [mlpack Installation](https://www.mlpack.org/doc/mlpack-3.4.2/doxygen/build.html) to install.
 
 
-### 4.6 Livox SDK and Livox ROS Driver (Optional)
+### 4.6 Livox SDK and Livox ROS Driver
 The SDK and driver is used for dealing with Livox LiDAR.
 Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [Livox ROS Driver](https://github.com/Livox-SDK/livox_ros_driver).
 
-### 4.7 MindVision SDK (Optional)
+### 4.7 MindVision SDK
 The SDK of the fisheye camera is in [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138).
 
 ## 5. Acknowledgements
