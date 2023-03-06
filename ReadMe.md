@@ -46,7 +46,8 @@ Please follow [OpenCV Installation](https://opencv.org/) to install.
 ### 4.5. **mlpack**
 Version: mlpack 3.4.2
 
-Please follow [mlpack Installation](https://mlpack.org/) to install.
+Please follow [mlpack Installation](https://www.mlpack.org/doc/mlpack-3.4.2/doxygen/build.html) to install.
+
 
 ### 4.6 Livox SDK and Livox ROS Driver (Optional)
 The SDK and driver is used for dealing with Livox LiDAR.
