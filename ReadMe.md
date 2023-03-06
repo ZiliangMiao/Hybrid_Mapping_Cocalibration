@@ -62,7 +62,10 @@ File stucture:
 │   ├── data
 │   │   └── dataset_name
 │   │       ├── log
-│   │       └── spot0
+│   │       ├── spot0
+│   │       └── cocalibration
+│   │           ├── full_fov_cloud.pcd
+│   │           └── hdr_img.bmp
 │   ├── launch
 │   ├── include
 │   ├── python_scripts
