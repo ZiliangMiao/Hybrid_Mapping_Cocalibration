@@ -64,7 +64,11 @@ File stucture:
 │   │       ├── log
 │   │       ├── spot0
 │   │       └── cocalibration
+│   │           ├── edges
+│   │           ├── results
+│   │               └── cocalib.txt
 │   │           ├── full_fov_cloud.pcd
+│   │           ├── flat_lidar_image.bmp
 │   │           └── hdr_img.bmp
 │   ├── launch
 │   ├── include
