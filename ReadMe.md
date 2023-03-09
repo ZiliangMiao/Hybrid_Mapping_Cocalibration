@@ -58,22 +58,41 @@ File stucture:
 ├── cocalibration
 │   ├── build
 │   ├── config
-│   │   ├── calibration.yaml
+│   │   └── cocalibration.yaml
 │   ├── data
 │   │   └── dataset_name
-│   │       ├── log
 │   │       ├── spot0
 │   │       └── cocalibration
 │   │           ├── edges
+│   │           │   ├── lidar_1_filtered.bmp
+│   │           │   ├── lidar_2_canny.bmp
+│   │           │   ├── lidar_edge_image.bmp
+│   │           │   ├── lidar_edge_cloud.pcd
+│   │           │   ├── omni_1_filtered.bmp
+│   │           │   ├── omni_2_canny.bmp
+│   │           │   └── omni_edge_image.bmp
 │   │           ├── results
-│   │           │   └── cocalib.txt
+│   │           │   ├── fusion_image_init.bmp
+│   │           │   ├── fusion_image_(bandwidth).bmp
+│   │           │   ├── cocalib_init.txt
+│   │           │   └── cocalib_(bandwidth).txt
 │   │           ├── full_fov_cloud.pcd
 │   │           ├── flat_lidar_image.bmp
-│   │           └── hdr_img.bmp
+│   │           └── hdr_image.bmp
 │   ├── launch
+│   │   └── cocalibration.launch
 │   ├── include
+│   │   ├── common_lib.h
+│   │   ├── define.h
+│   │   ├── lidar_process.h
+│   │   ├── omni_process.h
+│   │   └── optimization.h
 │   ├── python_scripts
 │   ├── src
+│   │   ├── lidar_process.cpp
+│   │   ├── omni_process.cpp
+│   │   ├── optimization.cpp
+│   │   └── cocalibration.cpp
 │   ├── package.xml
 │   └── CMakeLists.txt
 ├── ReadMe.md
