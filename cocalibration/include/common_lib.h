@@ -135,7 +135,7 @@ Eigen::Matrix<T, 2, 1> IntrinsicTransform(Eigen::Matrix<T, K_INT, 1> &intrinsic,
     return undistorted_projection;
 }
 
-void saveResults(std::string &record_path, std::vector<double> params, double bandwidth, double initial_cost, double final_cost) {
+void saveResults(std::string &record_path, std::vector<double> params, double bandwidth, double initial_cost, double final_cost, double proj_error) {
     const std::vector<const char*> name = {
             "rx", "ry", "rz",
             "tx", "ty", "tz",
@@ -159,7 +159,8 @@ void saveResults(std::string &record_path, std::vector<double> params, double ba
     output += "]\n";
     if (!title) {
         output += "Initial cost: " + to_string(initial_cost) + "\n" +
-                "Final cost: " + to_string(final_cost) + "\n";
+                "Final cost: " + to_string(final_cost) + "\n" + 
+                "Average projection error: " + to_string(proj_error) + "\n";
     }
     
     write.open(record_path, mode);

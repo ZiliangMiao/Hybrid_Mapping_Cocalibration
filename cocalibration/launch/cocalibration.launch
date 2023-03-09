@@ -1,0 +1,5 @@
+<launch>
+  <rosparam command="load" file="$(find cocalibration)/config/cocalibration.yaml" />
+  <node name="cocalibration" pkg="cocalibration" type="cocalibration" output="screen">
+  </node>
+</launch>

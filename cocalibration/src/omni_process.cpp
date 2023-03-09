@@ -1,6 +1,7 @@
 /** headings **/
 #include <omni_process.h>
 #include <common_lib.h>
+#include <define.h>
 
 /** namespace **/
 using namespace std;
@@ -12,66 +13,46 @@ using namespace mlpack::kernel;
 using namespace arma;
 
 OmniProcess::OmniProcess() {
-    /** parameter server **/
-    ros::param::get("essential/kDatasetName", this->dataset_name);
-    ros::param::get("essential/kNumSpots", this->num_spots);
-    ros::param::get("essential/kNumViews", this->num_views);
+    /** Param **/
+    ros::param::get("essential/kDatasetName", this->DATASET_NAME);
+    ros::param::get("essential/kNumSpot", this->NUM_SPOT);
     ros::param::get("essential/kImageRows", this->kImageSize.first);
     ros::param::get("essential/kImageCols", this->kImageSize.second);
-    ros::param::get("essential/kAngleInit", this->view_angle_init);
-    ros::param::get("essential/kAngleStep", this->view_angle_step);
-    this->kDatasetPath = this->kPkgPath + "/data/" + this->dataset_name;
-    this->fullview_idx = (this->num_views - 1) / 2;
 
-    /** filepath and edge cloud**/
-    vector<vector<string>> folder_path_tmp(num_spots, vector<string>(num_views));
-    vector<vector<PoseFilePath>> file_path_tmp(num_spots, vector<PoseFilePath>(num_views));
-    vector<vector<EdgeCloud>> edge_clouds_tmp(num_spots, vector<EdgeCloud>(num_views));
-    folder_path_vec = folder_path_tmp;
-    file_path_vec = file_path_tmp;
-    edge_cloud_vec = edge_clouds_tmp;
+    this->ocamEdgeCloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
+    /** Path **/
+    this->PKG_PATH = ros::package::getPath("cocalibration");
+    this->DATASET_PATH = this->PKG_PATH + "/data/" + this->DATASET_NAME;
+    this->COCALIB_PATH = this->DATASET_PATH + "/cocalibration";
+    this->EDGE_PATH = this->COCALIB_PATH + "/edges";
+    this->RESULT_PATH = this->COCALIB_PATH + "/results";
+    this->PYSCRIPT_PATH = this->PKG_PATH + "/python_scripts/image_process/edge_extraction.py";
 
-    /** degree map **/
-    for (int i = 0; i < num_spots; ++i) {
-        for (int j = 0; j < num_views; ++j) {
-            int v_degree = view_angle_init + view_angle_step * j;
-            this->degree_map[j] = v_degree;
-            this->folder_path_vec[i][j] = kDatasetPath + "/spot" + to_string(i) + "/" + to_string(v_degree);
-            struct PoseFilePath pose_file_path(folder_path_vec[i][j]);
-            this->file_path_vec[i][j] = pose_file_path;
-        }
-    }
+    this->cocalibImagePath = this->COCALIB_PATH + "/hdr_image.bmp";
+    this->cocalibEdgeImagePath = this->EDGE_PATH + "/omni_edge_image.bmp";
+    this->cocalibEdgeCloudPath = this->EDGE_PATH + "/edge_cloud.pcd";
+    this->cocalibKdePath = RESULT_PATH + "/kde_samples.txt";
 }
 
-void OmniProcess::ReadEdge() {
-    string edge_cloud_path = this->file_path_vec[spot_idx][view_idx].edge_cloud_path;
-    loadPcd(edge_cloud_path, this->edge_cloud_vec[spot_idx][view_idx], "camera edge");
-}
-
-cv::Mat OmniProcess::loadImage(bool output) {
-    PoseFilePath &path_vec = this->file_path_vec[spot_idx][view_idx];
-    string img_path = path_vec.hdr_img_path;
-    cv::Mat image = cv::imread(img_path, cv::IMREAD_UNCHANGED);
+void OmniProcess::loadCocalibImage() {
+    this->cocalibImage = cv::imread(this->cocalibImagePath, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
-                   "Invalid size (%d, %d) from file: %s", image.rows, image.cols, img_path);
+                   "Invalid size (%d, %d) from file: %s", image.rows, image.cols, cocalibImagePath);
     ROS_ASSERT_MSG((!MESSAGE_EN),
-                    "Loaded image from file: %s", img_path)
-    if (output) {
-        string output_img_path = path_vec.flat_img_path;
-        cv::imwrite(output_img_path, image);
-    }
-    return image;
+                    "Loaded image from file: %s", cocalibImagePath);
 }
 
+void OmniProcess::edgeExtraction() {
+    ROS_INFO("Run pythonscripts, Extract ocam edges");
+    string mode = "omni";
+    string cmd_str = "python3 " + this->PYSCRIPT_PATH + " " + this->DATASET_PATH + " " + mode;
+    int status = system(cmd_str.c_str());
+}
 
 void OmniProcess::generateEdgeCloud() {
-    string edge_img_path = file_path_vec[spot_idx][view_idx].edge_img_path;
-    cv::Mat edge_img = cv::imread(edge_img_path, cv::IMREAD_UNCHANGED);
+    cv::Mat edge_img = cv::imread(this->cocalibEdgeImagePath, cv::IMREAD_UNCHANGED);
     ROS_ASSERT_MSG((image.rows != 0 || image.cols != 0),
                    "Invalid size (%d, %d) from file: %s", image.rows, image.cols, edge_img_path);
-    
-    EdgeCloud::Ptr edge_cloud(new EdgeCloud);
-
     for (int u = 0; u < edge_img.rows; ++u) {
         for (int v = 0; v < edge_img.cols; ++v) {
             if (edge_img.at<uchar>(u, v) > 127) {
@@ -79,13 +60,10 @@ void OmniProcess::generateEdgeCloud() {
                 edge_pt.x = u;
                 edge_pt.y = v;
                 edge_pt.z = 1;
-                edge_cloud->points.push_back(edge_pt);
+                this->ocamEdgeCloud->points.push_back(edge_pt);
             }
         }
     }
-    this->edge_cloud_vec[spot_idx][view_idx] = *edge_cloud;
-    string edge_cloud_path = file_path_vec[spot_idx][view_idx].edge_cloud_path;
-    pcl::io::savePCDFileBinary(edge_cloud_path, *edge_cloud);
 }
 
 vector<double> OmniProcess::Kde(double bandwidth, double scale) {
@@ -95,12 +73,11 @@ vector<double> OmniProcess::Kde(double bandwidth, double scale) {
     const int n_cols = scale * this->kImageSize.second;
     arma::mat query;
     // number of rows equal to number of dimensions, query.n_rows == reference.n_rows is required
-    EdgeCloud &fisheye_edge = this->edge_cloud_vec[this->spot_idx][this->view_idx];
-    const int ref_size = fisheye_edge.size();
+    const int ref_size = this->ocamEdgeCloud->size();
     arma::mat reference(2, ref_size);
     for (int i = 0; i < ref_size; ++i) {
-        reference(0, i) = fisheye_edge.points[i].x;
-        reference(1, i) = fisheye_edge.points[i].y;
+        reference(0, i) = this->ocamEdgeCloud->points[i].x;
+        reference(1, i) = this->ocamEdgeCloud->points[i].y;
     }
 
     query = arma::mat(2, n_cols * n_rows);
@@ -124,10 +101,9 @@ vector<double> OmniProcess::Kde(double bandwidth, double scale) {
     std::vector<double> img = arma::conv_to<std::vector<double>>::from(kde_estimations);
 
     if (EXTRA_FILE_EN) {
-        /** kde prediction output **/
-        string kde_txt_path = this->file_path_vec[this->spot_idx][this->view_idx].kde_samples_path;
+        /** Kde Prediction **/
         ofstream outfile;
-        outfile.open(kde_txt_path, ios::out);
+        outfile.open(this->cocalibKdePath, ios::out);
         if (!outfile.is_open()) {
             cout << "Open file failure" << endl;
         }
@@ -142,16 +118,7 @@ vector<double> OmniProcess::Kde(double bandwidth, double scale) {
         outfile.close();
     }
     if (MESSAGE_EN) {
-        ROS_INFO("kde image generated in %f s.\n bandwidth = %f, size = (%d, %d)", ((float)(clock() - start_time) / CLOCKS_PER_SEC), bandwidth, n_rows, n_cols);
+        ROS_INFO("Kde image generated in %f s.\n bandwidth = %f, size = (%d, %d)", ((float)(clock() - start_time) / CLOCKS_PER_SEC), bandwidth, n_rows, n_cols);
     }
     return img;
-}
-
-void OmniProcess::edgeExtraction() {
-    ROS_INFO("Run Pythonscripts, Extract edges");
-    string script_path = this->kPkgPath + "/python_scripts/image_process/edge_extraction.py";
-    string kSpots = to_string(this->spot_idx);
-    string cmd_str = "python3 " 
-        + script_path + " " + this->kDatasetPath + " " + "omni" + " " + kSpots;
-    int status = system(cmd_str.c_str());
 }

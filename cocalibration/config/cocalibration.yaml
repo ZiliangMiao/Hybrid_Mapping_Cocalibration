@@ -1,0 +1,59 @@
+switch:
+    ## Calibration and Optimization cost analysis
+    kCeresOpt: true
+    kMultiSpotsOpt: true
+    kParamsAnalysis: false
+    kUniformSampling: false
+
+essential:
+    kLidarTopic: "/livox/lidar"
+    kNumSpot: 1 # -1: means run all the spots, other means run the specific spot index
+    kDatasetName: "sustech_crf"
+    # kDatasetName: "sustech_rb1"
+    # kDatasetName: "sustech_bs_hall"
+    kImageRows: 2048
+    kImageCols: 2448
+    kFlatRows: 2000
+    kFlatCols: 4000
+    
+cocalib:
+    bw: [32.00, 16.00, 4.00, 2.00, 1.00]
+    # initial extrinsic parameters
+    rx: 3.1415926
+    ry: 0.02
+    rz: -1.5707963
+    tx: 0.27
+    ty: 0.00
+    tz: 0.03
+    # range
+    rx_range: 0.10
+    ry_range: 0.10
+    rz_range: 0.10
+    tx_range: 0.05
+    ty_range: 0.05
+    tz_range: 0.05
+    # initial intrinsic parameters
+    u0: 1023.00
+    v0: 1201.00
+    a0: 1937.487404 # 616.7214056132 * M_PI
+    a1: -616.7214056132
+    a2: 0.00
+    a3: 0.00
+    a4: 0.00
+    c: 1.00
+    d: 0.00
+    e: 0.00
+    # range
+    u0_range: 5.00
+    v0_range: 5.00
+    a0_range: 160.00
+    a1_range: 80.00
+    a2_range: 40.00
+    a3_range: 20.00
+    a4_range: 10.00
+    c_range: 0.01
+    d_range: 0.01
+    e_range: 0.01
+    
+    
+    

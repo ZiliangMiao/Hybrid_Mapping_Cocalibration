@@ -45,9 +45,7 @@ inline double getDouble(const ceres::Jet<SCALAR, N> &x) {
     return static_cast<double>(x.a);
 }
 
-void project2Image(OmniProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, double bandwidth);
-
-void SpotColorization(OmniProcess &fisheye, LidarProcess &lidar, std::vector<double> &params);
+double project2Image(OmniProcess &fisheye, LidarProcess &lidar, std::vector<double> &params, std::string record_path, double bandwidth);
 
 std::vector<double> QuaternionCalib(OmniProcess &fisheye,
                                     LidarProcess &lidar,

@@ -1,6 +1,0 @@
-<launch>
-  <rosparam command="load" file="$(find cocalibration)/config/calibration.yaml" />
-  <param name="lio_mat_path" type="string" value="/lio_mid360/lio_spot_trans_mat_4_3.txt" />
-  <node name="cocalibration" pkg="cocalibration" type="cocalibration" output="screen">
-  </node>
-</launch>

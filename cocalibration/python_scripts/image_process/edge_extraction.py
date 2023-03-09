@@ -33,45 +33,33 @@ def blur(edge_lid, h_u, h_l):
     edge_lid = np.vstack((edge_lid_u, edge_lid_l))
     return edge_lid
 
-def check_folder():
-    dir_list = [
-        data_path + "/edges/canny_outputs/",
-        data_path + "/edges/hog_outputs/"
-    ]
-    for dir in dir_list:
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-
 if __name__ == "__main__":
-    kArgs = 4
+    kArgs = 3
     if not (len(sys.argv) >= kArgs):
         print("Edge extraction failed.")
     root_path = os.path.abspath(os.path.join(os.path.abspath(__file__), "../../.."))
     dataset_path = sys.argv[1]
     mode = sys.argv[2]
-    spot = sys.argv[3]
     
-    data_path = dataset_path + "/spot" + str(spot) + "/0"
-    print("Edge extraction in: " + data_path + " ... ", end="")
-
-    dir_cam_original = data_path + "/outputs/omni_outputs/flat_image.bmp"
-    dir_cam_mask = root_path + "/python_scripts/image_process/flat_image_mask.png"
-    dir_cam_filtered = data_path + "/edges/canny_outputs/omni_1_filtered.png"
-    dir_cam_canny = data_path + "/edges/canny_outputs/omni_2_canny.png"
-    dir_cam_output = data_path + "/edges/omni_edge.png"
-
-    dir_lid_original = data_path + "/outputs/lidar_outputs/flat_lidar_image.bmp"
-    dir_lid_mask = root_path + "/python_scripts/image_process/flat_lidar_image_mask.png"
-    dir_lid_filtered = data_path + "/edges/canny_outputs/lid_1_filtered.png"
-    dir_lid_canny = data_path + "/edges/canny_outputs/lid_2_canny.png"
-    dir_lid_output = data_path + "/edges/lidar_edge.png"
-
-    check_folder()
+    data_path = dataset_path + "/cocalibration"
+    edge_files_path = data_path + "/edges"
+    
+    # check folder
+    if not os.path.exists(data_path + "/edges/"):
+        os.mkdir(data_path + "/edges/")
+    dir_cam_mask = root_path + "/python_scripts/image_process/omni_image_mask.png"
+    dir_lid_mask = root_path + "/python_scripts/image_process/lidar_flat_image_mask.png"
+    dir_cam_filtered = edge_files_path + "/omni_1_filtered.bmp"
+    dir_cam_canny = edge_files_path + "/omni_2_canny.bmp"
+    dir_cam_output = edge_files_path + "/omni_edge_image.bmp"
+    dir_lid_filtered = edge_files_path + "/lidar_1_filtered.bmp"
+    dir_lid_canny = edge_files_path + "/lidar_2_canny.bmp"
+    dir_lid_output = edge_files_path + "/lidar_edge_image.bmp"
 
     # -------- omnidirectional camera --------
-
     if (mode == "omni"):
-        edge_cam_raw = cv2.imread(dir_cam_original)
+        dir_cocalib_img = data_path + "/hdr_image.bmp"
+        edge_cam_raw = cv2.imread(dir_cocalib_img)
         edge_cam_raw = cv2.cvtColor(edge_cam_raw, cv2.COLOR_BGR2GRAY)
 
         edge_cam = cv2.GaussianBlur(edge_cam_raw, sigmaX=1, sigmaY=1, ksize=(5, 5))
@@ -90,11 +78,11 @@ if __name__ == "__main__":
         edge_cam_out = np.zeros(np.shape(edge_cam), np.uint8)
         cv2.drawContours(edge_cam_out, cnt_cam_out, -1, 255, 1)
         cv2.imwrite(dir_cam_output, edge_cam_out)
-        print("done.")
+        print("Ocam edge extraction completed.")
 
     # -------- Lidar --------
-
-    else:
+    if (mode == "lidar"):
+        dir_lid_original = data_path + "/flat_lidar_image.bmp"
         edge_lid_raw = cv2.imread(dir_lid_original)
         edge_lid_raw = cv2.cvtColor(edge_lid_raw, cv2.COLOR_BGR2GRAY)
         # edge_lid_raw = cv2.GaussianBlur(edge_lid_raw, sigmaX=0.5, sigmaY=0.5, ksize=(5, 5))
@@ -114,9 +102,6 @@ if __name__ == "__main__":
         cv2.drawContours(edge_lid, cnt_lid, -1, 255, 1)
 
         cv2.imwrite(dir_lid_output, edge_lid)
-        print("done.")
-
-    if (len(sys.argv) >= kArgs):
-        print("Edge extraction completed.")
+        print("LiDAR edge extraction completed.")
 
  
