@@ -88,6 +88,10 @@ File stucture:
 │   │   ├── omni_process.h
 │   │   └── optimization.h
 │   ├── python_scripts
+│   │   └── image_process
+│   │       ├── omni_image_mask.png
+│   │       ├── lidar_flat_image_mask.png
+│   │       └── edge_extraction.py
 │   ├── src
 │   │   ├── lidar_process.cpp
 │   │   ├── omni_process.cpp
