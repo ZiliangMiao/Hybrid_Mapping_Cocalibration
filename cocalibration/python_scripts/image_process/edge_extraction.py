@@ -22,8 +22,8 @@ def patch_image(image, mode=cv2.MORPH_CLOSE, size=3, iter=1):
 def blur(edge_lid, h_u, h_l):
     if (len(edge_lid.shape) == 2):
         edge_lid = cv2.cvtColor(edge_lid, cv2.COLOR_GRAY2BGR)
-    edge_lid_u = edge_lid[:int(0.15 * edge_lid.shape[0]), :, :]
-    edge_lid_l = edge_lid[int(0.15 * edge_lid.shape[0]):, :, :]
+    edge_lid_u = edge_lid[:int(0.85 * edge_lid.shape[0]), :, :]
+    edge_lid_l = edge_lid[int(0.85 * edge_lid.shape[0]):, :, :]
     edge_lid_u = cv2.pyrMeanShiftFiltering(edge_lid_u, h_u, 2*h_u)
     edge_lid_l = cv2.pyrMeanShiftFiltering(edge_lid_l, h_l, 2*h_l)
     edge_lid_u = cv2.cvtColor(edge_lid_u, cv2.COLOR_BGR2GRAY)
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         edge_lid_raw = cv2.imread(dir_lid_original)
         edge_lid_raw = cv2.cvtColor(edge_lid_raw, cv2.COLOR_BGR2GRAY)
         # edge_lid_raw = cv2.GaussianBlur(edge_lid_raw, sigmaX=0.5, sigmaY=0.5, ksize=(5, 5))
-        edge_lid = blur(edge_lid_raw, h_u=20, h_l=10)
+        edge_lid = blur(edge_lid_raw, h_u=10, h_l=20)
         cv2.imwrite(dir_lid_filtered, edge_lid)
 
         # mask to remove the upper and lower bound noise

@@ -51,6 +51,7 @@ void LidarProcess::cartToSphere() {
     if (MESSAGE_EN) {
         ROS_INFO("Polar cloud generated. \ntheta: (min, max) = (%f, %f)", theta_min, theta_max);
     }
+    pcl::io::savePCDFileBinary(this->COCALIB_PATH + "/lidar_polar_cloud.pcd", *this->lidarPolarCloud);
 }
 
 void LidarProcess::sphereToPlane() {
@@ -125,8 +126,97 @@ void LidarProcess::sphereToPlane() {
     }
     this->tagsMap = tags_map;
     cv::imwrite(this->flatImagePath, flat_img);
-
 }
+
+// void LidarProcess::cartToSphere() {
+//     cout << "----- LiDAR: CartToSphere -----" << endl;
+//     float theta_min = M_PI, theta_max = -M_PI;
+//     pcl::io::loadPCDFile(this->cocalibCloudPath, *this->lidarCartCloud);
+//     pcl::copyPointCloud(*this->lidarCartCloud, *this->lidarPolarCloud);
+//     for (auto &point : this->lidarPolarCloud->points) {
+//         // change the projection approach
+//         double fov_up = 180.0 / 180.0 * M_PI;  // field of view up in radians
+//         double fov_down = -120.0 / 180.0 * M_PI;  // field of view down in radians
+//         double fov = abs(fov_down) + abs(fov_up);  // get field of view total in radians
+
+//         float depth = point.getVector3fMap().norm();
+//         float phi = atan2(point.y, point.x);
+//         float theta = acos(point.z / depth);
+//         // get projections in image coords
+//         double proj_x = (0.5 * (1.0 + phi / M_PI)) * this->kFlatImageSize.second;  // in [0.0, 1.0 * W]
+//         double proj_y = (1.0 - (theta + abs(fov_down)) / fov) * this->kFlatImageSize.first;  // in [0.0, 1.0 * H]
+
+//         point.x = proj_x;
+//         point.y = proj_y;
+//         point.z = 0;
+//         if (theta > theta_max) { theta_max = theta;}
+//         else if (theta < theta_min) { theta_min = theta;}
+//     }
+//     if (MESSAGE_EN) {
+//         ROS_INFO("Polar cloud generated. \ntheta: (min, max) = (%f, %f)", theta_min, theta_max);
+//     }
+//     pcl::io::savePCDFileBinary(this->COCALIB_PATH + "/lidar_polar_cloud.pcd", *this->lidarPolarCloud);
+// }
+
+// void LidarProcess::sphereToPlane() {
+//     cout << "----- LiDAR: SphereToPlane -----" << endl;
+//     /** define the data container **/
+//     cv::Mat flat_img = cv::Mat::zeros(this->kFlatImageSize.first, this->kFlatImageSize.second, CV_8U);
+//     vector<vector<Tags>> tags_map (this->kFlatImageSize.first, vector<Tags>(this->kFlatImageSize.second));
+//     /** construct kdtrees and load the point clouds **/
+//     /** caution: the point cloud need to be set before the loop **/
+//     pcl::KdTreeFLANN<PointI> kdtree;
+//     kdtree.setInputCloud(this->lidarPolarCloud);
+
+//     /** define the invalid search parameters **/
+//     int invalid_search_num, valid_search_num = 0; /** search invalid count **/
+//     int invalid_idx_num = 0; /** index invalid count **/
+//     const float kSearchRadius = sqrt(2) * (kRadPerPix / 2);
+//     const float sensitivity = 0.02f;
+//     // modify the search center!!!!! important
+//     #pragma omp parallel for num_threads(THREADS)
+//     for (int u = 0; u < this->kFlatImageSize.first; ++u) {
+//         float theta_center = - kRadPerPix * (2 * u + 1) / 2 + M_PI;
+//         for (int v = 0; v < this->kFlatImageSize.second; ++v) {
+//             float phi_center = kRadPerPix * (2 * v + 1) / 2 - M_PI;
+//             /** assign the theta and phi center to the search_center **/
+//             PointI search_center;
+//             search_center.x = theta_center;
+//             search_center.y = phi_center;
+//             search_center.z = 0;
+//             vector<int> tag;
+//             /** define the vector container for storing the info of searched points **/
+//             vector<int> search_pt_idx_vec;
+//             vector<float> search_pt_squared_dis_vec; /** type of distance vector has to be float **/
+//             /** use kdtree to search (radius search) the spherical point cloud **/
+//             int search_num = kdtree.radiusSearch(search_center, kSearchRadius, search_pt_idx_vec, search_pt_squared_dis_vec); // number of the radius nearest neighbors
+//             if (search_num == 0) {
+//                 flat_img.at<uint8_t>(u, v) = 0; /** intensity **/
+//                 invalid_search_num ++;
+//             }
+//             else { /** corresponding points are found in the radius neighborhood **/
+//                 float intensity_mean = 0;
+//                 vector<int> local_vec(search_num, 0);
+//                 for (int i = 0; i < search_num; ++i) {
+//                     PointI &local_pt = this->lidarPolarCloud->points[search_pt_idx_vec[i]];
+//                     float dist = local_pt.z;
+//                     intensity_mean += local_pt.intensity;
+//                     local_vec[i] = search_pt_idx_vec[i];
+//                 }
+//                 /** add tags **/
+//                 local_vec.erase(std::remove(local_vec.begin(), local_vec.end(), 0), local_vec.end());
+//                 tag.insert(tag.begin(), local_vec.data(), local_vec.data()+local_vec.size());
+//                 if (tag.size() > 0) {
+//                     intensity_mean /= tag.size();
+//                 }                
+//                 flat_img.at<uchar>(u, v) = static_cast<uchar>(intensity_mean);
+//             }
+//             tags_map[u][v] = tag;
+//         }
+//     }
+//     this->tagsMap = tags_map;
+//     cv::imwrite(this->flatImagePath, flat_img);
+// }
 
 void LidarProcess::edgeExtraction() {
     cout << "----- LiDAR: PythonScript EdgeExtraction -----" << endl;

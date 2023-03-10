@@ -1,16 +1,16 @@
 switch:
     ## Calibration and Optimization cost analysis
     kCeresOpt: true
-    kMultiSpotsOpt: true
+    kMultiSpotsOpt: false
     kParamsAnalysis: false
     kUniformSampling: false
 
 essential:
     kLidarTopic: "/livox/lidar"
     kNumSpot: 1 # -1: means run all the spots, other means run the specific spot index
-    kDatasetName: "sustech_crf"
+    # kDatasetName: "sustech_crf"
     # kDatasetName: "sustech_rb1"
-    # kDatasetName: "sustech_bs_hall"
+    kDatasetName: "sustech_bs_hall"
     kImageRows: 2048
     kImageCols: 2448
     kFlatRows: 2000
