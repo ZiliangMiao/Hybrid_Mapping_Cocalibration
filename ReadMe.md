@@ -53,15 +53,20 @@ Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [
 The SDK of the fisheye camera is in [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138).
 
 ## 4. Run Co-calibration
-File stucture:
+### Data:
+Make the data, (dataset_name), cocalibration directories, refer to the file structure below.
+Rename the accumulated non-repetitive scanned point cloud "full_fov_cloud.pcd", rename the hdr image "hrd_image.bmp".
+Put the two raw files into ~/cocalibration/data/(dataset_name)/cocalibration directory.
+### Config:
+Modify the parameters in the config file, cocalibration.yaml.
+### File stucture:
 ```bash
 ├── cocalibration
 │   ├── build
 │   ├── config
 │   │   └── cocalibration.yaml
 │   ├── data
-│   │   └── dataset_name
-│   │       ├── spot0
+│   │   └── (dataset_name)
 │   │       └── cocalibration
 │   │           ├── edges
 │   │           │   ├── lidar_1_filtered.bmp
@@ -103,12 +108,12 @@ File stucture:
 ├── .git
 └── .gitignore
 ```
-
+### Commands:
 ```
     cd ~/$catkin workspace$
     catkin_make
     source ./devel/setup.bash
-    roslaunch cocalibration calibration.launch
+    roslaunch cocalibration cocalibration.launch
 ```
 
 ## 5. Acknowledgements
