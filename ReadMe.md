@@ -68,6 +68,8 @@ Rename the accumulated non-repetitive scanned point cloud "full_fov_cloud.pcd", 
 Put the two raw files into ~/cocalibration/data/(dataset_name)/cocalibration directory.
 ### Config:
 Modify the parameters in the config file, cocalibration.yaml.
+
+Recommended Kernel Density Estimation (KDE) bandwidth: 32, 16, 8, 4, 2
 ### File stucture:
 ```bash
 ├── cocalibration
