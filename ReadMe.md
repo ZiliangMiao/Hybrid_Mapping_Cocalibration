@@ -53,9 +53,18 @@ Remenber to install [Livox SDK](https://github.com/Livox-SDK/Livox-SDK) before [
 The SDK of the fisheye camera is in [MindVision SDK](http://www.mindvision.com.cn/rjxz/list_12.aspx?lcid=138).
 
 ## 4. Run Co-calibration
+### Sensors:
+Currently, this cocalibration method only supports omnidirectional camera and non-repetitive scanning LiDAR (Livox).
+
+If you want to calibrate the monocular camera and the Livox LiDAR, please replace the omnidirectional camera model to monocular camera model and modify the corresponding parameters of optimization.
+
+We will consider supporting other types of LiDAR in the future.
+
 ### Data:
 Make the data, (dataset_name), cocalibration directories, refer to the file structure below.
+
 Rename the accumulated non-repetitive scanned point cloud "full_fov_cloud.pcd", rename the hdr image "hrd_image.bmp".
+
 Put the two raw files into ~/cocalibration/data/(dataset_name)/cocalibration directory.
 ### Config:
 Modify the parameters in the config file, cocalibration.yaml.
