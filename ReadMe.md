@@ -1,7 +1,7 @@
 # Coarse-to-fine Hybrid 3D Mapping System with Co-calibrated Omnidirectional Camera and Non-repetitive Mid-360 LiDAR
 This work is developed by Ziliang Miao, Buwei He, Wenya Xie, supervised by Prof.Xiaoping Hong ([ISEE-Lab](https://isee.technology/), SDIM, SUSTech), and is accepted by IEEE Robotics and Automation Letters (RA-L).
 
-Pre-print Paper: https://arxiv.org/pdf/2301.12934.pdf
+Paper: https://arxiv.org/pdf/2301.12934.pdf
 
 Demo Video: https://www.youtube.com/watch?v=Uh0C9VL9YEQ
 
