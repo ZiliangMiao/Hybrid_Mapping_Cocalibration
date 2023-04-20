@@ -1,6 +1,6 @@
-<mxfile host="app.diagrams.net" modified="2023-01-16T06:09:18.226Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36" etag="5zfoKMZsbUFsqszzn0wf" version="20.8.5" type="github">
+<mxfile host="app.diagrams.net" modified="2023-04-20T14:42:17.169Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36" etag="TWZKuHm4hMLn94haTuN0" version="21.1.8" type="github">
   <diagram id="C5RBs43oDa-KdzZeNtuy" name="Page-1">
-    <mxGraphModel dx="1877" dy="493" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
+    <mxGraphModel dx="2203" dy="767" grid="1" gridSize="5" guides="1" tooltips="1" connect="0" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="1" shadow="0">
       <root>
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-0" />
         <mxCell id="WIyWlLk6GJQsqaUBKTNV-1" parent="WIyWlLk6GJQsqaUBKTNV-0" />
@@ -587,6 +587,96 @@
             <Array as="points">
               <mxPoint x="355" y="1370" />
               <mxPoint x="355" y="1370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-0" value="" style="rounded=1;whiteSpace=wrap;html=1;gradientColor=none;fillColor=none;dashed=1;glass=0;shadow=0;sketch=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-450" y="1388.61" width="474.66" height="106.11" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-1" value="" style="rounded=1;whiteSpace=wrap;html=1;gradientColor=none;fillColor=none;dashed=1;glass=0;shadow=0;sketch=0;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-335" y="1245" width="355" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;dashPattern=8 8;startArrow=none;startFill=0;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-3" target="DBE6rPQj9LDb-ht1cJih-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-3" value="Camera-LiDAR co-calibration" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-445" y="1255" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-5" target="DBE6rPQj9LDb-ht1cJih-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-5" value="Registering the point cloud based on the localization" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-325" y="1255" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-7" target="DBE6rPQj9LDb-ht1cJih-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-7" value="Planning for viewpoints of the ROls based on the coarse map" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-210" y="1255" width="105" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-9" target="DBE6rPQj9LDb-ht1cJih-14">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="30" y="1284.9999999999998" />
+              <mxPoint x="30" y="1442.4999999999998" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-9" value="Guiding the robot to each viewpoint" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-90" y="1255" width="100" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=openThin;endFill=0;strokeColor=#666666;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-12" target="DBE6rPQj9LDb-ht1cJih-9">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-40" y="1335" />
+              <mxPoint x="-40" y="1335" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=openThin;endFill=0;strokeColor=#666666;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-12" target="DBE6rPQj9LDb-ht1cJih-5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="-270" y="1330" />
+              <mxPoint x="-270" y="1330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-12" value="Localization from the Odometry / SLAM" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-315" y="1340" width="320" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-14" target="DBE6rPQj9LDb-ht1cJih-18">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-14" value="Stationary scanning at each viewpoint at five states of the gimbal mount" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-85" y="1400" width="100" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-16" target="DBE6rPQj9LDb-ht1cJih-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-16" value="Pre-registering the stationary scans of the viewpoints based on the odometry" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-315" y="1399.72" width="100" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-18" target="DBE6rPQj9LDb-ht1cJih-16">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-18" value="Pre-registering the five scans of a viewpoint based on the angles of the gimbal mount" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-200" y="1399.72" width="100" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-19" value="Optimizing the pre-registered stationary scans and the coarse map based on GICP" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fillColor=#eeeeee;strokeColor=#36393d;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-440" y="1399.72" width="110" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-20" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Coarse Mapping&lt;/span&gt;" style="text;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;fillColor=#FFFFFF;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-120" y="1230" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-21" value="&lt;span style=&quot;font-size: 16px;&quot;&gt;Fine Mapping&lt;/span&gt;" style="text;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;rounded=0;shadow=0;glass=0;dashed=1;sketch=0;fillColor=#FFFFFF;" vertex="1" parent="WIyWlLk6GJQsqaUBKTNV-1">
+          <mxGeometry x="-114.09999999999991" y="1375" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="DBE6rPQj9LDb-ht1cJih-22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;startArrow=none;startFill=0;endArrow=openThin;endFill=0;strokeColor=#666666;" edge="1" parent="WIyWlLk6GJQsqaUBKTNV-1" source="DBE6rPQj9LDb-ht1cJih-12" target="DBE6rPQj9LDb-ht1cJih-16">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-145" y="1365" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="-270" y="1375" />
+              <mxPoint x="-270" y="1375" />
             </Array>
           </mxGeometry>
         </mxCell>
